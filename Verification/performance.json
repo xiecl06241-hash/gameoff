@@ -1,0 +1,104 @@
+[
+  {
+    "state": "Normal",
+    "render_mode": "offscreen",
+    "exit_code": 777003,
+    "screenshot": true,
+    "performance": {
+      "resolution": "1920x1080",
+      "quality": "High (sg.*=2), 100% screen percentage",
+      "steady_frames": "400–799; startup and screenshot frames excluded",
+      "sample_count": 400,
+      "mean_frame_ms": 4.38727725,
+      "average_fps": 227.93179984237375,
+      "p95_frame_ms": 5.4785,
+      "mean_gpu_ms": 3.107725,
+      "peak_gpu_local_used_mb": 1404.5391
+    }
+  },
+  {
+    "state": "Shift",
+    "render_mode": "offscreen",
+    "exit_code": 777003,
+    "screenshot": true,
+    "performance": {
+      "resolution": "1920x1080",
+      "quality": "High (sg.*=2), 100% screen percentage",
+      "steady_frames": "400–799; startup and screenshot frames excluded",
+      "sample_count": 400,
+      "mean_frame_ms": 4.33360875,
+      "average_fps": 230.75456454161906,
+      "p95_frame_ms": 5.2405,
+      "mean_gpu_ms": 3.11484425,
+      "peak_gpu_local_used_mb": 1401.0391
+    }
+  },
+  {
+    "state": "Normal",
+    "render_mode": "windowed",
+    "exit_code": 777003,
+    "screenshot": true,
+    "performance": {
+      "resolution": "1920x1080",
+      "quality": "High (sg.*=2), 100% screen percentage",
+      "steady_frames": "400–799; startup and screenshot frames excluded",
+      "sample_count": 400,
+      "mean_frame_ms": 21.619485,
+      "average_fps": 46.25457081887011,
+      "p95_frame_ms": 33.3952,
+      "mean_gpu_ms": 5.86119125,
+      "peak_gpu_local_used_mb": 1525.332
+    }
+  },
+  {
+    "state": "Shift",
+    "render_mode": "windowed",
+    "exit_code": 777003,
+    "screenshot": true,
+    "performance": {
+      "resolution": "1920x1080",
+      "quality": "High (sg.*=2), 100% screen percentage",
+      "steady_frames": "400–799; startup and screenshot frames excluded",
+      "sample_count": 400,
+      "mean_frame_ms": 21.6169355,
+      "average_fps": 46.2600260800149,
+      "p95_frame_ms": 33.3825,
+      "mean_gpu_ms": 5.855367,
+      "peak_gpu_local_used_mb": 1521.2695
+    }
+  },
+  {
+    "state": "Normal",
+    "render_mode": "fullscreen",
+    "exit_code": 777003,
+    "screenshot": true,
+    "performance": {
+      "resolution": "1920x1080",
+      "quality": "High (sg.*=2), 100% screen percentage",
+      "steady_frames": "400–799; startup and screenshot frames excluded",
+      "sample_count": 400,
+      "mean_frame_ms": 16.666033249999998,
+      "average_fps": 60.0022803866661,
+      "p95_frame_ms": 16.7661,
+      "mean_gpu_ms": 7.80854275,
+      "peak_gpu_local_used_mb": 1733.293
+    }
+  },
+  {
+    "state": "Shift",
+    "render_mode": "fullscreen",
+    "exit_code": 777003,
+    "screenshot": true,
+    "performance": {
+      "resolution": "1920x1080",
+      "quality": "High (sg.*=2), 100% screen percentage",
+      "steady_frames": "400–799; startup and screenshot frames excluded",
+      "sample_count": 400,
+      "mean_frame_ms": 16.6660395,
+      "average_fps": 60.00225788496421,
+      "p95_frame_ms": 16.7709,
+      "mean_gpu_ms": 7.77578375,
+      "peak_gpu_local_used_mb": 1732.168
+    }
+  }
+]

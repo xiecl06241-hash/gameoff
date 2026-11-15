@@ -1,0 +1,15 @@
+/Binaries/
+/DerivedDataCache/
+/Intermediate/
+/Saved/
+/Builds/
+/Build/Windows/FileOpenOrder/
+/.vs/
+/.codex-remote-attachments/
+.env
+.env.*
+*.log
+*.zip
+*.sln
+*.VC.db
+__pycache__/

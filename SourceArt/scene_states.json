@@ -1,0 +1,87 @@
+{
+  "units": "centimeters",
+  "normal_map": "/Game/ShiftStore/Maps/Normal",
+  "shift_map": "/Game/ShiftStore/Maps/Shift",
+  "fixtures_and_hero_props": {
+    "Gondola_0_1": {
+      "normal": [
+        800,
+        450,
+        0
+      ],
+      "shift": [
+        830,
+        450,
+        0
+      ]
+    },
+    "Gondola_1_1": {
+      "normal": [
+        800,
+        750,
+        0
+      ],
+      "shift": [
+        770,
+        750,
+        0
+      ]
+    },
+    "Hero_Water": {
+      "normal": [
+        1110,
+        178,
+        91
+      ],
+      "shift": [
+        1140,
+        216,
+        91
+      ]
+    },
+    "Hero_Milk": {
+      "normal": [
+        1137,
+        178,
+        91
+      ],
+      "shift": [
+        1162,
+        216,
+        91
+      ]
+    },
+    "Hero_Noodles": {
+      "normal": [
+        1164,
+        178,
+        91
+      ],
+      "shift": [
+        1184,
+        216,
+        91
+      ]
+    },
+    "Hero_Chips": {
+      "normal": [
+        1191,
+        178,
+        91
+      ],
+      "shift": [
+        1206,
+        216,
+        91
+      ]
+    }
+  },
+  "changes": {
+    "shelf_offsets_cm": [
+      30,
+      -30
+    ],
+    "hero_product_changes": 4,
+    "lighting": "main dimmed; refrigeration and exit remain"
+  }
+}

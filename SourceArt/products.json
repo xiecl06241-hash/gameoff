@@ -1,0 +1,86 @@
+[
+  {
+    "id": "Water",
+    "name": "PURE",
+    "description": "SPRING WATER",
+    "cost": 2.0,
+    "category": 0
+  },
+  {
+    "id": "Milk",
+    "name": "DAILY",
+    "description": "WHOLE MILK",
+    "cost": 3.4,
+    "category": 1
+  },
+  {
+    "id": "Soda",
+    "name": "CITRA",
+    "description": "SPARKLING CITRUS",
+    "cost": 2.8,
+    "category": 2
+  },
+  {
+    "id": "Noodles",
+    "name": "MIDNIGHT",
+    "description": "NOODLE CUP",
+    "cost": 4.0,
+    "category": 3
+  },
+  {
+    "id": "Chips",
+    "name": "CRISP",
+    "description": "SEA SALT POTATO",
+    "cost": 3.2,
+    "category": 4
+  },
+  {
+    "id": "Biscuits",
+    "name": "OAT",
+    "description": "BAKED BISCUITS",
+    "cost": 4.2,
+    "category": 5
+  },
+  {
+    "id": "Can",
+    "name": "PANTRY",
+    "description": "TOMATO SOUP",
+    "cost": 3.5,
+    "category": 6
+  },
+  {
+    "id": "Bread",
+    "name": "MORNING",
+    "description": "SOFT BAKED BREAD",
+    "cost": 2.4,
+    "category": 7
+  },
+  {
+    "id": "Tissue",
+    "name": "SOFT",
+    "description": "FACIAL TISSUE",
+    "cost": 2.1,
+    "category": 8
+  },
+  {
+    "id": "Meal",
+    "name": "FRESH",
+    "description": "RICE BOWL",
+    "cost": 7.0,
+    "category": 9
+  },
+  {
+    "id": "Sauce",
+    "name": "UMAMI",
+    "description": "SOY SAUCE",
+    "cost": 4.5,
+    "category": 10
+  },
+  {
+    "id": "Cleaner",
+    "name": "CLEAR",
+    "description": "SURFACE CLEANER",
+    "cost": 5.5,
+    "category": 11
+  }
+]

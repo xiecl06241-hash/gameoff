@@ -1,0 +1,673 @@
+{
+  "Wall_400": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Wall_400",
+    "materials": [
+      "Ivory"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Partition_100": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Partition_100",
+    "materials": [
+      "Ivory"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Floor_400": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Floor_400",
+    "materials": [
+      "Floor"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Ceiling_400": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Ceiling_400",
+    "materials": [
+      "Ivory"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Skirting_400": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Skirting_400",
+    "materials": [
+      "Charcoal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "GlassPanel": {
+    "asset": "/Game/ShiftStore/Meshes/SM_GlassPanel",
+    "materials": [
+      "Glass"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "floor_center"
+  },
+  "Gondola": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Gondola",
+    "materials": [
+      "Charcoal",
+      "Ivory",
+      "DarkMetal",
+      "Rubber",
+      "White",
+      "Teal",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 3036,
+    "pivot": "floor_center"
+  },
+  "WallShelf": {
+    "asset": "/Game/ShiftStore/Meshes/SM_WallShelf",
+    "materials": [
+      "Ivory",
+      "DarkMetal",
+      "White",
+      "Teal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 1196,
+    "pivot": "floor_center"
+  },
+  "Refrigerator": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Refrigerator",
+    "materials": [
+      "Charcoal",
+      "White",
+      "ColdLight",
+      "Metal",
+      "Teal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 1656,
+    "pivot": "floor_center"
+  },
+  "FridgeDoor": {
+    "asset": "/Game/ShiftStore/Meshes/SM_FridgeDoor",
+    "materials": [
+      "Glass",
+      "DarkMetal",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 552,
+    "pivot": "left_bottom_hinge"
+  },
+  "Counter": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Counter",
+    "materials": [
+      "Teal",
+      "Metal",
+      "Wood",
+      "Charcoal",
+      "DarkMetal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 644,
+    "pivot": "floor_center"
+  },
+  "Register": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Register",
+    "materials": [
+      "Charcoal",
+      "Metal",
+      "Screen",
+      "DarkMetal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 656,
+    "pivot": "floor_center"
+  },
+  "Scanner": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Scanner",
+    "materials": [
+      "Charcoal",
+      "Red"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 184,
+    "pivot": "floor_center"
+  },
+  "OdenStation": {
+    "asset": "/Game/ShiftStore/Meshes/SM_OdenStation",
+    "materials": [
+      "Metal",
+      "DarkMetal",
+      "Water",
+      "Food",
+      "Glass"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 3524,
+    "pivot": "floor_center"
+  },
+  "StockRack": {
+    "asset": "/Game/ShiftStore/Meshes/SM_StockRack",
+    "materials": [
+      "DarkMetal",
+      "Wood",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 1104,
+    "pivot": "floor_center"
+  },
+  "Carton": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Carton",
+    "materials": [
+      "Cardboard",
+      "Tape",
+      "White"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 368,
+    "pivot": "floor_center"
+  },
+  "Desk": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Desk",
+    "materials": [
+      "Wood",
+      "DarkMetal",
+      "Ivory",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 828,
+    "pivot": "floor_center"
+  },
+  "Chair": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Chair",
+    "materials": [
+      "Charcoal",
+      "Teal",
+      "Metal",
+      "DarkMetal",
+      "Rubber"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 2372,
+    "pivot": "floor_center"
+  },
+  "Computer": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Computer",
+    "materials": [
+      "Charcoal",
+      "Metal",
+      "Screen",
+      "DarkMetal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 460,
+    "pivot": "floor_center"
+  },
+  "Locker": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Locker",
+    "materials": [
+      "Teal",
+      "Ivory",
+      "Metal",
+      "Charcoal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 736,
+    "pivot": "floor_center"
+  },
+  "Sink": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sink",
+    "materials": [
+      "Ceramic",
+      "Ivory",
+      "DarkMetal",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 852,
+    "pivot": "floor_center"
+  },
+  "Toilet": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Toilet",
+    "materials": [
+      "Ceramic",
+      "DarkMetal",
+      "White",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 1356,
+    "pivot": "floor_center"
+  },
+  "Bin": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Bin",
+    "materials": [
+      "Charcoal",
+      "Metal",
+      "Rubber"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 884,
+    "pivot": "floor_center"
+  },
+  "Broom": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Broom",
+    "materials": [
+      "Teal",
+      "Wood",
+      "Bristles"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 1852,
+    "pivot": "floor_center"
+  },
+  "Mop": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Mop",
+    "materials": [
+      "Metal",
+      "Teal",
+      "White"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 1392,
+    "pivot": "floor_center"
+  },
+  "Bucket": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Bucket",
+    "materials": [
+      "Warning",
+      "DarkMetal",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 884,
+    "pivot": "floor_center"
+  },
+  "FireExtinguisher": {
+    "asset": "/Game/ShiftStore/Meshes/SM_FireExtinguisher",
+    "materials": [
+      "Red",
+      "Metal",
+      "Rubber"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 1172,
+    "pivot": "floor_center"
+  },
+  "InteriorDoor": {
+    "asset": "/Game/ShiftStore/Meshes/SM_InteriorDoor",
+    "materials": [
+      "Wood",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 184,
+    "pivot": "left_bottom_hinge"
+  },
+  "EntranceDoor": {
+    "asset": "/Game/ShiftStore/Meshes/SM_EntranceDoor",
+    "materials": [
+      "Glass",
+      "Metal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 552,
+    "pivot": "left_bottom_hinge"
+  },
+  "LightFixture": {
+    "asset": "/Game/ShiftStore/Meshes/SM_LightFixture",
+    "materials": [
+      "White",
+      "ColdLight"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 184,
+    "pivot": "floor_center"
+  },
+  "PriceTag": {
+    "asset": "/Game/ShiftStore/Meshes/SM_PriceTag",
+    "materials": [
+      "White",
+      "Mint"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 184,
+    "pivot": "floor_center"
+  },
+  "Product_Water": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Water",
+    "materials": [
+      "White",
+      "Teal",
+      "Print_Water"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 1368,
+    "pivot": "floor_center"
+  },
+  "Product_Milk": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Milk",
+    "materials": [
+      "Print_Milk",
+      "White",
+      "Teal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 276,
+    "pivot": "floor_center"
+  },
+  "Product_Soda": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Soda",
+    "materials": [
+      "Print_Soda",
+      "Metal",
+      "DarkMetal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 956,
+    "pivot": "floor_center"
+  },
+  "Product_Noodles": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Noodles",
+    "materials": [
+      "Print_Noodles",
+      "White"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 792,
+    "pivot": "floor_center"
+  },
+  "Product_Chips": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Chips",
+    "materials": [
+      "Print_Chips",
+      "White"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 276,
+    "pivot": "floor_center"
+  },
+  "Product_Biscuits": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Biscuits",
+    "materials": [
+      "Print_Biscuits"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Product_Can": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Can",
+    "materials": [
+      "Print_Can",
+      "Metal",
+      "DarkMetal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 956,
+    "pivot": "floor_center"
+  },
+  "Product_Bread": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Bread",
+    "materials": [
+      "Print_Bread",
+      "White"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 276,
+    "pivot": "floor_center"
+  },
+  "Product_Tissue": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Tissue",
+    "materials": [
+      "Print_Tissue"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Product_Meal": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Meal",
+    "materials": [
+      "Print_Meal",
+      "White"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 184,
+    "pivot": "floor_center"
+  },
+  "Product_Sauce": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Sauce",
+    "materials": [
+      "DarkMetal",
+      "Teal",
+      "Print_Sauce"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 1368,
+    "pivot": "floor_center"
+  },
+  "Product_Cleaner": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Product_Cleaner",
+    "materials": [
+      "Mint",
+      "Teal",
+      "Print_Cleaner",
+      "Charcoal"
+    ],
+    "collision": true,
+    "collision_type": "simple_boxes_and_complex",
+    "triangles": 1552,
+    "pivot": "floor_center"
+  },
+  "Sign_Storefront": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_Storefront",
+    "materials": [
+      "Print_Storefront"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Sign_Welcome": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_Welcome",
+    "materials": [
+      "Print_Welcome"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Sign_Exit": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_Exit",
+    "materials": [
+      "Print_Exit"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Sign_Office": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_Office",
+    "materials": [
+      "Print_Office"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Sign_Warehouse": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_Warehouse",
+    "materials": [
+      "Print_Warehouse"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Sign_Restroom": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_Restroom",
+    "materials": [
+      "Print_Restroom"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Sign_Poster": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_Poster",
+    "materials": [
+      "Print_Poster"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Sign_ShiftNotice": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Sign_ShiftNotice",
+    "materials": [
+      "Print_ShiftNotice"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 12,
+    "pivot": "panel_center"
+  },
+  "Unit_Asphalt": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_Asphalt",
+    "materials": [
+      "Asphalt"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Unit_Floor": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_Floor",
+    "materials": [
+      "Floor"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Unit_Ivory": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_Ivory",
+    "materials": [
+      "Ivory"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Unit_Charcoal": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_Charcoal",
+    "materials": [
+      "Charcoal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Unit_Teal": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_Teal",
+    "materials": [
+      "Teal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Unit_Glass": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_Glass",
+    "materials": [
+      "Glass"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Unit_DarkMetal": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_DarkMetal",
+    "materials": [
+      "DarkMetal"
+    ],
+    "collision": true,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  },
+  "Unit_Metal": {
+    "asset": "/Game/ShiftStore/Meshes/SM_Unit_Metal",
+    "materials": [
+      "Metal"
+    ],
+    "collision": false,
+    "collision_type": "complex_static",
+    "triangles": 92,
+    "pivot": "floor_center"
+  }
+}

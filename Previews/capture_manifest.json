@@ -1,0 +1,72 @@
+[
+  {
+    "state": "Normal",
+    "view": "Entrance",
+    "file": "Normal_Entrance.png"
+  },
+  {
+    "state": "Normal",
+    "view": "Shop",
+    "file": "Normal_Shop.png"
+  },
+  {
+    "state": "Normal",
+    "view": "Checkout",
+    "file": "Normal_Checkout.png"
+  },
+  {
+    "state": "Normal",
+    "view": "Corridor",
+    "file": "Normal_Corridor.png"
+  },
+  {
+    "state": "Normal",
+    "view": "Stockroom",
+    "file": "Normal_Stockroom.png"
+  },
+  {
+    "state": "Normal",
+    "view": "Office",
+    "file": "Normal_Office.png"
+  },
+  {
+    "state": "Normal",
+    "view": "Restroom",
+    "file": "Normal_Restroom.png"
+  },
+  {
+    "state": "Shift",
+    "view": "Entrance",
+    "file": "Shift_Entrance.png"
+  },
+  {
+    "state": "Shift",
+    "view": "Shop",
+    "file": "Shift_Shop.png"
+  },
+  {
+    "state": "Shift",
+    "view": "Checkout",
+    "file": "Shift_Checkout.png"
+  },
+  {
+    "state": "Shift",
+    "view": "Corridor",
+    "file": "Shift_Corridor.png"
+  },
+  {
+    "state": "Shift",
+    "view": "Stockroom",
+    "file": "Shift_Stockroom.png"
+  },
+  {
+    "state": "Shift",
+    "view": "Office",
+    "file": "Shift_Office.png"
+  },
+  {
+    "state": "Shift",
+    "view": "Restroom",
+    "file": "Shift_Restroom.png"
+  }
+]

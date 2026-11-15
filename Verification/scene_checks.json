@@ -1,0 +1,610 @@
+{
+  "maps": {
+    "Normal": {
+      "actor_count": 570,
+      "paths": {
+        "entrance": [
+          {
+            "from": [
+              800,
+              -90
+            ],
+            "to": [
+              800,
+              280
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "left_aisle": [
+          {
+            "from": [
+              600,
+              280
+            ],
+            "to": [
+              600,
+              920
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "right_aisle": [
+          {
+            "from": [
+              1000,
+              280
+            ],
+            "to": [
+              1000,
+              920
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "rear_sales": [
+          {
+            "from": [
+              600,
+              900
+            ],
+            "to": [
+              1455,
+              900
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "corridor_entry": [
+          {
+            "from": [
+              1455,
+              900
+            ],
+            "to": [
+              1455,
+              1125
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "back_corridor": [
+          {
+            "from": [
+              100,
+              1125
+            ],
+            "to": [
+              1500,
+              1125
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "warehouse": [
+          {
+            "from": [
+              395,
+              1125
+            ],
+            "to": [
+              395,
+              1380
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "office": [
+          {
+            "from": [
+              1035,
+              1125
+            ],
+            "to": [
+              1035,
+              1330
+            ],
+            "clear": true,
+            "hit": null
+          },
+          {
+            "from": [
+              1035,
+              1330
+            ],
+            "to": [
+              1170,
+              1370
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "restroom": [
+          {
+            "from": [
+              1435,
+              1125
+            ],
+            "to": [
+              1435,
+              1420
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ]
+      },
+      "missing_materials": [],
+      "empty_meshes": [],
+      "gondolas": {
+        "Gondola_0_0": [
+          400.0,
+          450.0,
+          0.0
+        ],
+        "Gondola_0_1": [
+          800.0,
+          450.0,
+          0.0
+        ],
+        "Gondola_0_2": [
+          1200.0,
+          450.0,
+          0.0
+        ],
+        "Gondola_1_0": [
+          400.0,
+          750.0,
+          0.0
+        ],
+        "Gondola_1_1": [
+          800.0,
+          750.0,
+          0.0
+        ],
+        "Gondola_1_2": [
+          1200.0,
+          750.0,
+          0.0
+        ]
+      },
+      "interactive_actor_mobility": {
+        "EntranceLeft": true,
+        "EntranceRight": true,
+        "CorridorDoor": true,
+        "WarehouseDoor": true,
+        "OfficeDoor": true,
+        "RestroomDoor": true,
+        "FridgeDoor_0_0": true,
+        "FridgeDoor_0_1": true,
+        "FridgeDoor_1_0": true,
+        "FridgeDoor_1_1": true,
+        "FridgeDoor_2_0": true,
+        "FridgeDoor_2_1": true,
+        "FridgeDoor_3_0": true,
+        "FridgeDoor_3_1": true,
+        "DrinksDoor_0": true,
+        "DrinksDoor_1": true,
+        "Hero_Water": true,
+        "Hero_Milk": true,
+        "Hero_Noodles": true,
+        "Hero_Chips": true,
+        "Broom": true,
+        "Mop": true
+      },
+      "collision_negative_control": true,
+      "row_0_aisles_cm": [
+        160.0,
+        160.0
+      ],
+      "row_1_aisles_cm": [
+        160.0,
+        160.0
+      ],
+      "hero_props": {
+        "Water": [
+          1110.0,
+          178.0,
+          91.0
+        ],
+        "Milk": [
+          1137.0,
+          178.0,
+          91.0
+        ],
+        "Noodles": [
+          1164.0,
+          178.0,
+          91.0
+        ],
+        "Chips": [
+          1191.0,
+          178.0,
+          91.0
+        ]
+      },
+      "cold_lamps": {
+        "ColdLamp_0": 150.0,
+        "ColdLamp_1": 150.0,
+        "ColdLamp_2": 150.0,
+        "ColdLamp_3": 150.0
+      }
+    },
+    "Shift": {
+      "actor_count": 571,
+      "paths": {
+        "entrance": [
+          {
+            "from": [
+              800,
+              -90
+            ],
+            "to": [
+              800,
+              280
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "left_aisle": [
+          {
+            "from": [
+              600,
+              280
+            ],
+            "to": [
+              600,
+              920
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "right_aisle": [
+          {
+            "from": [
+              1000,
+              280
+            ],
+            "to": [
+              1000,
+              920
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "rear_sales": [
+          {
+            "from": [
+              600,
+              900
+            ],
+            "to": [
+              1455,
+              900
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "corridor_entry": [
+          {
+            "from": [
+              1455,
+              900
+            ],
+            "to": [
+              1455,
+              1125
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "back_corridor": [
+          {
+            "from": [
+              100,
+              1125
+            ],
+            "to": [
+              1500,
+              1125
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "warehouse": [
+          {
+            "from": [
+              395,
+              1125
+            ],
+            "to": [
+              395,
+              1380
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "office": [
+          {
+            "from": [
+              1035,
+              1125
+            ],
+            "to": [
+              1035,
+              1330
+            ],
+            "clear": true,
+            "hit": null
+          },
+          {
+            "from": [
+              1035,
+              1330
+            ],
+            "to": [
+              1170,
+              1370
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ],
+        "restroom": [
+          {
+            "from": [
+              1435,
+              1125
+            ],
+            "to": [
+              1435,
+              1420
+            ],
+            "clear": true,
+            "hit": null
+          }
+        ]
+      },
+      "missing_materials": [],
+      "empty_meshes": [],
+      "gondolas": {
+        "Gondola_0_0": [
+          400.0,
+          450.0,
+          0.0
+        ],
+        "Gondola_0_1": [
+          830.0,
+          450.0,
+          0.0
+        ],
+        "Gondola_0_2": [
+          1200.0,
+          450.0,
+          0.0
+        ],
+        "Gondola_1_0": [
+          400.0,
+          750.0,
+          0.0
+        ],
+        "Gondola_1_1": [
+          770.0,
+          750.0,
+          0.0
+        ],
+        "Gondola_1_2": [
+          1200.0,
+          750.0,
+          0.0
+        ]
+      },
+      "interactive_actor_mobility": {
+        "EntranceLeft": true,
+        "EntranceRight": true,
+        "CorridorDoor": true,
+        "WarehouseDoor": true,
+        "OfficeDoor": true,
+        "RestroomDoor": true,
+        "FridgeDoor_0_0": true,
+        "FridgeDoor_0_1": true,
+        "FridgeDoor_1_0": true,
+        "FridgeDoor_1_1": true,
+        "FridgeDoor_2_0": true,
+        "FridgeDoor_2_1": true,
+        "FridgeDoor_3_0": true,
+        "FridgeDoor_3_1": true,
+        "DrinksDoor_0": true,
+        "DrinksDoor_1": true,
+        "Hero_Water": true,
+        "Hero_Milk": true,
+        "Hero_Noodles": true,
+        "Hero_Chips": true,
+        "Broom": true,
+        "Mop": true
+      },
+      "collision_negative_control": true,
+      "row_0_aisles_cm": [
+        190.0,
+        130.0
+      ],
+      "row_1_aisles_cm": [
+        130.0,
+        190.0
+      ],
+      "hero_props": {
+        "Water": [
+          1140.0,
+          216.0,
+          91.0
+        ],
+        "Milk": [
+          1162.0,
+          216.0,
+          91.0
+        ],
+        "Noodles": [
+          1184.0,
+          216.0,
+          91.0
+        ],
+        "Chips": [
+          1206.0,
+          216.0,
+          91.0
+        ]
+      },
+      "cold_lamps": {
+        "ColdLamp_0": 150.0,
+        "ColdLamp_1": 150.0,
+        "ColdLamp_2": 150.0,
+        "ColdLamp_3": 150.0
+      }
+    }
+  },
+  "errors": [],
+  "player_capsule_cm": {
+    "radius": 33.99907684326172,
+    "half_height": 96.0
+  },
+  "interactive_mesh_collision": {
+    "FridgeDoor": {
+      "simple_shapes": 6,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Broom": {
+      "simple_shapes": 18,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Mop": {
+      "simple_shapes": 13,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Bucket": {
+      "simple_shapes": 3,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "InteriorDoor": {
+      "simple_shapes": 2,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "EntranceDoor": {
+      "simple_shapes": 6,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Water": {
+      "simple_shapes": 4,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Milk": {
+      "simple_shapes": 3,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Soda": {
+      "simple_shapes": 4,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Noodles": {
+      "simple_shapes": 2,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Chips": {
+      "simple_shapes": 3,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Biscuits": {
+      "simple_shapes": 1,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Can": {
+      "simple_shapes": 4,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Bread": {
+      "simple_shapes": 3,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Tissue": {
+      "simple_shapes": 1,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Meal": {
+      "simple_shapes": 2,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Sauce": {
+      "simple_shapes": 4,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    },
+    "Product_Cleaner": {
+      "simple_shapes": 6,
+      "mode": "<CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX: 1>"
+    }
+  },
+  "printed_materials": {
+    "Water": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Milk": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Soda": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Noodles": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Chips": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Biscuits": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Can": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Bread": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Tissue": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Meal": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Sauce": {
+      "connected_texture": true,
+      "supports_instancing": true
+    },
+    "Cleaner": {
+      "connected_texture": true,
+      "supports_instancing": true
+    }
+  },
+  "round_trip_restores_normal": true
+}
