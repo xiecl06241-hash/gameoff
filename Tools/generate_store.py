@@ -561,7 +561,7 @@ def build_scene(state):
         a.set_editor_property('tags',[u.Name('Audio.Anchor'),u.Name('Audio.'+name)])
     player=EAS.spawn_actor_from_class(u.PlayerStart,u.Vector(800,150,100),u.Rotator(yaw=90))
     player.set_actor_label('WalkthroughStart')
-    gm=u.load_class(None,'/Game/FirstPerson/Blueprints/BP_FirstPersonGameMode.BP_FirstPersonGameMode_C')
+    gm=u.load_class(None,'/Script/ShiftStore.ShiftStoreGameMode') or u.load_class(None,'/Game/FirstPerson/Blueprints/BP_FirstPersonGameMode.BP_FirstPersonGameMode_C')
     world=u.get_editor_subsystem(u.UnrealEditorSubsystem).get_editor_world()
     world.get_world_settings().set_editor_property('default_game_mode',gm)
     # Static display-only bodies do not need the template character full-body mesh.

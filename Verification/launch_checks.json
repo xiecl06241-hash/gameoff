@@ -5,7 +5,7 @@
     "render_mode": "windowed",
     "csv_profiler": false,
     "exit_code": 0,
-    "elapsed_seconds": 16.31,
+    "elapsed_seconds": 14.7,
     "orderly_shutdown": true,
     "missing_material_usage_warning": false
   },
@@ -15,27 +15,7 @@
     "render_mode": "windowed",
     "csv_profiler": false,
     "exit_code": 0,
-    "elapsed_seconds": 14.45,
-    "orderly_shutdown": true,
-    "missing_material_usage_warning": false
-  },
-  {
-    "state": "Normal",
-    "resolution": "1920x1080",
-    "render_mode": "fullscreen",
-    "csv_profiler": false,
-    "exit_code": 0,
-    "elapsed_seconds": 14.94,
-    "orderly_shutdown": true,
-    "missing_material_usage_warning": false
-  },
-  {
-    "state": "Shift",
-    "resolution": "1920x1080",
-    "render_mode": "fullscreen",
-    "csv_profiler": false,
-    "exit_code": 0,
-    "elapsed_seconds": 11.65,
+    "elapsed_seconds": 11.87,
     "orderly_shutdown": true,
     "missing_material_usage_warning": false
   }

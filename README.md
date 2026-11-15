@@ -1,61 +1,80 @@
-# SHIFT / 24 — 首批环境资产
+# SHIFT / 24 — Convenience Store Night-Shift Horror (GitHub Game Off 2026)
 
-UE 5.8.2 制作的架空便利店环境，包含正常、异常两套地图和独立 Windows 第一人称漫游预览。
+**SHIFT / 24** is a 3D first-person convenience store night-shift horror game created in **Unreal Engine 5.8.2** for **GitHub Game Off 2026** around the theme **SHIFT** (*working the night shift* + *the store physically shifting into an abnormal state when an entity reveals itself*).
 
-## 直接试玩
+---
 
-打开 `Builds/Windows`，双击 **启动正常场景.cmd** 或 **启动异常场景.cmd**，以 1920×1080 全屏预览。直接双击 `ShiftStore.exe` 默认进入正常场景。
+## English Overview (For Game Off 2026 Judges & Players)
 
-WASD 移动，鼠标观察，Alt+F4 退出。试玩需要保留整个 Windows 文件夹，无需安装 UE 或 Python。门在这批环境预览中保持打开，方便检查全部区域。
+### How to Play
+1. Open `Builds/Windows` and double-click **`ShiftStore.exe`** (or **`启动正常场景.cmd`** for 1920×1080 fullscreen).
+2. Complete your assigned clerk chores before their timers expire—overdue tasks steadily drain your **Sanity**.
+3. Once all active chores are finished, a customer enters the store (only one customer is inside at a time):
+   - **Normal Customers** browse, occasionally ask you to fetch a specific product (`[E]` to pick up from a shelf and `[E]` to hand it over), and pay at the **Checkout Register** (`[E]`).
+   - **Abnormal Entities** disguise themselves as customers and reveal themselves while you are fetching an item. When they reveal, **the entire store automatically SHIFTS**: middle gondolas slide 30 cm, main ceiling lights cut out leaving only cold-storage and exit lights, and a displaced item begins glowing red somewhere in the store.
+4. **Banishing an Entity**: Find the item the entity demands and deliver it to the **Checkout Register** (`[E]`) while avoiding or looping the entity around shelves.
+   - Throwing merchandise (`[F]` or `Right Mouse Button`) stuns the entity temporarily (each product has a distinct wholesale cost and stun duration), or you can grab a hot cup from the **Oden Station** for a heavy stun.
+   - Destroyed merchandise is deducted at wholesale cost from store revenue; exceeding the loss limit (`-$40`) terminates your run.
+   - If grabbed, hold/mash `[E]` to struggle free slowly, or press `[F]`/`[RMB]` while holding a product to smash the entity and break free immediately.
+5. After all customers for the night are served, equip the **Mop** in the back corridor, clean the floor spills, and survive until **06:00 AM Dawn**. Progress auto-saves after each night (3 nights total).
 
-## 已制作内容
-
-- 约 16×16 米的单层店铺，层高 3.2 米；营业厅、后勤走廊、仓库、办公室与卫生间。
-- 六组双面货架、两组靠墙货架、四个冷柜、一个饮品柜、收银区及关东煮台。
-- 办公、仓储、卫生间家具，以及扫帚、拖把、桶、垃圾桶、灭火器等道具。
-- 十二类原创商品模型及包装：水、牛奶、汽水、杯面、零食、饼干、罐头、面包、纸巾、盒饭、调味瓶、清洁剂。
-- 正常／异常状态：两组中间货架分别横移 30 厘米、四件独立商品换位、一处告示变化、照明变化。
-- 保留冷柜与出口局部照明，配置制冷、呼吸、脚步等未来音效使用的空间锚点。
-
-本批交付环境资产、材质、状态配置与漫游预览。顾客、怪物、角色动画、任务逻辑和七晚流程按批准计划留在后续阶段。状态选择用于查看环境效果，不是游戏中的主动切换能力。
-
-## 编辑工程与模型
-
-用 UE 5.8.2 打开 `ShiftStore.uproject`。
-
-从 GitHub 克隆时需要 Git LFS，以下载 `.uasset`、`.umap` 模型和地图文件。克隆后如缺少资产，先在工程目录运行 `git lfs install`、`git lfs pull`。引擎缓存、运行日志和 Windows 打包文件不进入源码仓库；独立预览需要运行 `Tools/PackageWindows.ps1` 生成。
-
-`Docs/游戏讨论整理.md` 是策划文档的同步快照；本机策划原稿仍维护在 `C:\obisidian\GAMEJAM\game off 2026\游戏讨论整理.md`。
-
-| 内容 | 工程位置 |
+### Controls
+| Key / Input | Action |
 | --- | --- |
-| 正常地图 | `/Game/ShiftStore/Maps/Normal` |
-| 异常地图 | `/Game/ShiftStore/Maps/Shift` |
-| 独立模型 | `/Game/ShiftStore/Meshes` |
-| 程序化材质、印刷材质 | `/Game/ShiftStore/Materials` |
-| 原创包装与招牌贴图 | `/Game/ShiftStore/Textures` |
-| 模型目录与转轴说明 | `SourceArt/asset_catalog.json` |
-| 两态位置配置 | `SourceArt/scene_states.json` |
-| 商品基础资料 | `SourceArt/products.json` |
+| `W` `A` `S` `D` | Move |
+| `Mouse` (or Arrow Keys) | Look |
+| `E` or `Left Mouse Button` | Interact / Pick up item / Hold to complete chore / Ring up / Struggle |
+| `F` or `Right Mouse Button` | Throw held item (stuns entity on hit) |
+| `G` | Drop held item |
+| `Space` / `Enter` | Advance Title / Night Intro / Dawn screens |
+| `R` | Restart current night from auto-save (on Game Over screen) |
+| `Alt + F4` | Quit |
 
-门与冷柜门的转轴位于左下铰链处，分别保存为独立网格；家具和商品主要采用底部中心转轴。可拾取样品、工具、门及音源锚点带有 Actor Tags，供后续交互系统识别。普通陈列商品采用实例化网格减少绘制开销，四件独立商品样品可单独配置交互。
+### AI Usage Disclosure (GitHub Game Off 2026 Compliance)
+In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
+- **Code & Tooling**: C++ gameplay systems (`Source/ShiftStore/`), Unreal Editor Python geometry/material authoring scripts (`Tools/generate_store.py`), and packaging/verification scripts were developed with the assistance of AI coding agents (Codex, Claude / Gemini in Antigravity).
+- **Environment & Packaging Art**: All 59 store meshes, 44 procedural materials, and 21 product/signage textures (`SourceArt/Labels/`) are deterministically generated via Python (`Tools/author_labels.py` and `Tools/generate_store.py`) without third-party store asset packs or real-world brand logos.
+- **Character & Template Assets**: First-person movement foundations and the `SKM_Manny_Simple` character mannequin/unarmed locomotion animations come from the official **Unreal Engine 5 First Person Template** (governed by the Unreal Engine EULA).
 
-价格资料是资产样例数据，尚未作为正式游戏平衡数值。
+### License
+- **Source Code & Scripts** (`Source/`, `Tools/`): [MIT License](LICENSE)
+- **Original Procedural Store Meshes & Label Artwork** (`SourceArt/`, `Content/ShiftStore/`): [CC BY 4.0](LICENSE)
 
-## 可重复生成
+---
 
-几何和材质由 `Tools/generate_store.py` 使用 UE Geometry Scripting 生成。包装图案由 `Tools/author_labels.py` 从文字、矢量图形生成，源文件保存在 `SourceArt`。没有购买或下载第三方店铺模型、品牌包装或贴图。
+## 中文说明（玩法、工程与构建指南）
 
-开发机可运行 `Tools/RebuildAssets.ps1` 重新生成并验证；所需工具为 UE 5.8.2、Python 和 Pillow。**重新生成会重建这两张自有场景并更新生成资产，手工调整版本应先另存。**正常编辑和试玩不需要重新生成。
+### 1. 直接试玩
+打开 `Builds/Windows`，双击 **`启动正常场景.cmd`**（1920×1080 全屏）或 **`ShiftStore.exe`**。
+按 `Space` 或 `E` 从标题页进入第一晚夜班。
 
-`Tools/PackageWindows.ps1` 打包到 `Builds/Windows`。烘焙采用本地文件输出，独立包中的网格与材质已保存，不依赖运行时 Python、生成脚本或 Zen 服务器。
+### 2. 核心玩法与完整流程（3 晚 MVP）
+- **日常店员任务与清醒度（Sanity）**：每项补货（从仓库取货箱 `Stock Carton`）、清点、整理、倒垃圾任务都有独立倒计时；逾期会持续扣除清醒度，完成后停止扣除并部分恢复清醒度。
+- **顾客进店与服务优先级**：只有当前待办任务全部完成且店内无残留顾客/怪物时，下一位顾客才会进店（同时仅 1 位在店）。帮求助顾客找到指定商品（按 `E` 拿取并按 `E` 递交），并在收银台按 `E` 结账获得营业收入。
+- **怪物显形与店铺自动转变（Shift）**：异常顾客会在你帮忙找商品时显形；显形瞬间**同一家便利店在运行时平滑转入 Shift 异常状态**（中排货架横移 30 cm、主照明熄灭仅留冷柜与出口灯、欢迎牌变为异常告示，同时刷出泛红光的异常需求商品）。若未目击显形，怪物会潜伏偷袭，抓到玩家时额外一次性扣除大段清醒度。
+- **反制、挣脱与店铺亏损（Loss Limit）**：把异常顾客要求的商品送到收银台即可驱离怪物并让店铺恢复正常。期间可用商品或关东煮热汤（`F` 或鼠标右键投掷）砸晕怪物争取时间；损坏的商品按成本价计入负收入，累计亏损达到 `-$40` 或清醒度归零即淘汰。被抓时可按住/连按 `E` 缓慢挣脱，或手持商品按 `F`/`右键` 直接砸晕快速挣脱。
+- **夜末打扫与自动存档**：服务完当晚全部顾客后，去后勤走廊拿起拖把（`Mop`）清理地面污渍即可迎来 `06:00 AM` 天亮并自动存档；失败可按 `R`/`Space` 回溯至当晚开头。
 
-## 验证与预览
+### 3. 工程结构与重新构建
+用 **Unreal Engine 5.8.2** 与 **Visual Studio 2022** 打开 `ShiftStore.uproject`。
+克隆仓库后请确保安装了 Git LFS（`git lfs install && git lfs pull`）。
 
-`Previews` 保存引擎实际渲染的正常／异常对比截图。`Saved/validation.json` 检查两态通道、后勤房间可达性、碰撞对照、材料分配与商品位置。`Tools/runtime_smoke.py` 启动独立包，记录运行日志、截图与 CSV 帧性能。
+| 目录 / 文件 | 说明 |
+| --- | --- |
+| `Source/ShiftStore/` | C++ 核心玩法模块（`AShiftStoreGameMode`、`AShiftDirector` 运行时 Shift 切换器、`AShiftCustomer` 顾客与怪物 AI、`AShiftPlayerCharacter`、`AShiftTaskTarget`、`AShiftItem`、`AShiftHUD`、`UShiftSaveGame`） |
+| `/Game/ShiftStore/Maps/Normal` | 游戏主地图（包含运行时 Normal ↔ Shift 状态平滑切换） |
+| `/Game/ShiftStore/Maps/Shift` | 独立异常状态参考地图（供环境预览对比） |
+| `/Game/ShiftStore/Meshes` & `Materials` | 59 个原创静态网格、44 个程序化与印刷材质 |
+| `SourceArt/` | 包装贴图生成结果、`products.json`、`scene_states.json`、`asset_catalog.json` |
+| `Tools/RebuildAssets.ps1` | 从 Python 脚本确定性重建模型、贴图与场景并执行碰撞验证 |
+| `Tools/PackageWindows.ps1` | 编译 C++ 并打包独立 Windows 可执行版本到 `Builds/Windows` |
+| `Docs/游戏讨论整理.md` | 游戏策划讨论与规则文档 |
+| `VERIFICATION.md` | 自动化场景、构建、玩法自检与性能验证记录 |
 
-验证结果汇总见 `VERIFICATION.md`，精简检查数据保存在 `Verification`。本机全屏固定入口机位采样约 60 FPS；完整手动漫游仍有验收限制。CSV 性能记录器的退出异常单独记录，试玩启动器不启用该记录器。
+### 4. 回归检查
 
-## 内容来源
+完成 Windows 打包后，在 Git Bash 的工程目录运行 `python Tools/check_gameplay.py`。脚本会启动两个隔离的独立包进程：正常用例必须返回 0，故意注入失败的用例必须返回 1，且两次运行前后的玩家存档内容必须保持一致。
 
-店铺几何、道具、程序化材质、图案和包装由本项目生成。第一人称控制器及其依赖来自本机 Epic First Person 模板，适用 Unreal Engine 的相关条款。源工程保留这部分模板依赖，便于继续开发。
+自检覆盖：顾客模型与动画的打包加载、真实物理投掷命中、成本扣款、首夜及后续夜晚的账本回滚、GC 后的告示保活、跨帧验证货架与实例商品位置／灯光／告示切换和恢复、闪灯结束恢复，以及专用存档槽的读写与清理。它不等同于完整的人工通关验收。
+
+自检需要专用进程参数 `-ShiftSelfTest -ShiftSelfTestExit`；正常游玩进程中的 `ShiftRunSelfTest` 命令会拒绝执行，避免破坏当前夜晚。自检只使用随机命名的 `ShiftStoreSelfTest_*` 存档槽，并在结束时清理。原始报告和日志位于 `Saved/QA`，可分享的结果位于 `Verification/gameplay_selftest*.json`。

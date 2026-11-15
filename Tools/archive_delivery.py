@@ -20,16 +20,16 @@ for p in (out/'Windows').rglob('*'):
     rel=p.relative_to(out/'Windows')
     if p.is_file() and 'Saved' not in rel.parts and p.suffix.lower()!='.pdb' and not p.name.startswith('Manifest_'):
         runtime.append((p,'Windows/'+rel.as_posix()))
-required=['Windows/ShiftStore.exe','Windows/启动正常场景.cmd','Windows/启动异常场景.cmd','Windows/Engine/Binaries/Win64/UnrealGame.exe']
+required=['Windows/ShiftStore.exe','Windows/启动正常场景.cmd','Windows/启动异常场景.cmd','Windows/ShiftStore/Binaries/Win64/ShiftStore.exe']
 assert all(n in {name for _,name in runtime} for n in required)
 results=[archive(out/'ShiftStore-Windows.zip',runtime)]
 source=[]
-for folder in ('Config','Content','Tools','SourceArt','Previews','Verification'):
+for folder in ('Config','Content','Source','Tools','SourceArt','Previews','Verification'):
     for p in (r/folder).rglob('*'):
         rel=p.relative_to(r)
         if p.is_file() and '__pycache__' not in rel.parts:
             source.append((p,'ShiftStore/'+rel.as_posix()))
-for name in ('ShiftStore.uproject','README.md','VERIFICATION.md','.gitignore'):
+for name in ('ShiftStore.uproject','README.md','VERIFICATION.md','LICENSE','.gitignore','.gitattributes'):
     p=r/name
     if p.exists(): source.append((p,'ShiftStore/'+name))
 results.append(archive(out/'ShiftStore-UE-Source.zip',source))

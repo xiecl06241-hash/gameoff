@@ -2,7 +2,14 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Category": "Games",
-  "Description": "Shift Store \u2014 modular environment walkthrough",
+  "Description": "Shift Store \u2014 night-shift convenience store horror (GitHub Game Off 2026)",
+  "Modules": [
+    {
+      "Name": "ShiftStore",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
   "Plugins": [
     {
       "Name": "PythonScriptPlugin",

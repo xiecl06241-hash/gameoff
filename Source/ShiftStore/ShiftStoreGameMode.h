@@ -1,0 +1,110 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/GameModeBase.h"
+#include "ShiftTypes.h"
+#include "ShiftStoreGameMode.generated.h"
+
+class AShiftDirector;
+class AShiftTaskTarget;
+class AShiftCustomer;
+class AShiftItem;
+class UAudioComponent;
+
+UCLASS()
+class SHIFTSTORE_API AShiftStoreGameMode : public AGameModeBase
+{
+	GENERATED_BODY()
+
+public:
+	AShiftStoreGameMode();
+
+	const FShiftNightSpec& CurrentNightSpec() const;
+
+	void StartNight(int32 InNightIndex);
+	void RestartCurrentNight();
+	void OnAdvanceScreenKey();
+
+	void OnTaskCompleted(AShiftTaskTarget* Task);
+	void OnCustomerNeedsHelp(AShiftCustomer* Customer);
+	void OnCustomerHelped(AShiftCustomer* Customer);
+	void OnCustomerAtCheckout(AShiftCustomer* Customer);
+	void OnCheckoutCompleted(AShiftCustomer* Customer);
+	void OnMonsterRevealed(AShiftCustomer* Monster, bool bWitnessed);
+	void OnMonsterDemandDelivered(AShiftCustomer* Monster);
+	void OnCustomerFinished(AShiftCustomer* Customer);
+
+	void OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Customer);
+	void OnItemBroken(AShiftItem* Item, bool bUsedOnMonster);
+
+	void ModifySanity(float Delta, const FString& Reason = TEXT(""));
+	void SetStatusBanner(const FString& InText, float Seconds = 3.f);
+
+	UFUNCTION(Exec) void ShiftForceState(int32 bShifted);
+	UFUNCTION(Exec) void ShiftSkipNight();
+	UFUNCTION(Exec) void ShiftRunSelfTest();
+
+	UPROPERTY() TObjectPtr<AShiftDirector> Director;
+	UPROPERTY() TWeakObjectPtr<AShiftTaskTarget> CartonSource;
+	TArray<TWeakObjectPtr<AShiftTaskTarget>> ActiveTasks;
+	TWeakObjectPtr<AShiftCustomer> ActiveCustomer;
+	TWeakObjectPtr<AShiftItem> ActiveLostItem;
+
+	EShiftPhase Phase = EShiftPhase::Title;
+	int32 NightIndex = 0;
+	int32 NextCustomerIdx = 0;
+	int32 CustomersServed = 0;
+
+	float Sanity = ShiftData::MaxSanity;
+	float Income = 0.f;
+	float Losses = 0.f;
+
+	FString BannerText;
+	float BannerTimer = 0.f;
+	FString GameOverReason;
+
+protected:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+
+private:
+	void SpawnTaskFromSpot(int32 SpotIdx);
+	void SpawnRestockAfterService();
+	void SpawnCleanupSpills(int32 Count);
+	void ClearNightActors();
+	void TrySpawnNextCustomer();
+	void TriggerGameOver(const FString& Reason);
+	bool SaveProgress();
+	bool LoadProgress();
+	const FString& ProgressSlotName() const;
+	static const FString PlayerSaveSlotName;
+	int32 CheckpointNight = 0;
+	float CheckpointIncome = 0.f;
+	float CheckpointLosses = 0.f;
+	bool bHasNightCheckpoint = false;
+
+	enum class ESelfTestStage : uint8 { Idle, Setup, Projectile, Reveal, Shift, Restore, Flicker, Finished };
+	void TickSelfTest(float DeltaSeconds);
+	bool CheckSelfTest(const FString& Name, bool bSuccess, const FString& Detail = TEXT(""));
+	void AdvanceSelfTest(ESelfTestStage Stage);
+	void FinishSelfTest(bool bSuccess, const FString& Failure = TEXT(""));
+	ESelfTestStage SelfTestStage = ESelfTestStage::Idle;
+	bool bSelfTestRunning = false;
+	float SelfTestStageTime = 0.f;
+	float SelfTestElapsed = 0.f;
+	int32 SelfTestInitialTasks = 0;
+	FString SelfTestSaveSlotName;
+	TMap<FString, bool> SelfTestChecks;
+	TWeakObjectPtr<AShiftItem> SelfTestProjectile;
+	TArray<uint8> FormalSaveBeforeSelfTest;
+	bool bFormalSaveExistedBeforeSelfTest = false;
+
+	void SetupProceduralAudio();
+	void PlaySynthesizedCue(float FreqHz, float DurationSec, float Volume = 0.25f, bool bNoise = false);
+
+	UPROPERTY() TObjectPtr<UAudioComponent> FridgeHumComp;
+	UPROPERTY() TObjectPtr<UAudioComponent> CueAudioComp;
+	float CustomerSpawnCooldown = 2.0f;
+	float EerieFlickerTimer = 14.f;
+	float AudioFeedTimer = 0.f;
+};
