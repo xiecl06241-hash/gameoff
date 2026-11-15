@@ -1,0 +1,63 @@
+name: Windows build and gameplay tests
+
+# Kept manual: UE is installed on a trusted Windows machine, not hosted runners.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shiftstore-windows-build
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Package Windows (UE 5.8)
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Windows, X64, ue-5.8]
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+        working-directory: ci-${{ github.run_id }}-${{ github.run_attempt }}
+    env:
+      UE_ROOT: ${{ vars.UE_ROOT }}
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: ci-${{ github.run_id }}-${{ github.run_attempt }}
+          lfs: true
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Check repository and downloaded LFS assets
+        run: |
+          python .github/scripts/check_repository.py --require-lfs
+          git lfs fsck
+      - name: Compile editor and package standalone game
+        run: python .github/scripts/build_windows.py
+      - name: Run isolated gameplay regressions
+        run: python Tools/check_gameplay.py
+      - name: Upload standalone Windows build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ShiftStore-Windows-${{ github.sha }}
+          path: |
+            ci-${{ github.run_id }}-${{ github.run_attempt }}/Builds/Windows/**
+            !ci-${{ github.run_id }}-${{ github.run_attempt }}/Builds/Windows/**/Saved/**
+            !ci-${{ github.run_id }}-${{ github.run_attempt }}/Builds/Windows/**/*.pdb
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload build logs and test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Windows-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-${{ github.run_id }}-${{ github.run_attempt }}/Saved/QA/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,67 @@
+name: Repository checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    name: Source checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Check scripts, JSON, asset references and LFS rules
+        run: python .github/scripts/check_repository.py
+
+  workflows:
+    name: Workflow syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download and verify actionlint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=1.7.12
+          destination="$RUNNER_TEMP/actionlint"
+          mkdir -p "$destination"
+          gh release download "v$version" --repo rhysd/actionlint \
+            --pattern "actionlint_${version}_linux_amd64.tar.gz" \
+            --pattern "actionlint_${version}_checksums.txt" --dir "$destination"
+          cd "$destination"
+          sha256sum --ignore-missing --check "actionlint_${version}_checksums.txt"
+          tar -xzf "actionlint_${version}_linux_amd64.tar.gz" actionlint
+      - name: Lint workflows
+        shell: bash
+        run: '"$RUNNER_TEMP/actionlint/actionlint" -color'
