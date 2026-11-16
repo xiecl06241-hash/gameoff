@@ -1,4 +1,6 @@
 #include "ShiftCustomer.h"
+#include "ShiftLocalization.h"
+#include "ShiftGuidance.h"
 #include "ShiftStoreGameMode.h"
 #include "ShiftPlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
@@ -16,6 +18,7 @@ AShiftCustomer::AShiftCustomer()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	bUseControllerRotationYaw = false;
 
 	GetCapsuleComponent()->InitCapsuleSize(34.f, 88.f);
 	GetCapsuleComponent()->SetCollisionObjectType(ShiftData::CustomerCollisionChannel);
@@ -48,6 +51,7 @@ AShiftCustomer::AShiftCustomer()
 	Speech->SetWorldSize(7.5f);
 	Speech->SetTextRenderColor(FColor(235, 240, 230));
 	Speech->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Speech->SetVisibility(false); // Drawn by ShiftHUD with the selected runtime CJK font.
 
 	EyeLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("EyeLight"));
 	EyeLight->SetupAttachment(RootComponent);
@@ -70,6 +74,8 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 	State = ECustomerState::Entering;
 	TargetPos = ShiftData::InsideDoor;
 	StateTimer = 0.f;
+	bHasStoreRouteGoal = false;
+	StoreRoute.Empty();
 	Speech->SetText(FText::GetEmpty());
 }
 
@@ -110,6 +116,11 @@ bool AShiftCustomer::PlayerSeesMe(APawn* Player) const
 void AShiftCustomer::MoveToward(const FVector& Goal, float Speed, float DeltaSeconds)
 {
 	GetCharacterMovement()->MaxWalkSpeed = Speed;
+	if (!IsMonsterActive())
+	{
+		FollowStoreRoute(Goal, DeltaSeconds);
+		return;
+	}
 	FVector Current = GetActorLocation();
 	FVector Flat = Goal - Current;
 	Flat.Z = 0.f;
@@ -132,7 +143,51 @@ void AShiftCustomer::MoveToward(const FVector& Goal, float Speed, float DeltaSec
 		Dir = bBlockedL ? Right : Left;
 	}
 	AddMovementInput(Dir, 1.f);
-	SetActorRotation(FMath::RInterpTo(GetActorRotation(), Dir.Rotation(), DeltaSeconds, 8.f));
+}
+
+void AShiftCustomer::FollowStoreRoute(const FVector& Goal, float DeltaSeconds)
+{
+	StoreRouteRetry -= DeltaSeconds;
+	const FVector Current = GetActorLocation();
+	if (!bHasStoreRouteGoal || !StoreRouteGoal.Equals(Goal, 1.f) || (StoreRoute.IsEmpty() && StoreRouteRetry <= 0.f))
+	{
+		StoreRoute = ShiftGuidance::FindRoute(GetWorld(), this, nullptr, Goal, true);
+		StoreRouteGoal = Goal;
+		bHasStoreRouteGoal = true;
+		StoreRouteIndex = 0;
+		StoreRouteRetry = 1.f;
+		RouteStalledTime = 0.f;
+		PreviousRouteLocation = Current;
+	}
+	while (StoreRoute.IsValidIndex(StoreRouteIndex) && FVector::Dist2D(Current, StoreRoute[StoreRouteIndex]) < 30.f) { ++StoreRouteIndex; }
+	if (!StoreRoute.IsValidIndex(StoreRouteIndex))
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		return;
+	}
+	RouteStalledTime = FVector::DistSquared2D(Current, PreviousRouteLocation) < 0.25f
+		? RouteStalledTime + DeltaSeconds : 0.f;
+	PreviousRouteLocation = Current;
+	if (RouteStalledTime > 0.8f)
+	{
+		// A temporarily blocked doorway should produce a wait/retry, not alternating sidesteps.
+		StoreRoute.Empty();
+		StoreRouteRetry = 0.35f;
+		GetCharacterMovement()->StopMovementImmediately();
+		return;
+	}
+	AddMovementInput((StoreRoute[StoreRouteIndex] - Current).GetSafeNormal2D(), 1.f);
+}
+
+void AShiftCustomer::BeginLeaving()
+{
+	State = ECustomerState::Leaving;
+	StateTimer = 0.f;
+	TargetPos = ShiftData::OutsideDoor;
+	bHasStoreRouteGoal = false;
+	StoreRoute.Empty();
+	ConsumeMovementInputVector();
+	GetCharacterMovement()->StopMovementImmediately();
 }
 
 void AShiftCustomer::ApplyMonsterVisuals()
@@ -159,7 +214,7 @@ void AShiftCustomer::RevealMonster(APawn* Player)
 	State = bWitnessedReveal ? ECustomerState::MonsterHunting : ECustomerState::MonsterStalking;
 	StateTimer = 0.f;
 	Speech->SetTextRenderColor(FColor(255, 80, 70));
-	Speech->SetText(FText::FromString(FString::Printf(TEXT("WHERE IS MY %s"), *ShiftData::ProductLabel(Spec.MonsterSku).ToUpper())));
+	Speech->SetText(FText::FromString(ShiftLoc::Format(TEXT("WHERE IS MY %s"), {FString(ShiftData::ProductLabel(Spec.MonsterSku))})));
 	PickSearchPoint();
 
 	if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>())
@@ -197,7 +252,7 @@ void AShiftCustomer::OnReleasedGrab()
 {
 	State = ECustomerState::MonsterStunned;
 	StunTimer = 1.6f;
-	Speech->SetText(FText::FromString(FString::Printf(TEXT("BRING ME %s -> REGISTER"), *ShiftData::ProductLabel(Spec.MonsterSku).ToUpper())));
+	Speech->SetText(FText::FromString(ShiftLoc::Format(TEXT("BRING ME %s -> REGISTER"), {FString(ShiftData::ProductLabel(Spec.MonsterSku))})));
 }
 
 void AShiftCustomer::SatisfyAndLeave()
@@ -212,8 +267,7 @@ void AShiftCustomer::SatisfyAndLeave()
 	EyeLight->SetIntensity(0.f);
 	Speech->SetTextRenderColor(FColor(200, 220, 210));
 	Speech->SetText(FText::FromString(TEXT("...Thank you.")));
-	State = ECustomerState::Leaving;
-	TargetPos = ShiftData::OutsideDoor;
+	BeginLeaving();
 }
 
 void AShiftCustomer::Tick(float DeltaSeconds)
@@ -252,7 +306,9 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 			if (Spec.bAsksHelp)
 			{
 				State = ECustomerState::WaitingForHelp;
-				Speech->SetText(FText::FromString(FString::Printf(TEXT("[Need: %s]"), *ShiftData::ProductLabel(Spec.WantedSku))));
+				ConsumeMovementInputVector();
+				GetCharacterMovement()->StopMovementImmediately();
+				Speech->SetText(FText::FromString(ShiftLoc::Format(TEXT("[Need: %s]"), {FString(ShiftData::ProductLabel(Spec.WantedSku))})));
 				if (GM) { GM->OnCustomerNeedsHelp(this); }
 			}
 			else
@@ -278,9 +334,11 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 
 	case ECustomerState::WalkingToCheckout:
 		MoveToward(TargetPos, 185.f, DeltaSeconds);
-		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 55.f || StateTimer > 8.f)
+		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 55.f)
 		{
 			State = ECustomerState::WaitingAtCheckout;
+			ConsumeMovementInputVector();
+			GetCharacterMovement()->StopMovementImmediately();
 			StateTimer = 0.f;
 			Speech->SetText(FText::FromString(TEXT("[ Waiting at Register - Press E ]")));
 			if (GM) { GM->OnCustomerAtCheckout(this); }
@@ -338,13 +396,13 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 		if (StunTimer <= 0.f)
 		{
 			State = ECustomerState::MonsterHunting;
-			Speech->SetText(FText::FromString(FString::Printf(TEXT("WHERE IS MY %s"), *ShiftData::ProductLabel(Spec.MonsterSku).ToUpper())));
+			Speech->SetText(FText::FromString(ShiftLoc::Format(TEXT("WHERE IS MY %s"), {FString(ShiftData::ProductLabel(Spec.MonsterSku))})));
 		}
 		break;
 
 	case ECustomerState::Leaving:
 		MoveToward(TargetPos, 210.f, DeltaSeconds);
-		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 60.f || StateTimer > 9.f)
+		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 60.f)
 		{
 			if (GM) { GM->OnCustomerFinished(this); }
 			Destroy();

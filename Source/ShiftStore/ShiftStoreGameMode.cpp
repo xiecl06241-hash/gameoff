@@ -1,4 +1,5 @@
 #include "ShiftStoreGameMode.h"
+#include "ShiftLocalization.h"
 #include "ShiftPlayerCharacter.h"
 #include "ShiftHUD.h"
 #include "ShiftDirector.h"
@@ -13,6 +14,7 @@
 #include "Sound/SoundWaveProcedural.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "GameFramework/PlayerController.h"
 
 const FString AShiftStoreGameMode::PlayerSaveSlotName(TEXT("ShiftStoreSlot"));
 
@@ -32,6 +34,21 @@ const FShiftNightSpec& AShiftStoreGameMode::CurrentNightSpec() const
 void AShiftStoreGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	ShiftLoc::Initialize();
+	SelectedLanguage = ShiftLoc::CurrentLanguage();
+	FString PreviewLanguage;
+	if (FParse::Value(FCommandLine::Get(), TEXT("ShiftLanguage="), PreviewLanguage))
+	{
+		for (int32 Index = 0; Index < ShiftLoc::LanguageCount; ++Index)
+		{
+			if (PreviewLanguage == ShiftLoc::LanguageCode(Index))
+			{
+				ShiftLoc::SetLanguage(Index, false);
+				SelectedLanguage = Index;
+				break;
+			}
+		}
+	}
 
 	Director = GetWorld()->SpawnActor<AShiftDirector>(FVector::ZeroVector, FRotator::ZeroRotator);
 
@@ -52,7 +69,13 @@ void AShiftStoreGameMode::BeginPlay()
 		ShiftRunSelfTest();
 		return;
 	}
-	LoadProgress();
+	if (FParse::Param(*CmdLine, TEXT("ShiftLocalizationTest")))
+	{
+		NightIndex = 0;
+		OpenLanguageSelection();
+		return;
+	}
+	bHasSavedProgress = LoadProgress();
 	if (FParse::Param(*CmdLine, TEXT("ShiftAutoStart")))
 	{
 		StartNight(NightIndex);
@@ -60,7 +83,32 @@ void AShiftStoreGameMode::BeginPlay()
 	}
 	else
 	{
-		Phase = EShiftPhase::Title;
+		OpenLanguageSelection();
+	}
+}
+
+void AShiftStoreGameMode::OpenLanguageSelection()
+{
+	Phase = EShiftPhase::LanguageSelection;
+	SelectedLanguage = ShiftLoc::CurrentLanguage();
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		PC->SetShowMouseCursor(true);
+		FInputModeGameAndUI Mode;
+		Mode.SetHideCursorDuringCapture(false);
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PC->SetInputMode(Mode);
+	}
+}
+
+void AShiftStoreGameMode::ConfirmLanguage()
+{
+	if (Phase != EShiftPhase::LanguageSelection || !ShiftLoc::SetLanguage(SelectedLanguage)) { return; }
+	Phase = EShiftPhase::Title;
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		PC->SetShowMouseCursor(false);
+		PC->SetInputMode(FInputModeGameOnly());
 	}
 }
 
@@ -145,6 +193,9 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	CheckpointLosses = Losses;
 	bHasNightCheckpoint = true;
 	NextCustomerIdx = 0;
+	GuidedTaskIndex = 0;
+	SalesSinceRestock = 0;
+	ServiceTaskRotation = 0;
 	CustomersServed = 0;
 	Sanity = ShiftData::MaxSanity;
 	CustomerSpawnCooldown = 1.5f;
@@ -175,7 +226,7 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 		SpawnTaskFromSpot(SpotIdx);
 	}
 	Phase = EShiftPhase::NightIntro;
-	SetStatusBanner(FString::Printf(TEXT("%s — Complete opening chores to let customers in."), *Spec.Title), 4.f);
+	SetStatusBanner(ShiftLoc::Format(TEXT("%s — Complete opening chores to let customers in."), {FString(Spec.Title)}), 4.f);
 }
 
 void AShiftStoreGameMode::RestartCurrentNight()
@@ -198,7 +249,10 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 {
 	if (Phase == EShiftPhase::Title)
 	{
-		StartNight(NightIndex);
+		// The primary title action always starts a new run. Resume is explicit [C].
+		Income = 0.f;
+		Losses = 0.f;
+		StartNight(0);
 	}
 	else if (Phase == EShiftPhase::NightIntro)
 	{
@@ -228,6 +282,74 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 		SaveProgress();
 		StartNight(0);
 	}
+}
+
+void AShiftStoreGameMode::ContinueSavedGame()
+{
+	if (Phase == EShiftPhase::Title && bHasSavedProgress && LoadProgress())
+	{
+		StartNight(NightIndex);
+	}
+}
+
+void AShiftStoreGameMode::CycleGuidedTask()
+{
+	if (!ActiveTasks.IsEmpty()) { GuidedTaskIndex = (GuidedTaskIndex + 1) % ActiveTasks.Num(); }
+}
+
+bool AShiftStoreGameMode::GetTaskGuidance(const AShiftPlayerCharacter* Player, FShiftTaskGuidance& Out) const
+{
+	Out = FShiftTaskGuidance();
+	// Clerk guidance never reveals a monster or the position of its hidden demand item.
+	if (!Player || ActiveCustomer.IsValid() || ActiveTasks.IsEmpty()
+		|| (Phase != EShiftPhase::Working && Phase != EShiftPhase::Cleanup)) { return false; }
+	AShiftTaskTarget* Task = ActiveTasks[FMath::Clamp(GuidedTaskIndex, 0, ActiveTasks.Num() - 1)].Get();
+	if (!Task) { return false; }
+	Out.Target = Task;
+	Out.Location = Task->GetActorLocation();
+	Out.TaskLabel = Task->Label;
+	if (Task->Type == EShiftTaskType::Restock)
+	{
+		if (Player->HeldItem.IsValid() && Player->HeldItem->Kind == EShiftItemKind::Carton)
+		{
+			Out.Action = EShiftGuideAction::DeliverCarton;
+		}
+		else if (AShiftTaskTarget* Source = CartonSource.Get())
+		{
+			Out.Action = EShiftGuideAction::CollectCarton;
+			Out.Target = Source;
+			Out.Location = Source->GetActorLocation();
+		}
+	}
+	else if (Task->Type == EShiftTaskType::Spill)
+	{
+		Out.Action = EShiftGuideAction::MopFloor;
+		if (!Player->HeldItem.IsValid() || Player->HeldItem->Kind != EShiftItemKind::Mop)
+		{
+			Out.Action = EShiftGuideAction::CollectMop;
+			for (TActorIterator<AShiftItem> It(GetWorld()); It; ++It)
+			{
+				if (It->Kind == EShiftItemKind::Mop && !It->IsHidden())
+				{
+					Out.Target = *It;
+					Out.Location = It->GetActorLocation() + FVector(0.f, 0.f, 20.f);
+					return true;
+				}
+			}
+			for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+			{
+				if (It->ActorHasTag(TEXT("Tool.Mop")) && !It->IsHidden())
+				{
+					Out.Action = EShiftGuideAction::CollectMop;
+					Out.Target = *It;
+					Out.Location = It->GetActorLocation() + FVector(0.f, 0.f, 70.f);
+					break;
+				}
+			}
+		}
+	}
+	if (Task->Type == EShiftTaskType::CookOden) { Out.Action = EShiftGuideAction::CookOden; }
+	return true;
 }
 
 void AShiftStoreGameMode::SpawnTaskFromSpot(int32 SpotIdx)
@@ -268,9 +390,30 @@ void AShiftStoreGameMode::SpawnCleanupSpills(int32 Count)
 		AShiftTaskTarget* T = GetWorld()->SpawnActor<AShiftTaskTarget>(SpillLocs[i % 4], FRotator::ZeroRotator);
 		if (T)
 		{
-			T->Setup(EShiftTaskType::Spill, FString::Printf(TEXT("Mop floor residue #%d"), i + 1), 75.f);
+			T->Setup(EShiftTaskType::Spill, ShiftLoc::Format(TEXT("Mop floor residue #%d"), {LexToString(i + 1)}), CurrentNightSpec().TaskTimeLimit);
 			ActiveTasks.Add(T);
 		}
+	}
+}
+
+void AShiftStoreGameMode::SpawnPostServiceTask()
+{
+	if (!ActiveTasks.IsEmpty()) { return; }
+	if (SalesSinceRestock >= 3)
+	{
+		SpawnRestockAfterService();
+		if (!ActiveTasks.IsEmpty()) { SalesSinceRestock = 0; }
+	}
+	else
+	{
+		// One brief chore between customers; alternate shelf facing and hot-food preparation.
+		const int32 Spot = ServiceTaskRotation % 2 == 0 ? 5 + (ServiceTaskRotation / 2) % 2 : 10;
+		SpawnTaskFromSpot(Spot);
+	}
+	++ServiceTaskRotation;
+	if (!ActiveTasks.IsEmpty())
+	{
+		SetStatusBanner(ShiftLoc::Format(TEXT("Next chore: %s. Follow the yellow marker."), {ActiveTasks[0]->Label}), 4.f);
 	}
 }
 
@@ -279,6 +422,7 @@ void AShiftStoreGameMode::OnTaskCompleted(AShiftTaskTarget* Task)
 	if (!Task) { return; }
 	const bool bWasOverdue = Task->IsOverdue();
 	ActiveTasks.RemoveAll([Task](const TWeakObjectPtr<AShiftTaskTarget>& P) { return !P.IsValid() || P.Get() == Task; });
+	GuidedTaskIndex = 0;
 	Task->Destroy();
 
 	// Sanity recovery: overdue tasks stop draining and partially recover; on-time tasks give a small boost
@@ -295,7 +439,7 @@ void AShiftStoreGameMode::OnTaskCompleted(AShiftTaskTarget* Task)
 
 	SetStatusBanner(ActiveTasks.Num() == 0
 		? TEXT("All chores complete. Ready for next customer.")
-		: FString::Printf(TEXT("Chore completed! (%d remaining)"), ActiveTasks.Num()), 2.5f);
+		: ShiftLoc::Format(TEXT("Chore completed! (%d remaining)"), {LexToString(ActiveTasks.Num())}), 2.5f);
 }
 
 void AShiftStoreGameMode::TrySpawnNextCustomer()
@@ -309,7 +453,7 @@ void AShiftStoreGameMode::TrySpawnNextCustomer()
 	{
 		Phase = EShiftPhase::Cleanup;
 		SpawnCleanupSpills(Spec.Spills);
-		SetStatusBanner(TEXT("All customers served! Equip the Mop in the back corridor and clean the floor before 06:00."), 5.f);
+		SetStatusBanner(TEXT("All customers served! Equip the Mop in the warehouse and clean the floor before 06:00."), 5.f);
 		PlaySynthesizedCue(580.f, 0.25f, 0.25f);
 		return;
 	}
@@ -331,8 +475,7 @@ void AShiftStoreGameMode::OnCustomerNeedsHelp(AShiftCustomer* Customer)
 {
 	if (!Customer) { return; }
 	PlaySynthesizedCue(480.f, 0.16f, 0.22f);
-	SetStatusBanner(FString::Printf(TEXT("Customer asks for help finding [%s]! Pick it up from a shelf and press [E] on them."),
-		*ShiftData::ProductLabel(Customer->Spec.WantedSku)), 4.5f);
+	SetStatusBanner(ShiftLoc::Format(TEXT("Customer asks for help finding [%s]! Pick it up from a shelf and press [E] on them."), {FString(ShiftData::ProductLabel(Customer->Spec.WantedSku))}), 4.5f);
 }
 
 void AShiftStoreGameMode::OnCustomerHelped(AShiftCustomer* Customer)
@@ -352,17 +495,16 @@ void AShiftStoreGameMode::OnCustomerAtCheckout(AShiftCustomer* Customer)
 
 void AShiftStoreGameMode::OnCheckoutCompleted(AShiftCustomer* Customer)
 {
-	if (!Customer) { return; }
+	if (Phase != EShiftPhase::Working || !Customer || ActiveCustomer.Get() != Customer || Customer->State != ECustomerState::WaitingAtCheckout) { return; }
 	const FShiftProduct* Prod = ShiftData::FindProduct(Customer->Spec.WantedSku);
 	const float SalePrice = Prod ? Prod->Price : 4.5f;
 	Income += SalePrice;
+	++SalesSinceRestock;
 
-	Customer->Speech->SetText(FText::FromString(FString::Printf(TEXT("Paid +$%.2f"), SalePrice)));
-	Customer->State = ECustomerState::Leaving;
-	Customer->TargetPos = ShiftData::OutsideDoor;
-	Customer->StateTimer = 0.f;
+	Customer->Speech->SetText(FText::FromString(ShiftLoc::Format(TEXT("Paid +$%.2f"), {FString::Printf(TEXT("%.2f"), SalePrice)})));
+	Customer->BeginLeaving();
 	PlaySynthesizedCue(820.f, 0.18f, 0.28f);
-	SetStatusBanner(FString::Printf(TEXT("Sale complete (+$%.2f)! Restock sold merchandise."), SalePrice), 3.f);
+	SetStatusBanner(ShiftLoc::Format(TEXT("Sale complete (+$%.2f). The customer is leaving."), {FString::Printf(TEXT("%.2f"), SalePrice)}), 3.f);
 }
 
 void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitnessed)
@@ -387,11 +529,11 @@ void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitne
 	const FString ItemName = ShiftData::ProductLabel(Monster->Spec.MonsterSku);
 	if (bWitnessed)
 	{
-		SetStatusBanner(FString::Printf(TEXT("THE STORE SHIFTED! Find [%s] (Red Glow) and deliver it to the Checkout Register!"), *ItemName), 5.f);
+		SetStatusBanner(ShiftLoc::Format(TEXT("THE STORE SHIFTED! Find [%s] (Red Glow) and deliver it to the Checkout Register!"), {FString(ItemName)}), 5.f);
 	}
 	else
 	{
-		SetStatusBanner(FString::Printf(TEXT("Lights died behind you... An unseen entity is stalking! Find [%s] -> Checkout Register!"), *ItemName), 5.f);
+		SetStatusBanner(ShiftLoc::Format(TEXT("Lights died behind you... An unseen entity is stalking! Find [%s] -> Checkout Register!"), {FString(ItemName)}), 5.f);
 	}
 }
 
@@ -409,14 +551,13 @@ void AShiftStoreGameMode::OnMonsterDemandDelivered(AShiftCustomer* Monster)
 
 void AShiftStoreGameMode::OnCustomerFinished(AShiftCustomer* Customer)
 {
-	if (ActiveCustomer.Get() == Customer)
-	{
-		ActiveCustomer.Reset();
-	}
+	if (!Customer || ActiveCustomer.Get() != Customer) { return; }
+	ActiveCustomer.Reset();
+	if (Phase != EShiftPhase::Working) { return; }
 	CustomersServed++;
 	CustomerSpawnCooldown = 2.0f;
 
-	// After serving a customer: prioritize restocking, then reset timers on any remaining tasks
+	// Existing chores are reassigned, but no extra work is inserted after the last customer.
 	for (TWeakObjectPtr<AShiftTaskTarget>& TP : ActiveTasks)
 	{
 		if (AShiftTaskTarget* T = TP.Get())
@@ -424,13 +565,12 @@ void AShiftStoreGameMode::OnCustomerFinished(AShiftCustomer* Customer)
 			T->RestartTimer(CurrentNightSpec().TaskTimeLimit);
 		}
 	}
-	SpawnRestockAfterService();
-	// Also assign one additional chore if the night still has customers waiting
-	if (NextCustomerIdx < CurrentNightSpec().Customers.Num())
+	if (NextCustomerIdx >= CurrentNightSpec().Customers.Num())
 	{
-		const int32 ExtraSpot = (NightIndex * 3 + CustomersServed * 2) % ShiftData::TaskSpots().Num();
-		SpawnTaskFromSpot(ExtraSpot);
+		TrySpawnNextCustomer();
+		return;
 	}
+	SpawnPostServiceTask();
 }
 
 void AShiftStoreGameMode::OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Customer)
@@ -441,7 +581,7 @@ void AShiftStoreGameMode::OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Cu
 	if (Customer->IsMonsterActive())
 	{
 		Customer->Stun(StunSec);
-		SetStatusBanner(FString::Printf(TEXT("Direct hit! Entity stunned for %.1fs (-$%.2f cost loss)"), StunSec, Prod ? Prod->Cost : 2.f), 3.f);
+		SetStatusBanner(ShiftLoc::Format(TEXT("Direct hit! Entity stunned for %.1fs (-$%.2f cost loss)"), {FString::Printf(TEXT("%.1f"), StunSec), FString::Printf(TEXT("%.2f"), Prod ? Prod->Cost : 2.f)}), 3.f);
 	}
 	if (!Item->bLostItem)
 	{
@@ -459,11 +599,11 @@ void AShiftStoreGameMode::OnItemBroken(AShiftItem* Item, bool bUsedOnMonster)
 	PlaySynthesizedCue(180.f, 0.18f, 0.30f, true);
 	if (!bUsedOnMonster)
 	{
-		SetStatusBanner(FString::Printf(TEXT("Damaged %s (-$%.2f wholesale loss)"), *ShiftData::ProductLabel(Item->Sku), Cost), 2.5f);
+		SetStatusBanner(ShiftLoc::Format(TEXT("Damaged %s (-$%.2f wholesale loss)"), {FString(ShiftData::ProductLabel(Item->Sku)), FString::Printf(TEXT("%.2f"), Cost)}), 2.5f);
 	}
 	if (Losses >= ShiftData::LossLimit)
 	{
-		TriggerGameOver(FString::Printf(TEXT("Store losses reached -$%.2f (Limit: -$%.0f). You were fired."), Losses, ShiftData::LossLimit));
+		TriggerGameOver(ShiftLoc::Format(TEXT("Store losses reached -$%.2f (Limit: -$%.0f). You were fired."), {FString::Printf(TEXT("%.2f"), Losses), FString::Printf(TEXT("%.0f"), ShiftData::LossLimit)}));
 	}
 }
 
@@ -532,6 +672,11 @@ bool AShiftStoreGameMode::LoadProgress()
 void AShiftStoreGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (FParse::Param(FCommandLine::Get(), TEXT("ShiftLocalizationTest")))
+	{
+		TickLocalizationTest(DeltaSeconds);
+		return;
+	}
 	if (bSelfTestRunning)
 	{
 		TickSelfTest(DeltaSeconds);

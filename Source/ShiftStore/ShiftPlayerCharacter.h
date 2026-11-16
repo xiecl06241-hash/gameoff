@@ -48,4 +48,5 @@ private:
 
 	bool bPrevInteractDown = false;
 	bool bPrevThrowDown = false;
+	FVector2D PreviousMenuMouse = FVector2D(-1.f, -1.f);
 };

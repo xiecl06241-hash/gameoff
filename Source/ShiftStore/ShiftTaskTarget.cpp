@@ -1,4 +1,5 @@
 #include "ShiftTaskTarget.h"
+#include "ShiftStoreGameMode.h"
 #include "Components/SphereComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -51,7 +52,7 @@ void AShiftTaskTarget::Setup(EShiftTaskType InType, const FString& InLabel, floa
 			MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.12f, 0.06f, 0.02f));
 		}
 	}
-	Marker->SetText(FText::FromString(Type == EShiftTaskType::CartonSource ? TEXT("[ STOCK ]") : TEXT("[ ! ]")));
+	Marker->SetText(FText::FromString(Type == EShiftTaskType::CartonSource ? TEXT("[ E ]") : TEXT("[ ! ]")));
 	Marker->SetTextRenderColor(Type == EShiftTaskType::CartonSource ? FColor(180, 200, 190) : FColor(255, 210, 90));
 }
 
@@ -71,6 +72,7 @@ float AShiftTaskTarget::HoldDuration() const
 	case EShiftTaskType::Tidy: return 2.5f;
 	case EShiftTaskType::Trash: return 2.0f;
 	case EShiftTaskType::Spill: return 2.5f;
+	case EShiftTaskType::CookOden: return 6.f;
 	default: return 0.f;
 	}
 }
@@ -85,7 +87,12 @@ bool AShiftTaskTarget::NeedsItem(EShiftItemKind& OutKind) const
 void AShiftTaskTarget::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (Deadline > 0.f && TimeLeft > 0.f) { TimeLeft = FMath::Max(0.f, TimeLeft - DeltaSeconds); }
+	const AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
+	if (GM && (GM->Phase == EShiftPhase::Working || GM->Phase == EShiftPhase::Cleanup)
+		&& GM->ActiveTasks.Contains(this) && Deadline > 0.f && TimeLeft > 0.f)
+	{
+		TimeLeft = FMath::Max(0.f, TimeLeft - DeltaSeconds);
+	}
 
 	// Billboard the marker toward the camera and bob it a little.
 	if (APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0))

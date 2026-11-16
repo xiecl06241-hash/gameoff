@@ -1,6 +1,39 @@
 # SHIFT / 24 — 验收与回归记录
 
-当前工作区包含 C++ 三晚 MVP、正常／异常环境地图及 Windows 独立包。本次修复运行时资源、碰撞、重开状态和自检问题；以下回归结果不能替代完整的人工通关验收。
+当前工作区包含 C++ 三晚 MVP、正常／异常环境地图及 Windows 独立包。本轮修正顾客结账后的离店移动，并降低服务间补货频率；此前的开局、任务指引和早期时间调整继续保留。以下回归结果不能替代完整的人工通关验收。
+
+## 顾客离店与服务间任务（2026-11-16）
+
+- 顾客普通移动与离店改为缓存的可通行路线，加入入口及收银台两侧的通道节点；移动时由 CharacterMovement 统一转向，停下等候时清除残余输入。删除离店九秒后强制消失的兜底，实际走到店外才结束服务。
+- 服务间只派一项任务：整理货架与准备关东煮轮换；累计三笔正常消费才安排一次批量补货，怪物驱离不算消费。最后一位顾客离店后直接清理。
+- 新增关东煮任务：在台前长按 E 六秒完成，无需手持物品，提供位置指引、倒计时及任务完成后的清醒度恢复。结账及结束服务的回调均阻止重复处理。
+- 编辑器与最终 Windows 独立包均通过 52 项回归；额外覆盖实际离店、转向连续性、单一整理／关东煮任务、三笔消费后的批量补货、收银侧到关东煮台的路线、实际长按 E 完成准备，以及最后直接打扫。
+- 固定 60 Hz 用例中，顾客约 3.85 秒走到店外，最后位置约 `(802, -203, 90)` cm，最大单帧转向 6°。证据见 `Verification/gameplay_selftest.json`；预期失败用例其余项目通过，退出 1，正式存档哈希未变。
+- 简体中文 720p 实际渲染用例通过 24 项，新增离店两帧和关东煮画面，见 `Previews/Localization/zh-Hans_1280_DepartureEarly.png`、`DepartureDoorway.png`、`CookOden.png` 及对应语言报告。其他语言本轮完成文本／参数／字体检查，1920p 运行报告是上一轮引导版本的基线。
+- 构建日志：`Saved/QA/ServiceEditorBuild.log`、`ServiceGameBuild.log`、`LocalizationPackage.log`。实现说明见 `Docs/ONBOARDING.md`。
+
+## 试玩反馈修复（2026-11-16）
+
+- 原因：标题页原本直接按已载入存档开始；任务 Actor 还会在夜晚说明页倒计时。现主操作明确为新游戏／第一晚，C 单独继续存档；仅 Working／Cleanup 中的待办任务推进时间。
+- 当前三晚每项开店、售后补货及清理任务调整为 240／180／120 秒。说明页显示时限与暂停说明。
+- 日常工作加入常驻步骤、黄色方向／距离标记、按实际碰撞检查的通道路线，Tab 切换任务。补货拿到纸箱后从仓库目标切换到货架；顾客／怪物阶段隐藏日常路线。
+- 纸箱的手持位置下移以保留视野；拖把位置说明改为仓库，丢下拖把后可再次定位。
+- 编辑器真实帧测试当前通过 52 项，其中包括第二晚存档下的新游戏／显式继续、说明页暂停与进入工作后计时、仓库路线胶囊检查、取箱后切换指引，以及实际注入 E 领箱、长按 E 完成补货。原有物理、怪物、Shift、GC 和独立存档回归同时执行；本机日志 `Saved/QA/GuidanceEditorTest.log`。
+- 最终 Windows 独立包同样通过 52 项，预期失败用例为 53 项中的 `forced_failure=false` 并退出 1，其他检查通过。正式存档 SHA-256 未变；证据为 `Verification/gameplay_selftest.json`、`gameplay_selftest_failure.json`。
+
+交互与实现说明见 `Docs/ONBOARDING.md`。
+
+## 四套语言包与启动界面（2026-11-16）
+
+- 标题页之前新增语言选择，固定顺序为 **1 English／2 日本語／3 繁體中文／4 简体中文**，支持鼠标行选择、方向键／W、S、数字键 1–4 及 Enter／Space 确认，标题页按 L 可重新选择。确认只保存语言偏好，不更改夜晚进度；偏好按语言代码存储，重排后仍可恢复。
+- 四套 UTF-8 语言包各 147 条，涵盖界面、任务、步骤／路线提示、关东煮准备、商品名、交互、顾客对白、失败原因及结算；实体包装和招牌保持原美术。
+- 静态验证通过：四套键集合、动态参数一致，90 处直接显示／格式化文本有语言包条目；日文、繁体中文、简体中文的字体覆盖分别检查了 397／427／426 种字符。见 `Verification/localization_catalogues.json`。
+- 编辑器和 Windows Development 编译、烘焙、打包通过；本机日志 `Saved/QA/LocalizationPackage.log` 包含 Editor／Game 双目标构建。实际日志确认从包内 `.ufont` 加载 SC／JP／TC 字体，不依赖玩家安装字体。
+- 1080p 独立包四套语言分别通过 21 项检查，覆盖固定语言顺序、启动阶段、数字／方向键选择、确认、磁盘保存、重新打开语言页、进入第一晚、说明页保留完整任务时限、顾客字幕及补货取箱／返回两个步骤；每个选项再启动一个进程确认保存的语言恢复。见 `Verification/localization_runtime_*_1920.json`。
+- 本轮另以 1280×720 运行简体中文用例及重启恢复，检查常驻步骤、距离标记与纸箱下移后的视野；见 `Verification/localization_runtime_zh-Hans_1280.json`。繁体／日语的 720p 记录属于此前版本的历史验证。
+- 当前版本的 52 项玩法回归通过；故意注入失败的用例其余检查通过、按预期退出 1，正式进度存档未变化。更新后的证据仍为 `Verification/gameplay_selftest.json` 和 `gameplay_selftest_failure.json`。
+- 四个语言选项各采集 11 张实际渲染截图；选定的启动、标题、HUD、顾客及补货步骤画面保存在 `Previews/Localization/`。已目视检查简繁中文字形、日文字形、界面间距和手持视野。
+- 测试脚本核对正式进度存档 SHA-256 未变，结束后恢复原有玩家设置。实现与复现方法见 `Docs/LOCALIZATION.md`。这轮测试仍不等同于完整三晚人工通关或母语润色验收。
 
 ## 本轮修复
 
@@ -18,9 +51,9 @@
 
 | 检查 | 结果与证据 |
 | --- | --- |
-| 编辑器 C++ 编译 | `Result: Succeeded`；本机日志 `Saved/QA/EditorBuild.log` |
-| Windows 编译、烘焙、打包 | `BUILD SUCCESSFUL`，退出 0；本机日志 `Saved/QA/PackageFixes.log` |
-| 独立包玩法回归 | 24 项全部通过，退出 0；`Verification/gameplay_selftest.json` |
+| 编辑器 C++ 编译 | `Result: Succeeded`；本机日志 `Saved/QA/ServiceEditorBuild.log` |
+| Windows 编译、烘焙、打包 | `BUILD SUCCESSFUL`，退出 0；本机日志 `Saved/QA/LocalizationPackage.log` |
+| 独立包玩法回归 | 当前 52 项全部通过，退出 0；`Verification/gameplay_selftest.json` |
 | 故意注入失败 | 其余检查通过，`forced_failure=false`、总体 `passed=false`，退出 1；`Verification/gameplay_selftest_failure.json` |
 | 正式存档保护 | 正、反两次用例均核对正式存档内容；外部脚本另核对已知存档位置的 SHA-256，均未改变 |
 | 测试存档清理 | 正、反两次用例均确认专用存档槽已删除 |
@@ -34,7 +67,7 @@
 
 - 原创环境：59 个独立静态网格、44 个材质、21 张包装／标识贴图，模型库 36,304 个三角形。
 - 两态场景几何检查：正常最窄通道 160 cm，异常 130 cm；9 条路线、10 段真实角色尺寸胶囊扫掠通过。原始环境检查见 `Verification/scene_checks.json`。
-- `Previews` 的 14 张截图是此前环境版本的对照图，不代表本轮新增顾客与 HUD 的画面验收。
+- `Previews` 根目录的 14 张截图是此前环境版本的对照图；新增语言界面与顾客 HUD 的画面见 `Previews/Localization/`。
 - `Verification/performance.json` 是此前环境版本的固定入口机位基线：本机 RTX 5060 Laptop GPU、1080p High，全屏约 60 FPS；不能据此声称当前 C++ 玩法版本已完成整段漫游性能验收。
 - 旧 CSV 性能采样存在退出码 777003 的记录，未在本轮将其认定为已修复；本轮回归不使用该记录器。
 

@@ -28,7 +28,7 @@ def run_case(force_failure=False):
     before = player_saves()
     log = OUT / f'gameplay_{case}.log'
     args = [str(EXE), '/Game/ShiftStore/Maps/Normal', '-NullRHI', '-unattended',
-            '-benchmark', '-fps=60', '-seconds=30', '-ShiftSelfTest', '-ShiftSelfTestExit',
+            '-benchmark', '-fps=60', '-seconds=60', '-ShiftSelfTest', '-ShiftSelfTestExit',
             '-abslog=' + log.as_posix()]
     if force_failure:
         args.append('-ShiftSelfTestForceFailure')

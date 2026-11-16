@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "language": "zh-Hans",
+  "settings_file": "D:/Game Jam/Game Off 2026/ShiftStore/Builds/Windows/ShiftStore/Saved/Config/Windows/GameUserSettings.ini",
+  "checks": {
+    "packaged_catalogues": true,
+    "language_order": true,
+    "packaged_runtime_fonts": true,
+    "language_before_title": true,
+    "invalid_locale_preserves_selection": true,
+    "unknown_text_fallback": true,
+    "restart_cannot_bypass_picker": true,
+    "number_2_selects_japanese": true,
+    "arrow_selects_english": true,
+    "target_language_selected": true,
+    "confirm_opens_title": true,
+    "language_written_to_settings": true,
+    "title_can_reopen_picker": true,
+    "start_opens_night_intro": true,
+    "new_game_is_night_one": true,
+    "reading_intro_keeps_full_task_budget": true,
+    "intro_enters_gameplay": true,
+    "localized_customer_dialogue": true,
+    "customer_subtitle_visible": true,
+    "restock_take_step": true,
+    "restock_return_step": true,
+    "normal_customer_exits_after_payment": true,
+    "service_creates_one_tidy_task": true,
+    "service_creates_one_oden_task": true
+  },
+  "process_exit_code": 0,
+  "player_saves_unchanged": true,
+  "screenshot_count": 14,
+  "resolution": [
+    1280,
+    720
+  ],
+  "editor": false,
+  "saved_language_restored_after_relaunch": true
+}

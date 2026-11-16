@@ -8,10 +8,13 @@
 
 ### How to Play
 1. Open `Builds/Windows` and double-click **`ShiftStore.exe`** (or **`启动正常场景.cmd`** for 1920×1080 fullscreen).
+   Choose **1 English**, **2 日本語**, **3 繁體中文**, or **4 简体中文** before the title screen. Click a language or select it with arrows / `1`–`4` and press `Enter`. Your choice is remembered; press `L` on the title screen to change it.
+   `Space` / `E` starts a **new game at Night 1**. Use `C` to explicitly continue an existing save.
 2. Complete your assigned clerk chores before their timers expire—overdue tasks steadily drain your **Sanity**.
 3. Once all active chores are finished, a customer enters the store (only one customer is inside at a time):
    - **Normal Customers** browse, occasionally ask you to fetch a specific product (`[E]` to pick up from a shelf and `[E]` to hand it over), and pay at the **Checkout Register** (`[E]`).
    - **Abnormal Entities** disguise themselves as customers and reveal themselves while you are fetching an item. When they reveal, **the entire store automatically SHIFTS**: middle gondolas slide 30 cm, main ceiling lights cut out leaving only cold-storage and exit lights, and a displaced item begins glowing red somewhere in the store.
+   After the customer leaves, one chore is assigned: shelf tidying and oden preparation alternate, with a batch restock only after three paid sales. The last customer leads directly to dawn cleanup.
 4. **Banishing an Entity**: Find the item the entity demands and deliver it to the **Checkout Register** (`[E]`) while avoiding or looping the entity around shelves.
    - Throwing merchandise (`[F]` or `Right Mouse Button`) stuns the entity temporarily (each product has a distinct wholesale cost and stun duration), or you can grab a hot cup from the **Oden Station** for a heavy stun.
    - Destroyed merchandise is deducted at wholesale cost from store revenue; exceeding the loss limit (`-$40`) terminates your run.
@@ -29,6 +32,9 @@
 | `Space` / `Enter` | Advance Title / Night Intro / Dawn screens |
 | `R` | Restart current night from auto-save (on Game Over screen) |
 | `Alt + F4` | Quit |
+| `L` (title screen) | Change language |
+| `C` (title screen) | Continue saved game |
+| `Tab` (during chores) | Guide to the next chore |
 
 ### AI Usage Disclosure (GitHub Game Off 2026 Compliance)
 In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
@@ -39,6 +45,7 @@ In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
 ### License
 - **Source Code & Scripts** (`Source/`, `Tools/`): [MIT License](LICENSE)
 - **Original Procedural Store Meshes & Label Artwork** (`SourceArt/`, `Content/ShiftStore/`): [CC BY 4.0](LICENSE)
+- **Noto Sans CJK interface fonts** (`SourceArt/Fonts/`, `Content/ShiftStore/Fonts/`): SIL Open Font License 1.1; see [third-party notices](THIRD_PARTY_NOTICES.md).
 
 ---
 
@@ -47,6 +54,10 @@ In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
 ### 1. 直接试玩
 打开 `Builds/Windows`，双击 **`启动正常场景.cmd`**（1920×1080 全屏）或 **`ShiftStore.exe`**。
 按 `Space` 或 `E` 从标题页进入第一晚夜班。
+标题页之前先选择 **1 English／2 日本語／3 繁體中文／4 简体中文**。鼠标点击，或用方向键、数字 `1/2/3/4` 选择后按 `Enter` 确认。会记住上次选择，标题页按 `L` 可重新选择；语言设置与夜晚进度存档独立。
+标题页默认按 `Space`／`E` 开始**新游戏（第一晚）**；按 `C` 才会继续已有存档。日常任务有常驻步骤和黄色通道／距离标记，按 `Tab` 可切换指引的任务。当前三晚每项任务时限分别为 **240／180／120 秒**，夜晚说明页暂停计时。补货时先沿标记去仓库领取补货纸箱，再跟随新标记回到货架长按 `E`。
+
+界面、任务、交互提示、顾客对白、失败与结算文字均支持上述四个语言选项。场景中的原创品牌、包装和实体标识暂保留原样。语言包和字体制作说明见 [Docs/LOCALIZATION.md](Docs/LOCALIZATION.md)。
 
 ### 2. 核心玩法与完整流程（3 晚 MVP）
 - **日常店员任务与清醒度（Sanity）**：每项补货（从仓库取货箱 `Stock Carton`）、清点、整理、倒垃圾任务都有独立倒计时；逾期会持续扣除清醒度，完成后停止扣除并部分恢复清醒度。

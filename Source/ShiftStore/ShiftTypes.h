@@ -21,12 +21,14 @@ enum class EShiftTaskType : uint8
 	Tidy,         // hold E to face / tidy a shelf
 	Trash,        // hold E to empty a bin
 	Spill,        // hold E with the mop to clean
-	CartonSource  // permanent: press E to take a carton
+	CartonSource, // permanent: press E to take a carton
+	CookOden     // hold E at the oden station to prepare hot broth
 };
 
 UENUM()
 enum class EShiftPhase : uint8
 {
+	LanguageSelection,
 	Title,
 	NightIntro,
 	Working,
@@ -68,8 +70,18 @@ struct FShiftNightSpec
 	TArray<FShiftCustomerSpec> Customers;
 	TArray<int32> OpeningTasks;   // indices into ShiftData::TaskSpots()
 	int32 Spills = 2;
-	float TaskTimeLimit = 60.f;
+	float TaskTimeLimit = 120.f;
 	bool bEerieEvents = false;
+};
+
+enum class EShiftGuideAction : uint8 { Work, CollectCarton, DeliverCarton, CollectMop, MopFloor, CookOden };
+
+struct FShiftTaskGuidance
+{
+	TWeakObjectPtr<AActor> Target;
+	FVector Location = FVector::ZeroVector;
+	FString TaskLabel;
+	EShiftGuideAction Action = EShiftGuideAction::Work;
 };
 
 namespace ShiftData

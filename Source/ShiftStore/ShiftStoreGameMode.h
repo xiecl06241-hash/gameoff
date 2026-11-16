@@ -10,6 +10,7 @@ class AShiftTaskTarget;
 class AShiftCustomer;
 class AShiftItem;
 class UAudioComponent;
+class AShiftPlayerCharacter;
 
 UCLASS()
 class SHIFTSTORE_API AShiftStoreGameMode : public AGameModeBase
@@ -24,6 +25,13 @@ public:
 	void StartNight(int32 InNightIndex);
 	void RestartCurrentNight();
 	void OnAdvanceScreenKey();
+	void ContinueSavedGame();
+	void CycleGuidedTask();
+	bool GetTaskGuidance(const AShiftPlayerCharacter* Player, FShiftTaskGuidance& Out) const;
+	bool bHasSavedProgress = false;
+	void OpenLanguageSelection();
+	void ConfirmLanguage();
+	int32 SelectedLanguage = 0;
 
 	void OnTaskCompleted(AShiftTaskTarget* Task);
 	void OnCustomerNeedsHelp(AShiftCustomer* Customer);
@@ -50,7 +58,7 @@ public:
 	TWeakObjectPtr<AShiftCustomer> ActiveCustomer;
 	TWeakObjectPtr<AShiftItem> ActiveLostItem;
 
-	EShiftPhase Phase = EShiftPhase::Title;
+	EShiftPhase Phase = EShiftPhase::LanguageSelection;
 	int32 NightIndex = 0;
 	int32 NextCustomerIdx = 0;
 	int32 CustomersServed = 0;
@@ -68,8 +76,15 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	void TickLocalizationTest(float DeltaSeconds);
+	void FinishLocalizationTest();
+	void CheckLocalization(const FString& Name, bool bPassed);
+	TMap<FString, bool> LocalizationChecks;
+	int32 LocalizationStep = 0;
+	float LocalizationTime = 0.f;
 	void SpawnTaskFromSpot(int32 SpotIdx);
 	void SpawnRestockAfterService();
+	void SpawnPostServiceTask();
 	void SpawnCleanupSpills(int32 Count);
 	void ClearNightActors();
 	void TrySpawnNextCustomer();
@@ -82,8 +97,11 @@ private:
 	float CheckpointIncome = 0.f;
 	float CheckpointLosses = 0.f;
 	bool bHasNightCheckpoint = false;
+	int32 GuidedTaskIndex = 0;
+	int32 SalesSinceRestock = 0;
+	int32 ServiceTaskRotation = 0;
 
-	enum class ESelfTestStage : uint8 { Idle, Setup, Projectile, Reveal, Shift, Restore, Flicker, Finished };
+	enum class ESelfTestStage : uint8 { Idle, Setup, IntroPause, ActiveTimer, RestockPickup, RestockWork, ServiceSetup, CustomerExit, CookService, Regression, Projectile, Reveal, Shift, Restore, Flicker, Finished };
 	void TickSelfTest(float DeltaSeconds);
 	bool CheckSelfTest(const FString& Name, bool bSuccess, const FString& Detail = TEXT(""));
 	void AdvanceSelfTest(ESelfTestStage Stage);
@@ -98,6 +116,14 @@ private:
 	TWeakObjectPtr<AShiftItem> SelfTestProjectile;
 	TArray<uint8> FormalSaveBeforeSelfTest;
 	bool bFormalSaveExistedBeforeSelfTest = false;
+	bool bSelfTestInteractPressed = false;
+	TWeakObjectPtr<AShiftTaskTarget> SelfTestRestockTarget;
+	TWeakObjectPtr<AShiftCustomer> SelfTestDepartingCustomer;
+	TWeakObjectPtr<AShiftTaskTarget> SelfTestCookTarget;
+	FVector SelfTestExitLastLocation = FVector::ZeroVector;
+	float SelfTestExitLastYaw = 0.f;
+	float SelfTestExitMaxYawStep = 0.f;
+	float SelfTestExitSeconds = 0.f;
 
 	void SetupProceduralAudio();
 	void PlaySynthesizedCue(float FreqHz, float DurationSec, float Volume = 0.25f, bool bNoise = false);

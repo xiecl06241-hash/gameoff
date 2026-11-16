@@ -1,8 +1,10 @@
 #include "ShiftPlayerCharacter.h"
+#include "ShiftLocalization.h"
 #include "ShiftItem.h"
 #include "ShiftTaskTarget.h"
 #include "ShiftCustomer.h"
 #include "ShiftStoreGameMode.h"
+#include "ShiftHUD.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -37,6 +39,11 @@ void AShiftPlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
+		if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>(); GM && GM->Phase == EShiftPhase::LanguageSelection)
+		{
+			GM->OpenLanguageSelection();
+			return;
+		}
 		PC->SetShowMouseCursor(false);
 		FInputModeGameOnly Mode;
 		PC->SetInputMode(Mode);
@@ -85,7 +92,8 @@ void AShiftPlayerCharacter::PickupItem(AShiftItem* Item)
 	HeldItem = Item;
 	Item->SetHeld(true);
 	Item->AttachToComponent(HoldMount, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	Item->SetActorRelativeLocation(FVector::ZeroVector);
+	// The full-size stock carton must sit below the view so the clerk can still follow aisle markers.
+	Item->SetActorRelativeLocation(Item->Kind == EShiftItemKind::Carton ? FVector(38.f, 5.f, -45.f) : FVector::ZeroVector);
 	Item->SetActorRelativeRotation(FRotator(0.f, -20.f, 0.f));
 }
 
@@ -142,6 +150,61 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
 	if (!PC || !GM) { return; }
 
+	if (GM->Phase == EShiftPhase::LanguageSelection)
+	{
+		if (PC->WasInputKeyJustPressed(EKeys::Up) || PC->WasInputKeyJustPressed(EKeys::W))
+		{
+			GM->SelectedLanguage = (GM->SelectedLanguage + ShiftLoc::LanguageCount - 1) % ShiftLoc::LanguageCount;
+		}
+		if (PC->WasInputKeyJustPressed(EKeys::Down) || PC->WasInputKeyJustPressed(EKeys::S))
+		{
+			GM->SelectedLanguage = (GM->SelectedLanguage + 1) % ShiftLoc::LanguageCount;
+		}
+		const FKey NumberKeys[] = { EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four };
+		for (int32 Index = 0; Index < ShiftLoc::LanguageCount; ++Index)
+		{
+			if (PC->WasInputKeyJustPressed(NumberKeys[Index])) { GM->SelectedLanguage = Index; }
+		}
+		FVector2D Mouse;
+		bool bClickedChoice = false;
+		if (PC->GetMousePosition(Mouse.X, Mouse.Y))
+		{
+			const bool bClick = PC->WasInputKeyJustPressed(EKeys::LeftMouseButton);
+			const bool bMoved = PreviousMenuMouse.X >= 0.f && FVector2D::DistSquared(Mouse, PreviousMenuMouse) > 1.f;
+			int32 Width = 0, Height = 0;
+			PC->GetViewportSize(Width, Height);
+			if (bMoved || bClick)
+			{
+				for (int32 Index = 0; Index < ShiftLoc::LanguageCount; ++Index)
+				{
+					if (AShiftHUD::LanguageButton(Index, Width, Height).IsInside(Mouse))
+					{
+						GM->SelectedLanguage = Index;
+						bClickedChoice = bClick;
+					}
+				}
+			}
+			PreviousMenuMouse = Mouse;
+		}
+		ShiftLoc::SetLanguage(GM->SelectedLanguage, false);
+		if (PC->WasInputKeyJustPressed(EKeys::Enter) || PC->WasInputKeyJustPressed(EKeys::SpaceBar) || bClickedChoice)
+		{
+			GM->ConfirmLanguage();
+			PreviousMenuMouse = FVector2D(-1.f, -1.f);
+		}
+		return;
+	}
+	if (GM->Phase == EShiftPhase::Title && PC->WasInputKeyJustPressed(EKeys::L))
+	{
+		GM->OpenLanguageSelection();
+		return;
+	}
+	if (GM->Phase == EShiftPhase::Title && PC->WasInputKeyJustPressed(EKeys::C))
+	{
+		GM->ContinueSavedGame();
+		return;
+	}
+
 	// Title / Intro / Dawn / GameOver / Ending screens consume Space or Enter
 	if (GM->Phase != EShiftPhase::Working && GM->Phase != EShiftPhase::Cleanup)
 	{
@@ -149,12 +212,14 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		{
 			GM->OnAdvanceScreenKey();
 		}
-		if (PC->WasInputKeyJustPressed(EKeys::R))
+		if (GM->Phase == EShiftPhase::GameOver && PC->WasInputKeyJustPressed(EKeys::R))
 		{
 			GM->RestartCurrentNight();
 		}
 		return;
 	}
+
+	if (PC->WasInputKeyJustPressed(EKeys::Tab)) { GM->CycleGuidedTask(); }
 
 	// Mouse look
 	float MouseX = 0.f, MouseY = 0.f;
@@ -208,7 +273,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 			ConsumeHeldItem();
 			Monster->Stun(StunSec);
 			ReleaseFromGrab();
-			GM->SetStatusBanner(FString::Printf(TEXT("Smashed monster with merchandise! Escaped (Stunned %.1fs)"), StunSec), 2.5f);
+			GM->SetStatusBanner(ShiftLoc::Format(TEXT("Smashed monster with merchandise! Escaped (Stunned %.1fs)"), {FString::Printf(TEXT("%.1f"), StunSec)}), 2.5f);
 			return;
 		}
 
@@ -221,9 +286,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		{
 			StruggleProgress = FMath::Max(0.f, StruggleProgress - DeltaSeconds * 0.15f);
 		}
-		CrosshairPrompt = FString::Printf(TEXT("GRABBED! Hold/Mash [E] to struggle (%d%%)%s"),
-			FMath::RoundToInt(StruggleProgress * 100.f),
-			(HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product) ? TEXT(" | [F/RMB] Smash with item!") : TEXT(""));
+		CrosshairPrompt = ShiftLoc::Format(TEXT("GRABBED! Hold/Mash [E] to struggle (%d%%)%s"), {LexToString(FMath::RoundToInt(StruggleProgress * 100.f)), FString((HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product) ? TEXT(" | [F/RMB] Smash with item!") : TEXT(""))});
 
 		if (StruggleProgress >= 1.f)
 		{
@@ -292,14 +355,14 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		{
 			if (!HeldItem.IsValid() || HeldItem->Kind != NeededKind)
 			{
-				const TCHAR* NeededName = (NeededKind == EShiftItemKind::Carton) ? TEXT("Stock Carton (from Warehouse)") : TEXT("Mop (from Back Corridor)");
-				CrosshairPrompt = FString::Printf(TEXT("%s — Requires %s"), *Task->Label, NeededName);
+				const TCHAR* NeededName = (NeededKind == EShiftItemKind::Carton) ? TEXT("Stock Carton (from Warehouse)") : TEXT("Mop (from Warehouse)");
+				CrosshairPrompt = ShiftLoc::Format(TEXT("%s — Requires %s"), {FString(Task->Label), FString(NeededName)});
 				Task->Progress = 0.f;
 				return;
 			}
 		}
 
-		CrosshairPrompt = FString::Printf(TEXT("[Hold E] %s (%d%%)"), *Task->Label, FMath::RoundToInt(Task->Progress * 100.f));
+		CrosshairPrompt = ShiftLoc::Format(TEXT("[Hold E] %s (%d%%)"), {FString(Task->Label), LexToString(FMath::RoundToInt(Task->Progress * 100.f))});
 		if (bInteractDown)
 		{
 			Task->Progress += DeltaSeconds / FMath::Max(0.2f, Task->HoldDuration());
@@ -328,7 +391,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			const FString WantedLabel = ShiftData::ProductLabel(Cust->Spec.WantedSku);
 			if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == Cust->Spec.WantedSku)
 			{
-				CrosshairPrompt = FString::Printf(TEXT("[E] Hand %s to Customer"), *WantedLabel);
+				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Hand %s to Customer"), {FString(WantedLabel)});
 				if (bInteractJustPressed)
 				{
 					ConsumeHeldItem();
@@ -337,8 +400,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			}
 			else
 			{
-				CrosshairPrompt = FString::Printf(TEXT("Customer: \"%s\" (Bring %s)"),
-					Cust->Spec.Line.IsEmpty() ? TEXT("Can you find this for me?") : *Cust->Spec.Line, *WantedLabel);
+				CrosshairPrompt = ShiftLoc::Format(TEXT("Customer: \"%s\" (Bring %s)"), {FString(Cust->Spec.Line.IsEmpty() ? TEXT("Can you find this for me?") : *Cust->Spec.Line), FString(WantedLabel)});
 			}
 			return;
 		}
@@ -353,8 +415,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		}
 		if (Cust->IsMonsterActive())
 		{
-			CrosshairPrompt = FString::Printf(TEXT("ENTITY DEMANDS: %s (Deliver to Checkout Register!)"),
-				*ShiftData::ProductLabel(Cust->Spec.MonsterSku));
+			CrosshairPrompt = ShiftLoc::Format(TEXT("ENTITY DEMANDS: %s (Deliver to Checkout Register!)"), {FString(ShiftData::ProductLabel(Cust->Spec.MonsterSku))});
 			return;
 		}
 	}
@@ -375,7 +436,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 					const FString Demanded = ShiftData::ProductLabel(C->Spec.MonsterSku);
 					if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == C->Spec.MonsterSku)
 					{
-						CrosshairPrompt = FString::Printf(TEXT("[E] Deliver %s to appease the entity!"), *Demanded);
+						CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Deliver %s to appease the entity!"), {FString(Demanded)});
 						if (bInteractJustPressed)
 						{
 							ConsumeHeldItem();
@@ -383,7 +444,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 						}
 						return;
 					}
-					CrosshairPrompt = FString::Printf(TEXT("Checkout: Bring [%s] here to banish the entity"), *Demanded);
+					CrosshairPrompt = ShiftLoc::Format(TEXT("Checkout: Bring [%s] here to banish the entity"), {FString(Demanded)});
 					return;
 				}
 				if (C->State == ECustomerState::WaitingAtCheckout)
@@ -414,7 +475,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		// 5. Already-spawned AShiftItem
 		if (AShiftItem* ShiftItem = Cast<AShiftItem>(HitActor))
 		{
-			CrosshairPrompt = FString::Printf(TEXT("[E] Pick up %s"), *ShiftItem->DisplayName());
+			CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Pick up %s"), {FString(ShiftItem->DisplayName())});
 			if (bInteractJustPressed)
 			{
 				PickupItem(ShiftItem);
@@ -441,7 +502,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		const FName Sku = ExtractSkuTag(HitActor);
 		if (!Sku.IsNone())
 		{
-			CrosshairPrompt = FString::Printf(TEXT("[E] Pick up %s"), *ShiftData::ProductLabel(Sku));
+			CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Pick up %s"), {FString(ShiftData::ProductLabel(Sku))});
 			if (bInteractJustPressed)
 			{
 				AShiftItem* NewItem = GetWorld()->SpawnActor<AShiftItem>(GetActorLocation(), FRotator::ZeroRotator);
@@ -483,7 +544,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			}
 			if (!BestSku.IsNone())
 			{
-				CrosshairPrompt = FString::Printf(TEXT("[E] Take %s from shelf"), *ShiftData::ProductLabel(BestSku));
+				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Take %s from shelf"), {FString(ShiftData::ProductLabel(BestSku))});
 				if (bInteractJustPressed)
 				{
 					AShiftItem* NewItem = GetWorld()->SpawnActor<AShiftItem>(GetActorLocation(), FRotator::ZeroRotator);

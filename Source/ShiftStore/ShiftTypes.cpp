@@ -46,6 +46,7 @@ namespace ShiftData
 			/*7*/ { EShiftTaskType::Trash,   FVector(1500.f, 265.f, 80.f),  TEXT("Empty checkout bin") },
 			/*8*/ { EShiftTaskType::Trash,   FVector(1350.f, 1450.f, 80.f), TEXT("Empty restroom bin") },
 			/*9*/ { EShiftTaskType::Count,   FVector(1070.f, 1450.f, 110.f),TEXT("Sign the shift log") },
+			/*10*/{ EShiftTaskType::CookOden,FVector(1380.f, 300.f, 110.f), TEXT("Prepare hot oden") },
 		};
 		return List;
 	}
@@ -91,7 +92,7 @@ namespace ShiftData
 			N1.Intro = TEXT("First night shift. Finish your chores, serve whoever walks in,\nclean up, and hand the store over at 06:00.");
 			N1.Customers = { Customer(TEXT("Water"), false), Customer(TEXT("Noodles"), true, TEXT("Excuse me... where are the noodle cups?")), Customer(TEXT("Chips"), false) };
 			N1.OpeningTasks = { 3, 5 };
-			N1.Spills = 2; N1.TaskTimeLimit = 70.f; N1.bEerieEvents = true;
+			N1.Spills = 2; N1.TaskTimeLimit = 240.f; N1.bEerieEvents = true;
 			List.Add(N1);
 
 			FShiftNightSpec N2;
@@ -100,7 +101,7 @@ namespace ShiftData
 			N2.Customers = { Customer(TEXT("Milk"), false), Customer(TEXT("Bread"), true, TEXT("Do you have any bread left?")),
 				Monster(TEXT("Soda"), TEXT("Can"), TEXT("I... need something to drink.")), Customer(TEXT("Meal"), false) };
 			N2.OpeningTasks = { 0, 4 };
-			N2.Spills = 3; N2.TaskTimeLimit = 60.f;
+			N2.Spills = 3; N2.TaskTimeLimit = 180.f;
 			List.Add(N2);
 
 			FShiftNightSpec N3;
@@ -111,7 +112,7 @@ namespace ShiftData
 				Customer(TEXT("Water"), true, TEXT("Sorry, where's the water?")),
 				Monster(TEXT("Noodles"), TEXT("Bread"), TEXT("Something warm... please.")) };
 			N3.OpeningTasks = { 1, 7, 9 };
-			N3.Spills = 3; N3.TaskTimeLimit = 55.f;
+			N3.Spills = 3; N3.TaskTimeLimit = 120.f;
 			List.Add(N3);
 		}
 		return List;

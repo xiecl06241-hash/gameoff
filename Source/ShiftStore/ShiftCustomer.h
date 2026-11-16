@@ -51,6 +51,7 @@ public:
 	void Stun(float Seconds);
 	void OnReleasedGrab();
 	void SatisfyAndLeave();
+	void BeginLeaving();
 
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> Speech;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UPointLightComponent> EyeLight;
@@ -69,10 +70,18 @@ protected:
 
 private:
 	void MoveToward(const FVector& Goal, float Speed, float DeltaSeconds);
+	void FollowStoreRoute(const FVector& Goal, float DeltaSeconds);
 	void RevealMonster(APawn* Player);
 	void PickSearchPoint();
 	void ApplyMonsterVisuals();
 
 	int32 PatrolIdx = 0;
 	float RepathTimer = 0.f;
+	TArray<FVector> StoreRoute;
+	FVector StoreRouteGoal = FVector::ZeroVector;
+	FVector PreviousRouteLocation = FVector::ZeroVector;
+	int32 StoreRouteIndex = 0;
+	float StoreRouteRetry = 0.f;
+	float RouteStalledTime = 0.f;
+	bool bHasStoreRouteGoal = false;
 };

@@ -4,6 +4,11 @@
 #include "ShiftItem.h"
 #include "ShiftSaveGame.h"
 #include "ShiftTaskTarget.h"
+#include "ShiftPlayerCharacter.h"
+#include "ShiftGuidance.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "InputKeyEventArgs.h"
 #include "Components/RectLightComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -54,7 +59,7 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 {
 	SelfTestElapsed += DeltaSeconds;
 	SelfTestStageTime += DeltaSeconds;
-	if (SelfTestElapsed > 20.f)
+	if (SelfTestElapsed > 40.f)
 	{
 		FinishSelfTest(false, TEXT("selftest_timeout"));
 		return;
@@ -65,6 +70,213 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 	case ESelfTestStage::Setup:
 	{
 		if (!CheckSelfTest(TEXT("director_spawned"), IsValid(Director))) { return; }
+		// A real night-two checkpoint must not turn the primary title action into an implicit resume.
+		Income = 12.5f;
+		Losses = 3.f;
+		StartNight(1);
+		if (!CheckSelfTest(TEXT("resume_fixture_saved"), SaveProgress())) { return; }
+		bHasSavedProgress = true;
+		Phase = EShiftPhase::Title;
+		OnAdvanceScreenKey();
+		if (!CheckSelfTest(TEXT("new_game_starts_night_one"), NightIndex == 0 && Income == 0.f && Losses == 0.f)) { return; }
+		const UShiftSaveGame* Existing = Cast<UShiftSaveGame>(UGameplayStatics::LoadGameFromSlot(ProgressSlotName(), 0));
+		if (!CheckSelfTest(TEXT("new_game_preserves_previous_checkpoint"), Existing && Existing->SavedNightIndex == 1 && Existing->CumulativeIncome == 12.5f)) { return; }
+		Phase = EShiftPhase::Title;
+		ContinueSavedGame();
+		if (!CheckSelfTest(TEXT("explicit_continue_restores_checkpoint"), Phase == EShiftPhase::NightIntro && NightIndex == 1 && Income == 12.5f && Losses == 3.f)) { return; }
+		StartNight(0);
+		AdvanceSelfTest(ESelfTestStage::IntroPause);
+		break;
+	}
+	case ESelfTestStage::IntroPause:
+		if (SelfTestStageTime > 0.35f)
+		{
+			if (!CheckSelfTest(TEXT("intro_pauses_chore_timers"), ActiveTasks.Num() > 0 && FMath::IsNearlyEqual(ActiveTasks[0]->TimeLeft, CurrentNightSpec().TaskTimeLimit))) { return; }
+			Phase = EShiftPhase::Working;
+			AdvanceSelfTest(ESelfTestStage::ActiveTimer);
+		}
+		break;
+	case ESelfTestStage::ActiveTimer:
+		if (SelfTestStageTime > 0.35f)
+		{
+			if (!CheckSelfTest(TEXT("working_starts_chore_timers"), ActiveTasks[0]->TimeLeft < CurrentNightSpec().TaskTimeLimit - 0.2f)) { return; }
+			const auto& Nights = ShiftData::Nights();
+			if (!CheckSelfTest(TEXT("early_nights_have_learning_time"), Nights[0].TaskTimeLimit >= 240.f && Nights[0].TaskTimeLimit > Nights[1].TaskTimeLimit && Nights[1].TaskTimeLimit > Nights[2].TaskTimeLimit && Nights[2].TaskTimeLimit >= 120.f)) { return; }
+			StartNight(1);
+			Phase = EShiftPhase::Working;
+			AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+			FShiftTaskGuidance Guide;
+			if (!CheckSelfTest(TEXT("restock_guides_to_warehouse"), GetTaskGuidance(Player, Guide) && Guide.Action == EShiftGuideAction::CollectCarton && Guide.Target == CartonSource)) { return; }
+			const TArray<FVector> Route = ShiftGuidance::FindRoute(GetWorld(), Player, Guide.Target.Get(), Guide.Location);
+			if (!CheckSelfTest(TEXT("warehouse_route_uses_walkable_aisles"), Route.Num() >= 3 && FVector::Dist2D(Route.Last(), Guide.Location) < 160.f)) { return; }
+			FVector PreviousPoint = Player->GetActorLocation();
+			for (const FVector& Point : Route)
+			{
+				if (!CheckSelfTest(TEXT("guide_route_capsule_clear"), ShiftGuidance::CanWalkSegment(GetWorld(), Player, Guide.Target.Get(), PreviousPoint, Point))) { return; }
+				PreviousPoint = Point;
+			}
+			AShiftItem* Carton = GetWorld()->SpawnActor<AShiftItem>(Player->GetActorLocation(), FRotator::ZeroRotator);
+			Carton->InitKind(EShiftItemKind::Carton);
+			Player->PickupItem(Carton);
+			if (!CheckSelfTest(TEXT("carton_pickup_switches_to_restock_shelf"), GetTaskGuidance(Player, Guide) && Guide.Action == EShiftGuideAction::DeliverCarton && Guide.Target == ActiveTasks[0])) { return; }
+			Player->ConsumeHeldItem();
+			CycleGuidedTask();
+			if (!CheckSelfTest(TEXT("guide_can_cycle_chores"), GetTaskGuidance(Player, Guide) && Guide.Action == EShiftGuideAction::Work && Guide.Target == ActiveTasks[1])) { return; }
+			CycleGuidedTask();
+			SelfTestRestockTarget = ActiveTasks[0];
+			Player->SetActorLocation(Route.Last());
+			Player->GetController()->SetControlRotation((CartonSource->GetActorLocation() - Player->FirstPersonCamera->GetComponentLocation()).Rotation());
+			bSelfTestInteractPressed = false;
+			AdvanceSelfTest(ESelfTestStage::RestockPickup);
+		}
+		break;
+	case ESelfTestStage::RestockPickup:
+	{
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		AShiftPlayerCharacter* Player = PC ? Cast<AShiftPlayerCharacter>(PC->GetPawn()) : nullptr;
+		if (!CheckSelfTest(TEXT("interaction_player_ready"), Player && PC)) { return; }
+		if (!bSelfTestInteractPressed && SelfTestStageTime > 0.1f)
+		{
+			PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Pressed, 1.f));
+			bSelfTestInteractPressed = true;
+		}
+		if (SelfTestStageTime > 0.4f)
+		{
+			PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Released, 0.f));
+			if (!CheckSelfTest(TEXT("real_E_picks_up_stock_carton"), Player->HeldItem.IsValid() && Player->HeldItem->Kind == EShiftItemKind::Carton)) { return; }
+			FShiftTaskGuidance Guide;
+			if (!CheckSelfTest(TEXT("real_pickup_changes_guide_target"), GetTaskGuidance(Player, Guide) && Guide.Action == EShiftGuideAction::DeliverCarton)) { return; }
+			const TArray<FVector> Route = ShiftGuidance::FindRoute(GetWorld(), Player, Guide.Target.Get(), Guide.Location);
+			if (!CheckSelfTest(TEXT("return_to_shelf_route_exists"), !Route.IsEmpty())) { return; }
+			Player->SetActorLocation(Route.Last());
+			PC->SetControlRotation((Guide.Location - Player->FirstPersonCamera->GetComponentLocation()).Rotation());
+			bSelfTestInteractPressed = false;
+			AdvanceSelfTest(ESelfTestStage::RestockWork);
+		}
+		break;
+	}
+	case ESelfTestStage::RestockWork:
+	{
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(PC->GetPawn());
+		if (!bSelfTestInteractPressed && SelfTestStageTime > 0.15f)
+		{
+			PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Pressed, 1.f));
+			bSelfTestInteractPressed = true;
+		}
+		if (!SelfTestRestockTarget.IsValid())
+		{
+			PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Released, 0.f));
+			if (!CheckSelfTest(TEXT("real_hold_E_completes_restock"), !Player->HeldItem.IsValid() && ActiveTasks.Num() == 1)) { return; }
+			AdvanceSelfTest(ESelfTestStage::ServiceSetup);
+		}
+		else if (SelfTestStageTime > 3.f) { FinishSelfTest(false, TEXT("real_hold_E_completes_restock")); }
+		break;
+	}
+	case ESelfTestStage::ServiceSetup:
+	{
+		StartNight(1);
+		ClearNightActors();
+		Phase = EShiftPhase::Working;
+		Income = 0.f;
+		AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+		Player->SetActorLocation(FVector(600.f, 280.f, 100.f));
+		AShiftCustomer* Customer = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::CheckoutCustomerSpot, FRotator(0,-90,0));
+		if (!CheckSelfTest(TEXT("checkout_customer_spawned"), Customer != nullptr)) { return; }
+		Customer->Init(ShiftData::Nights()[0].Customers[0]);
+		Customer->State = ECustomerState::WaitingAtCheckout;
+		ActiveCustomer = Customer;
+		NextCustomerIdx = 1;
+		OnCheckoutCompleted(Customer);
+		const float PaidIncome = Income;
+		OnCheckoutCompleted(Customer);
+		if (!CheckSelfTest(TEXT("checkout_cannot_charge_twice"), Income == PaidIncome && Customer->State == ECustomerState::Leaving)) { return; }
+		SelfTestDepartingCustomer = Customer;
+		SelfTestExitLastLocation = Customer->GetActorLocation();
+		SelfTestExitLastYaw = Customer->GetActorRotation().Yaw;
+		SelfTestExitMaxYawStep = 0.f;
+		AdvanceSelfTest(ESelfTestStage::CustomerExit);
+		break;
+	}
+	case ESelfTestStage::CustomerExit:
+	{
+		if (AShiftCustomer* Customer = SelfTestDepartingCustomer.Get())
+		{
+			SelfTestExitLastLocation = Customer->GetActorLocation();
+			const float Yaw = Customer->GetActorRotation().Yaw;
+			SelfTestExitMaxYawStep = FMath::Max(SelfTestExitMaxYawStep, FMath::Abs(FMath::FindDeltaAngleDegrees(SelfTestExitLastYaw, Yaw)));
+			SelfTestExitLastYaw = Yaw;
+			if (SelfTestStageTime > 8.f) { FinishSelfTest(false, TEXT("paid_customer_walks_out_without_timeout")); }
+			break;
+		}
+		SelfTestExitSeconds = SelfTestStageTime;
+		if (!CheckSelfTest(TEXT("paid_customer_walks_out_without_timeout"), SelfTestExitLastLocation.Y < -150.f && CustomersServed == 1 && !ActiveCustomer.IsValid())) { return; }
+		if (!CheckSelfTest(TEXT("departure_has_no_yaw_snapping"), SelfTestExitMaxYawStep < 30.f)) { return; }
+		if (!CheckSelfTest(TEXT("first_service_assigns_only_tidy"), ActiveTasks.Num() == 1 && ActiveTasks[0]->Type == EShiftTaskType::Tidy)) { return; }
+		OnTaskCompleted(ActiveTasks[0].Get());
+		AShiftCustomer* Second = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::CheckoutCustomerSpot, FRotator::ZeroRotator);
+		Second->Init(ShiftData::Nights()[0].Customers[0]);
+		Second->State = ECustomerState::WaitingAtCheckout;
+		ActiveCustomer = Second;
+		NextCustomerIdx = 2;
+		OnCheckoutCompleted(Second);
+		OnCustomerFinished(Second);
+		OnCustomerFinished(Second);
+		Second->Destroy();
+		if (!CheckSelfTest(TEXT("service_finish_callback_is_idempotent"), CustomersServed == 2)) { return; }
+		if (!CheckSelfTest(TEXT("second_service_assigns_only_oden"), ActiveTasks.Num() == 1 && ActiveTasks[0]->Type == EShiftTaskType::CookOden)) { return; }
+		SelfTestCookTarget = ActiveTasks[0];
+		AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+		Player->SetActorLocation(FVector(1250.f, 50.f, 100.f));
+		const TArray<FVector> CookRoute = ShiftGuidance::FindRoute(GetWorld(), Player, SelfTestCookTarget.Get(), SelfTestCookTarget->GetActorLocation());
+		if (!CheckSelfTest(TEXT("oden_route_from_cashier_side_exists"), !CookRoute.IsEmpty())) { return; }
+		Player->SetActorLocation(CookRoute.Last());
+		Player->GetController()->SetControlRotation((SelfTestCookTarget->GetActorLocation() - Player->FirstPersonCamera->GetComponentLocation()).Rotation());
+		bSelfTestInteractPressed = false;
+		AdvanceSelfTest(ESelfTestStage::CookService);
+		break;
+	}
+	case ESelfTestStage::CookService:
+	{
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		if (!bSelfTestInteractPressed && SelfTestStageTime > 0.15f)
+		{
+			PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Pressed, 1.f));
+			bSelfTestInteractPressed = true;
+		}
+		if (SelfTestCookTarget.IsValid())
+		{
+			if (SelfTestStageTime > 8.f) { FinishSelfTest(false, TEXT("real_hold_E_prepares_oden")); }
+			break;
+		}
+		PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Released, 0.f));
+		if (!CheckSelfTest(TEXT("real_hold_E_prepares_oden"), ActiveTasks.IsEmpty())) { return; }
+		AShiftCustomer* Third = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::CheckoutCustomerSpot, FRotator::ZeroRotator);
+		Third->Init(ShiftData::Nights()[0].Customers[0]);
+		Third->State = ECustomerState::WaitingAtCheckout;
+		ActiveCustomer = Third;
+		NextCustomerIdx = 3;
+		OnCheckoutCompleted(Third);
+		OnCustomerFinished(Third);
+		Third->Destroy();
+		if (!CheckSelfTest(TEXT("third_paid_sale_assigns_one_batch_restock"), ActiveTasks.Num() == 1 && ActiveTasks[0]->Type == EShiftTaskType::Restock)) { return; }
+		OnTaskCompleted(ActiveTasks[0].Get());
+		AShiftCustomer* Last = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::CheckoutCustomerSpot, FRotator::ZeroRotator);
+		Last->Init(ShiftData::Nights()[0].Customers[0]);
+		Last->State = ECustomerState::WaitingAtCheckout;
+		ActiveCustomer = Last;
+		NextCustomerIdx = CurrentNightSpec().Customers.Num();
+		OnCheckoutCompleted(Last);
+		OnCustomerFinished(Last);
+		Last->Destroy();
+		const bool bOnlyCleanup = ActiveTasks.Num() == CurrentNightSpec().Spills
+			&& !ActiveTasks.ContainsByPredicate([](const TWeakObjectPtr<AShiftTaskTarget>& Task) { return !Task.IsValid() || Task->Type != EShiftTaskType::Spill; });
+		if (!CheckSelfTest(TEXT("last_customer_goes_directly_to_cleanup"), Phase == EShiftPhase::Cleanup && bOnlyCleanup)) { return; }
+		AdvanceSelfTest(ESelfTestStage::Regression);
+		break;
+	}
+	case ESelfTestStage::Regression:
+	{
 		Income = 0.f;
 		Losses = 0.f;
 		StartNight(0);
@@ -225,6 +437,9 @@ void AShiftStoreGameMode::FinishSelfTest(bool bSuccess, const FString& Failure)
 	Report->SetStringField(TEXT("test_save_slot"), SelfTestSaveSlotName);
 	Report->SetStringField(TEXT("failure"), FailureReason);
 	Report->SetNumberField(TEXT("elapsed_world_seconds"), SelfTestElapsed);
+	Report->SetNumberField(TEXT("normal_customer_exit_seconds"), SelfTestExitSeconds);
+	Report->SetNumberField(TEXT("normal_customer_max_yaw_step"), SelfTestExitMaxYawStep);
+	Report->SetStringField(TEXT("normal_customer_last_exit_position"), SelfTestExitLastLocation.ToString());
 	FString Json;
 	FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&Json));
 	const bool bReportWritten = FFileHelper::SaveStringToFile(Json, *(FPaths::ProjectSavedDir() / TEXT("gameplay_selftest.json")));
