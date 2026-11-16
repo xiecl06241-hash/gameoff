@@ -21,6 +21,7 @@ public:
 	void OnGrabbedByMonster(AShiftCustomer* Monster, bool bUnseenAmbush);
 	void ReleaseFromGrab(bool bEscaped = true);
 	void ResetGrabCamera();
+	void ApplyMouseLook(float DeltaX, float DeltaY);
 	bool IsGrabbed() const { return GrabbingMonster.IsValid(); }
 
 	void PickupItem(AShiftItem* Item);

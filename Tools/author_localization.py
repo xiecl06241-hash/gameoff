@@ -6,6 +6,12 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 # Columns: English source key, Simplified Chinese, Japanese, Traditional Chinese.
 ENTRIES = [
+    ("Mouse Sensitivity", "鼠标灵敏度", "マウス感度", "滑鼠靈敏度"),
+    ("Lower is slower. Changes are saved automatically.", "数值越低，视角移动越慢。设置会自动保存。", "値が小さいほど視点移動が遅くなります。変更は自動保存されます。", "數值越低，視角移動越慢。設定會自動儲存。"),
+    ("Mouse sensitivity: %sx", "鼠标灵敏度：{0} 倍", "マウス感度：{0} 倍", "滑鼠靈敏度：{0} 倍"),
+    ("Restore Default", "恢复默认", "初期値に戻す", "恢復預設"),
+    ("Back", "返回", "戻る", "返回"),
+    ("[Left / Right] Adjust    [Up / Down] Select    [Esc] Back", "[← / →] 调整    [↑ / ↓] 选择    [Esc] 返回", "[← / →] 調整    [↑ / ↓] 選択    [Esc] 戻る", "[← / →] 調整    [↑ / ↓] 選擇    [Esc] 返回"),
     ("CURRENT OBJECTIVE", "当前目标", "現在の目標", "目前目標"),
     ("Time left: %s", "剩余时间：{0}", "残り時間：{0}", "剩餘時間：{0}"),
     ("%s · %s", "{0} · {1}", "{0} · {1}", "{0} · {1}"),

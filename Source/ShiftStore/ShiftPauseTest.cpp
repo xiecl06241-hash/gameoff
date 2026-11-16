@@ -140,33 +140,45 @@ void AShiftPlayerController::TickPauseTest()
 		Key(EKeys::Down, true);
 		break;
 	case 12:
-		Check(TEXT("keyboard_selects_return_to_title"), bPauseMenuOpen && SelectedPauseAction == 1);
+		Key(EKeys::Down, false);
+		break;
+	case 13:
+		Key(EKeys::Down, true);
+		break;
+	case 14:
+		Check(TEXT("keyboard_selects_return_to_title"), bPauseMenuOpen && SelectedPauseAction == 2);
 		Key(EKeys::Down, false);
 		Key(EKeys::Enter, true);
 		break;
-	case 13:
+	case 15:
 		Check(TEXT("return_to_title_unpauses_and_cleans_night"), !IsPaused() && !bPauseMenuOpen && GM->Phase == EShiftPhase::Title
 			&& GM->ActiveTasks.IsEmpty() && !GM->ActiveCustomer.IsValid() && !Clerk->HeldItem.IsValid() && !GM->Director->IsShifted());
 		Key(EKeys::Enter, false);
 		break;
-	case 14:
+	case 16:
 		Check(TEXT("menu_confirm_does_not_start_new_game"), GM->Phase == EShiftPhase::Title);
 		GM->OnAdvanceScreenKey();
 		Key(EKeys::Escape, true);
 		break;
-	case 15:
-		Key(EKeys::Escape, false);
-		Key(EKeys::Down, true);
-		break;
-	case 16:
-		Key(EKeys::Down, false);
-		break;
 	case 17:
+		Key(EKeys::Escape, false);
 		Key(EKeys::Down, true);
 		break;
 	case 18:
 		Key(EKeys::Down, false);
-		Check(TEXT("keyboard_selects_quit_game"), bPauseMenuOpen && SelectedPauseAction == 2);
+		break;
+	case 19:
+		Key(EKeys::Down, true);
+		break;
+	case 20:
+		Key(EKeys::Down, false);
+		break;
+	case 21:
+		Key(EKeys::Down, true);
+		break;
+	case 22:
+		Key(EKeys::Down, false);
+		Check(TEXT("keyboard_selects_quit_game"), bPauseMenuOpen && SelectedPauseAction == 3);
 		FinishPauseTest();
 		Key(EKeys::Enter, true);
 		break;

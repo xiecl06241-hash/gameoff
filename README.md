@@ -8,6 +8,8 @@
 
 ## 快速启动 / Quick Start
 
+**[下载 v0.2 Windows 免安装版](https://github.com/xiecl06241-hash/gameoff/releases/download/v0.2/ShiftStore-v0.2-Windows-x64.zip)** · [版本说明与已知问题](Docs/RELEASES/v0.2.md)
+
 **先确认你拿到的是打包版还是源码。** `Builds/` 被 Git 忽略，**克隆本仓库或下载 GitHub 的 Source code ZIP，都不会附带 `ShiftStore.exe`**。下面的启动文件在本机完成打包后，或拿到独立 Windows 打包版后才会存在。
 
 ### 已有 Windows 打包版：直接玩
@@ -126,6 +128,8 @@ python .github/scripts/build_windows.py
 
 Pausing freezes chores, sanity loss, customers, monsters and world physics. Returning to the title discards unsaved progress from the current night; the last dawn checkpoint is preserved.
 
+Open **Esc → Mouse Sensitivity** to adjust camera speed with the slider or Left/Right keys. The range is **0.10–3.00×**, with **1.00×** preserving the original speed. Changes are saved automatically; **Restore Default** resets to 1.00×. Esc returns to the pause menu before resuming. This adjusts in-game sensitivity; hardware DPI remains a mouse-driver setting.
+
 ### AI Usage Disclosure (GitHub Game Off 2026 Compliance)
 In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
 - **Code & Tooling**: C++ gameplay systems (`Source/ShiftStore/`), Unreal Editor Python geometry/material authoring scripts (`Tools/generate_store.py`), and packaging/verification scripts were developed with the assistance of AI coding agents (Codex, Claude / Gemini in Antigravity).
@@ -147,6 +151,8 @@ In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
 日常任务有常驻步骤和黄色通道／距离标记，按 `Tab` 可切换指引的任务。当前三晚每项任务时限分别为 **240／180／120 秒**，夜晚说明页暂停计时。补货时先沿标记去仓库领取补货纸箱，再跟随新标记回到货架长按 `E`。
 
 夜晚中按 `Esc` 打开暂停菜单，再按 `Esc` 继续；也可用鼠标点击，或方向键／W、S 选择后按 Enter／Space 确认。暂停时任务倒计时、清醒度扣除、顾客／怪物及物理运动均停止。返回主菜单会放弃本晚未保存的进度，保留最近一次天亮时的存档。
+
+进入 **Esc → 鼠标灵敏度**，拖动滑条或用左右方向键调整，范围为原速度的 **0.10–3.00 倍**，默认 **1.00 倍**；“恢复默认”可还原。设置自动保存，重启游戏仍有效，与语言及夜晚存档独立。设置页按 Esc 返回暂停菜单，再按 Esc 继续游戏。此项调整游戏内视角速度，鼠标硬件 DPI 仍在鼠标驱动中设置。
 
 界面、任务、交互提示、顾客对白、失败与结算文字均支持上述四个语言选项。场景中的原创品牌、包装和实体标识暂保留原样。语言包和字体制作说明见 [Docs/LOCALIZATION.md](Docs/LOCALIZATION.md)。
 

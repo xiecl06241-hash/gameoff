@@ -1,4 +1,10 @@
 {
+  "Mouse Sensitivity": "Mouse Sensitivity",
+  "Lower is slower. Changes are saved automatically.": "Lower is slower. Changes are saved automatically.",
+  "Mouse sensitivity: %sx": "Mouse sensitivity: {0}x",
+  "Restore Default": "Restore Default",
+  "Back": "Back",
+  "[Left / Right] Adjust    [Up / Down] Select    [Esc] Back": "[Left / Right] Adjust    [Up / Down] Select    [Esc] Back",
   "CURRENT OBJECTIVE": "CURRENT OBJECTIVE",
   "Time left: %s": "Time left: {0}",
   "%s · %s": "{0} · {1}",

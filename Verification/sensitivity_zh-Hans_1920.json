@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "baseline_yaw_degrees": 35,
+  "baseline_pitch_degrees": 17.5,
+  "checks": {
+    "default_mouse_look_matches_previous_speed": true,
+    "pause_menu_open": true,
+    "keyboard_selects_mouse_settings_entry": true,
+    "mouse_settings_remain_paused": true,
+    "right_key_increases_sensitivity": true,
+    "settings_freeze_timers_and_sanity": true,
+    "left_key_decreases_sensitivity": true,
+    "slider_click_updates_value": true,
+    "slider_drag_clamps_maximum": true,
+    "slider_drag_clamps_minimum": true,
+    "mouse_release_saves_setting": true,
+    "restore_default_button": true,
+    "back_returns_to_paused_menu": true,
+    "resume_restores_game_input": true,
+    "sensitivity_scales_actual_yaw_and_pitch": true,
+    "sensitivity_survives_night_restart": true,
+    "sensitivity_survives_new_game": true,
+    "mouse_opens_settings_entry": true,
+    "escape_returns_to_paused_menu": true,
+    "sensitivity_restored_after_relaunch": true
+  },
+  "language": "zh-Hans",
+  "process_exit_code": 0,
+  "player_save_and_language_unchanged": true,
+  "original_settings_restored": true,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "editor": false
+}

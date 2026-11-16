@@ -15,11 +15,38 @@ public:
 	int32 PauseSelection() const { return SelectedPauseAction; }
 	bool BlocksGameplayInput();
 	void TogglePauseMenu();
+	bool IsMouseSettingsOpen() const { return bMouseSettingsOpen; }
+	int32 MouseSettingsSelection() const { return SelectedMouseSetting; }
+	float MouseSensitivity() const { return Sensitivity; }
+	static constexpr float MinSensitivity = 0.10f;
+	static constexpr float MaxSensitivity = 3.f;
+	void SetMouseSensitivity(float Value, bool bPersist = true);
 
 protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void SetupInputComponent() override;
 
 private:
+	void DecreaseSensitivity();
+	void IncreaseSensitivity();
+	void ReleaseMenuMouse();
+	void UpdateSensitivityFromMouse(float X, float Width);
+	void SaveMouseSensitivity();
+	void CloseMouseSettings();
+	bool bMouseSettingsOpen = false;
+	bool bDraggingSensitivity = false;
+	bool bSensitivityDirty = false;
+	int32 SelectedMouseSetting = 0;
+	float Sensitivity = 1.f;
+	void TickSensitivityTest();
+	void FinishSensitivityTest();
+	int32 SensitivityTestStep = 0;
+	double SensitivityTestNextTime = 0.;
+	TMap<FString, bool> SensitivityTestChecks;
+	FVector2D SensitivityTestBaseline = FVector2D::ZeroVector;
+	float SensitivityTestTimer = 0.f;
+	float SensitivityTestSanity = 0.f;
 	void SetPauseMenuOpen(bool bOpen);
 	void PreviousPauseAction();
 	void NextPauseAction();

@@ -51,8 +51,45 @@ FBox2D AShiftHUD::LanguageButton(int32 Index, float Width, float Height)
 
 FBox2D AShiftHUD::PauseButton(int32 Index, float Width, float Height)
 {
-	return FBox2D(FVector2D(Width * 0.30f, Height * (0.36f + Index * 0.11f)),
-		FVector2D(Width * 0.70f, Height * (0.445f + Index * 0.11f)));
+	return FBox2D(FVector2D(Width * 0.30f, Height * (0.32f + Index * 0.10f)),
+		FVector2D(Width * 0.70f, Height * (0.395f + Index * 0.10f)));
+}
+
+FBox2D AShiftHUD::SensitivitySlider(float Width, float Height)
+{
+	return FBox2D(FVector2D(Width * 0.30f - 12.f, Height * 0.44f), FVector2D(Width * 0.70f + 12.f, Height * 0.53f));
+}
+
+FBox2D AShiftHUD::SensitivityButton(int32 Index, float Width, float Height)
+{
+	return FBox2D(FVector2D(Width * 0.30f, Height * (0.63f + Index * 0.11f)),
+		FVector2D(Width * 0.70f, Height * (0.705f + Index * 0.11f)));
+}
+
+void AShiftHUD::DrawMouseSettings(const AShiftPlayerController* PC)
+{
+	const float W = Canvas->ClipX, H = Canvas->ClipY;
+	const FLinearColor Accent(0.45f, 0.90f, 0.72f);
+	DrawCenteredText(TEXT("Mouse Sensitivity"), H * 0.20f, FLinearColor(0.82f, 0.95f, 0.90f), 1.8f);
+	DrawCenteredText(TEXT("Lower is slower. Changes are saved automatically."), H * 0.32f, FLinearColor(0.72f, 0.84f, 0.80f), 0.95f);
+	DrawCenteredText(ShiftLoc::Format(TEXT("Mouse sensitivity: %sx"), {FString::Printf(TEXT("%.2f"), PC->MouseSensitivity())}),
+		H * 0.39f, PC->MouseSettingsSelection() == 0 ? Accent : FLinearColor::White, 1.25f);
+	const float Fraction = (PC->MouseSensitivity() - AShiftPlayerController::MinSensitivity) /
+		(AShiftPlayerController::MaxSensitivity - AShiftPlayerController::MinSensitivity);
+	DrawRect(FLinearColor(0.12f, 0.20f, 0.18f), W * 0.30f, H * 0.48f, W * 0.40f, 8.f);
+	DrawRect(Accent, W * 0.30f, H * 0.48f, W * 0.40f * Fraction, 8.f);
+	DrawRect(FLinearColor::White, W * (0.30f + 0.40f * Fraction) - 4.f, H * 0.48f - 10.f, 8.f, 28.f);
+	DrawText(TEXT("0.10x"), FLinearColor(0.65f, 0.78f, 0.72f), W * 0.30f, H * 0.54f, InterfaceFont(), 0.9f);
+	DrawText(TEXT("3.00x"), FLinearColor(0.65f, 0.78f, 0.72f), W * 0.70f - 65.f, H * 0.54f, InterfaceFont(), 0.9f);
+	const TCHAR* Labels[] = {TEXT("Restore Default"), TEXT("Back")};
+	for (int32 Index = 0; Index < 2; ++Index)
+	{
+		const FBox2D Box = SensitivityButton(Index, W, H);
+		const bool bSelected = PC->MouseSettingsSelection() == Index + 1;
+		DrawRect(bSelected ? FLinearColor(0.13f, 0.34f, 0.29f) : FLinearColor(0.05f, 0.10f, 0.10f), Box.Min.X, Box.Min.Y, Box.GetSize().X, Box.GetSize().Y);
+		DrawCenteredText(Labels[Index], Box.Min.Y + Box.GetSize().Y * 0.24f, bSelected ? FLinearColor::White : FLinearColor(0.65f, 0.74f, 0.70f), 1.2f);
+	}
+	DrawCenteredText(TEXT("[Left / Right] Adjust    [Up / Down] Select    [Esc] Back"), H * 0.89f, FLinearColor(0.65f, 0.82f, 0.78f), 0.95f);
 }
 
 void AShiftHUD::DrawLocalizedText(const FString& Str, FLinearColor Color, float X, float Y, UFont* Font, float Scale, float MaxWidth)
@@ -100,9 +137,10 @@ void AShiftHUD::DrawHUD()
 	{
 		DrawRect(FLinearColor(0.015f, 0.025f, 0.025f, 0.94f), 0.f, 0.f, W, H);
 		DrawRect(FLinearColor(0.18f, 0.55f, 0.48f), W * 0.25f, H * 0.29f, W * 0.50f, 3.f);
+		if (PC->IsMouseSettingsOpen()) { DrawMouseSettings(PC); return; }
 		DrawCenteredText(TEXT("PAUSED"), H * 0.20f, FLinearColor(0.82f, 0.95f, 0.90f), 2.f);
-		const TCHAR* Labels[] = {TEXT("Resume Game"), TEXT("Return to Main Menu"), TEXT("Quit Game")};
-		for (int32 Index = 0; Index < 3; ++Index)
+		const TCHAR* Labels[] = {TEXT("Resume Game"), TEXT("Mouse Sensitivity"), TEXT("Return to Main Menu"), TEXT("Quit Game")};
+		for (int32 Index = 0; Index < 4; ++Index)
 		{
 			const FBox2D Box = PauseButton(Index, W, H);
 			const bool bSelected = PC->PauseSelection() == Index;
@@ -113,9 +151,9 @@ void AShiftHUD::DrawHUD()
 				bSelected ? FLinearColor::White : FLinearColor(0.65f, 0.74f, 0.70f), 1.3f);
 		}
 		DrawCenteredText(TEXT("Only dawn checkpoints are saved. Returning to the menu discards this night's progress."),
-			H * 0.77f, FLinearColor(0.85f, 0.78f, 0.60f), 0.95f);
+			H * 0.78f, FLinearColor(0.85f, 0.78f, 0.60f), 0.95f);
 		DrawCenteredText(TEXT("[Esc] Resume    [Up / Down] Select    [Enter / Click] Confirm"),
-			H * 0.85f, FLinearColor(0.65f, 0.82f, 0.78f), 0.95f);
+			H * 0.88f, FLinearColor(0.65f, 0.82f, 0.78f), 0.95f);
 		return;
 	}
 

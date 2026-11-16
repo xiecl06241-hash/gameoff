@@ -14,12 +14,15 @@ public:
 	virtual void DrawHUD() override;
 	static FBox2D LanguageButton(int32 Index, float Width, float Height);
 	static FBox2D PauseButton(int32 Index, float Width, float Height);
+	static FBox2D SensitivitySlider(float Width, float Height);
+	static FBox2D SensitivityButton(int32 Index, float Width, float Height);
 	bool HasRuntimeFonts() const;
 	int32 ObjectiveTaskRows = 0;
 	int32 SubtitleLines = 0;
 	bool bObjectiveFitsViewport = true;
 
 private:
+	void DrawMouseSettings(const class AShiftPlayerController* PC);
 	float DrawObjectivePanel(class AShiftStoreGameMode* GM, class AShiftPlayerCharacter* Player);
 	TArray<FString> WrapText(const FString& Str, float Width, float Scale, int32 MaxLines = 0) const;
 	void DrawSubtitle(class AShiftStoreGameMode* GM);

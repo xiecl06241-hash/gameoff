@@ -181,6 +181,14 @@ FName AShiftPlayerCharacter::ExtractSkuTag(const AActor* Actor) const
 	return NAME_None;
 }
 
+void AShiftPlayerCharacter::ApplyMouseLook(float DeltaX, float DeltaY)
+{
+	const AShiftPlayerController* PC = Cast<AShiftPlayerController>(GetController());
+	const float Scale = 0.7f * (PC ? PC->MouseSensitivity() : 1.f);
+	AddControllerYawInput(DeltaX * Scale);
+	AddControllerPitchInput(-DeltaY * Scale);
+}
+
 void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -272,8 +280,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	{
 	float MouseX = 0.f, MouseY = 0.f;
 	PC->GetInputMouseDelta(MouseX, MouseY);
-	if (MouseX != 0.f) { AddControllerYawInput(MouseX * 0.7f); }
-	if (MouseY != 0.f) { AddControllerPitchInput(-MouseY * 0.7f); }
+	ApplyMouseLook(MouseX, MouseY);
 	// Arrow key look fallback for accessibility / headless testing
 	if (PC->IsInputKeyDown(EKeys::Left))  { AddControllerYawInput(-70.f * DeltaSeconds); }
 	if (PC->IsInputKeyDown(EKeys::Right)) { AddControllerYawInput(70.f * DeltaSeconds); }

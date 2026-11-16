@@ -6,7 +6,7 @@
 
 ## 文本与字体
 
-- `Content/Localization/Strings/en.json`、`ja.json`、`zh-Hant.json`、`zh-Hans.json`：四份 UTF-8 语言包，各 154 条。覆盖语言与暂停菜单、任务名、商品名称、任务步骤与路线指引、关东煮准备、交互提示、顾客对白、异常提示、失败原因与结算。
+- `Content/Localization/Strings/en.json`、`ja.json`、`zh-Hant.json`、`zh-Hans.json`：四份 UTF-8 语言包，当前各 175 条。覆盖语言、暂停及鼠标灵敏度菜单、任务名、商品名称、任务步骤与路线指引、关东煮准备、交互提示、顾客对白、主角反应、异常提示、失败原因与结算。
 - 英文原文是稳定键；格式字符串保留原来的 `%s/%d/%.2f` 等键名，语言包值使用 `{0}`、`{1}` 参数。代码用 `ShiftLoc::Format` 传入已格式化的数值，商品名等字符串参数会先查表翻译。SKU、资产名和游戏存档使用原来的稳定标识。
 - `Tools/author_localization.py` 是四个语言选项的文案源，修改后运行以重新生成 JSON；运行时直接加载 JSON。繁体中文保存为独立、经过检查的文案列，重新生成时不依赖简繁转换库。缺少译文时回退英文，未列入语言包的品牌文本保持原样。
 - Noto Sans CJK SC／JP／TC Regular 字体以独立 FontFace 和 Runtime Font 资产保存，HUD 构造期硬引用确保进入烘焙。顾客头顶文字由 HUD 投影绘制，并检查距离及视线，避免旧 TextRender 字体缺字。

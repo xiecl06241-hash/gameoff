@@ -1,4 +1,10 @@
 {
+  "Mouse Sensitivity": "マウス感度",
+  "Lower is slower. Changes are saved automatically.": "値が小さいほど視点移動が遅くなります。変更は自動保存されます。",
+  "Mouse sensitivity: %sx": "マウス感度：{0} 倍",
+  "Restore Default": "初期値に戻す",
+  "Back": "戻る",
+  "[Left / Right] Adjust    [Up / Down] Select    [Esc] Back": "[← / →] 調整    [↑ / ↓] 選択    [Esc] 戻る",
   "CURRENT OBJECTIVE": "現在の目標",
   "Time left: %s": "残り時間：{0}",
   "%s · %s": "{0} · {1}",

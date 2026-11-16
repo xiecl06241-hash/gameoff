@@ -1,4 +1,10 @@
 {
+  "Mouse Sensitivity": "鼠标灵敏度",
+  "Lower is slower. Changes are saved automatically.": "数值越低，视角移动越慢。设置会自动保存。",
+  "Mouse sensitivity: %sx": "鼠标灵敏度：{0} 倍",
+  "Restore Default": "恢复默认",
+  "Back": "返回",
+  "[Left / Right] Adjust    [Up / Down] Select    [Esc] Back": "[← / →] 调整    [↑ / ↓] 选择    [Esc] 返回",
   "CURRENT OBJECTIVE": "当前目标",
   "Time left: %s": "剩余时间：{0}",
   "%s · %s": "{0} · {1}",
