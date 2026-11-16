@@ -36,7 +36,7 @@
 | [Content/ShiftStore/Maps/Normal.umap](Content/ShiftStore/Maps/Normal.umap) | 游戏默认主地图，UE 资源路径为 `/Game/ShiftStore/Maps/Normal` |
 | [Source/ShiftStore/](Source/ShiftStore/) | C++ 玩法实现；无需逐个运行这些源文件 |
 
-`Builds/Windows/` 中的文件是**本机生成的交付物，不在 Git 跟踪范围内**。源码用户请按下文编译；若维护者已成功运行 Windows 构建工作流，也可在对应 Actions 运行页面下载 `ShiftStore-Windows-<提交哈希>` artifact 并完整解压。工作流需要已配置的 UE 自托管 runner，详见 [Actions 说明](.github/README.md)。
+`Builds/Windows/` 中的文件是**本机生成的交付物，不在 Git 跟踪范围内**。源码用户请按下文编译；若维护者已成功运行 Windows 构建工作流，也可在对应 Actions 运行页面下载 `ShiftStore-Windows-<提交哈希>` artifact 并完整解压。工作流需要已配置的 UE 自托管 runner，详见 [Actions 说明](.github/ACTIONS.md)。
 
 ### 只有源码：编译并启动
 
