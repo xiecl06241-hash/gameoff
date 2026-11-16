@@ -78,11 +78,15 @@ enum class EShiftGuideAction : uint8 { Work, CollectCarton, DeliverCarton, Colle
 
 struct FShiftTaskGuidance
 {
+	TWeakObjectPtr<class AShiftTaskTarget> Task;
 	TWeakObjectPtr<AActor> Target;
 	FVector Location = FVector::ZeroVector;
 	FString TaskLabel;
 	EShiftGuideAction Action = EShiftGuideAction::Work;
 };
+
+UENUM()
+enum class EShiftDialogueEvent : uint8 { WorkStart, WitnessReveal, Grabbed, Escaped, LowSanity };
 
 namespace ShiftData
 {

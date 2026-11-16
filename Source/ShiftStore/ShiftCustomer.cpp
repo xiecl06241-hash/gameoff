@@ -37,6 +37,7 @@ AShiftCustomer::AShiftCustomer()
 		Skel->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
 		Skel->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 		Skel->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		Skel->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 		Skel->SetCollisionResponseToAllChannels(ECR_Ignore);
 		Skel->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 		Skel->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Block);
@@ -77,6 +78,12 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 	bHasStoreRouteGoal = false;
 	StoreRoute.Empty();
 	Speech->SetText(FText::GetEmpty());
+	bBlockedByPlayer = false;
+	BlockedSeconds = 0.f;
+	ClearSeconds = 0.f;
+	CourtesyTime = 0.f;
+	CourtesyCount = 0;
+	LastCourtesyTime = -100.;
 }
 
 bool AShiftCustomer::CanSeePlayer(APawn* Player, float MaxDist, float CosHalfFOV) const
@@ -151,7 +158,7 @@ void AShiftCustomer::FollowStoreRoute(const FVector& Goal, float DeltaSeconds)
 	const FVector Current = GetActorLocation();
 	if (!bHasStoreRouteGoal || !StoreRouteGoal.Equals(Goal, 1.f) || (StoreRoute.IsEmpty() && StoreRouteRetry <= 0.f))
 	{
-		StoreRoute = ShiftGuidance::FindRoute(GetWorld(), this, nullptr, Goal, true);
+		StoreRoute = ShiftGuidance::FindRoute(GetWorld(), this, nullptr, Goal, true).Waypoints;
 		StoreRouteGoal = Goal;
 		bHasStoreRouteGoal = true;
 		StoreRouteIndex = 0;
@@ -176,12 +183,66 @@ void AShiftCustomer::FollowStoreRoute(const FVector& Goal, float DeltaSeconds)
 		GetCharacterMovement()->StopMovementImmediately();
 		return;
 	}
-	AddMovementInput((StoreRoute[StoreRouteIndex] - Current).GetSafeNormal2D(), 1.f);
+	const FVector Direction = (StoreRoute[StoreRouteIndex] - Current).GetSafeNormal2D();
+	if (!UpdatePlayerBlock(DeltaSeconds, Direction)) { AddMovementInput(Direction, 1.f); }
+}
+
+bool AShiftCustomer::UpdatePlayerBlock(float DeltaSeconds, const FVector& Direction)
+{
+	FCollisionObjectQueryParams Objects;
+	Objects.AddObjectTypesToQuery(ECC_Pawn);
+	FCollisionQueryParams Params(TEXT("CustomerPlayerBlock"), false, this);
+	FHitResult Hit;
+	const FVector Start = GetActorLocation();
+	const bool bHitPlayer = GetWorld()->SweepSingleByObjectType(Hit, Start, Start + Direction * 100.f,
+		FQuat::Identity, Objects, FCollisionShape::MakeCapsule(34.f, 85.f), Params)
+		&& Hit.GetActor() == UGameplayStatics::GetPlayerPawn(this, 0);
+	if (bHitPlayer) { bBlockedByPlayer = true; ClearSeconds = 0.f; }
+	else if (bBlockedByPlayer)
+	{
+		ClearSeconds += DeltaSeconds;
+		if (ClearSeconds >= 0.2f) { bBlockedByPlayer = false; BlockedSeconds = 0.f; }
+	}
+	if (!bBlockedByPlayer) { return false; }
+	BlockedSeconds += DeltaSeconds;
+	RouteStalledTime = 0.f;
+	ConsumeMovementInputVector();
+	GetCharacterMovement()->StopMovementImmediately();
+	const double Now = GetWorld()->GetTimeSeconds();
+	if (BlockedSeconds >= 0.8f && Now - LastCourtesyTime >= 8.)
+	{
+		if (CourtesyTime <= 0.f) { SavedSpeech = Speech->Text; }
+		Speech->SetText(FText::FromString(TEXT("Excuse me, could I get through?")));
+		CourtesyTime = 2.5f;
+		LastCourtesyTime = Now;
+		++CourtesyCount;
+	}
+	if (BlockedSeconds >= 0.8f)
+	{
+		if (const APawn* P = UGameplayStatics::GetPlayerPawn(this, 0))
+		{
+			const FRotator Facing(0.f, (P->GetActorLocation() - Start).Rotation().Yaw, 0.f);
+			SetActorRotation(FMath::RInterpTo(GetActorRotation(), Facing, DeltaSeconds, 4.f));
+		}
+	}
+	return true;
+}
+
+FVector AShiftCustomer::GrabFocusLocation() const
+{
+	if (const USkeletalMeshComponent* Skel = GetMesh(); Skel && Skel->GetBoneIndex(TEXT("head")) != INDEX_NONE)
+	{
+		return Skel->GetSocketLocation(TEXT("head")) + GetActorForwardVector() * 8.f;
+	}
+	return GetActorLocation() + FVector(0.f, 0.f, 80.f);
 }
 
 void AShiftCustomer::BeginLeaving()
 {
 	State = ECustomerState::Leaving;
+	bBlockedByPlayer = false;
+	BlockedSeconds = 0.f;
+	ClearSeconds = 0.f;
 	StateTimer = 0.f;
 	TargetPos = ShiftData::OutsideDoor;
 	bHasStoreRouteGoal = false;
@@ -211,6 +272,8 @@ void AShiftCustomer::RevealMonster(APawn* Player)
 {
 	bWitnessedReveal = PlayerSeesMe(Player);
 	ApplyMonsterVisuals();
+	CourtesyTime = 0.f;
+	bBlockedByPlayer = false;
 	State = bWitnessedReveal ? ECustomerState::MonsterHunting : ECustomerState::MonsterStalking;
 	StateTimer = 0.f;
 	Speech->SetTextRenderColor(FColor(255, 80, 70));
@@ -273,7 +336,6 @@ void AShiftCustomer::SatisfyAndLeave()
 void AShiftCustomer::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	StateTimer += DeltaSeconds;
 	bSeeingPlayer = false;
 
 	if (APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0))
@@ -284,12 +346,28 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 
 	AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 	AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
+	if (GM && GM->Phase != EShiftPhase::Working && GM->Phase != EShiftPhase::Cleanup)
+	{
+		ConsumeMovementInputVector();
+		GetCharacterMovement()->StopMovementImmediately();
+		return;
+	}
+	if (CourtesyTime > 0.f)
+	{
+		CourtesyTime = FMath::Max(0.f, CourtesyTime - DeltaSeconds);
+		if (CourtesyTime == 0.f && !IsMonsterActive() && Speech->Text.ToString() == TEXT("Excuse me, could I get through?")) { Speech->SetText(SavedSpeech); }
+	}
+	// Moving states advance their timers only after the obstruction check below.
+	const bool bMoving = State == ECustomerState::Entering || State == ECustomerState::Browsing
+		|| State == ECustomerState::WalkingToCheckout || State == ECustomerState::Leaving;
+	if (!bMoving) { StateTimer += DeltaSeconds; }
 
 	switch (State)
 	{
 	case ECustomerState::Entering:
 		MoveToward(TargetPos, 185.f, DeltaSeconds);
-		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 45.f)
+		if (!bBlockedByPlayer) { StateTimer += DeltaSeconds; }
+		if (!bBlockedByPlayer && FVector::Dist2D(GetActorLocation(), TargetPos) < 45.f)
 		{
 			State = ECustomerState::Browsing;
 			StateTimer = 0.f;
@@ -300,7 +378,8 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 
 	case ECustomerState::Browsing:
 		MoveToward(TargetPos, 175.f, DeltaSeconds);
-		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 55.f || StateTimer > 6.5f)
+		if (!bBlockedByPlayer) { StateTimer += DeltaSeconds; }
+		if (!bBlockedByPlayer && FVector::Dist2D(GetActorLocation(), TargetPos) < 55.f)
 		{
 			StateTimer = 0.f;
 			if (Spec.bAsksHelp)
@@ -334,7 +413,8 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 
 	case ECustomerState::WalkingToCheckout:
 		MoveToward(TargetPos, 185.f, DeltaSeconds);
-		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 55.f)
+		if (!bBlockedByPlayer) { StateTimer += DeltaSeconds; }
+		if (!bBlockedByPlayer && FVector::Dist2D(GetActorLocation(), TargetPos) < 55.f)
 		{
 			State = ECustomerState::WaitingAtCheckout;
 			ConsumeMovementInputVector();
@@ -402,7 +482,8 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 
 	case ECustomerState::Leaving:
 		MoveToward(TargetPos, 210.f, DeltaSeconds);
-		if (FVector::Dist2D(GetActorLocation(), TargetPos) < 60.f)
+		if (!bBlockedByPlayer) { StateTimer += DeltaSeconds; }
+		if (!bBlockedByPlayer && FVector::Dist2D(GetActorLocation(), TargetPos) < 60.f)
 		{
 			if (GM) { GM->OnCustomerFinished(this); }
 			Destroy();

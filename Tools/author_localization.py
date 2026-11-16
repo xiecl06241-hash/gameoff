@@ -6,6 +6,21 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 # Columns: English source key, Simplified Chinese, Japanese, Traditional Chinese.
 ENTRIES = [
+    ("CURRENT OBJECTIVE", "当前目标", "現在の目標", "目前目標"),
+    ("Time left: %s", "剩余时间：{0}", "残り時間：{0}", "剩餘時間：{0}"),
+    ("%s · %s", "{0} · {1}", "{0} · {1}", "{0} · {1}"),
+    ("%d overdue chores are draining sanity!", "{0} 项任务超时，正在扣除清醒度！", "期限切れの作業 {0} 件で正気度が減少中！", "{0} 項工作逾時，正在扣除清醒度！"),
+    ("[TAB] Next chore", "[Tab] 切换任务", "[Tab] 次の作業", "[Tab] 切換工作"),
+    ("Route blocked. Return to an aisle.", "路线受阻，请返回通道。", "経路が塞がれています。通路に戻ってください。", "路線受阻，請返回通道。"),
+    ("Waiting for the next customer.", "等待下一位顾客进店。", "次のお客様を待っています。", "等待下一位顧客進店。"),
+    ("Customer is leaving. Keep the doorway clear.", "顾客正在离店，请保持出口畅通。", "お客様が退店します。出口を空けてください。", "顧客正在離店，請保持出口暢通。"),
+    ("Take the product from a shelf, then press [E] on the customer.", "从货架拿取商品，再对顾客按 [E] 递交。", "棚から商品を取り、お客様に [E] で渡してください。", "從貨架拿取商品，再對顧客按 [E] 遞交。"),
+    ("Excuse me, could I get through?", "不好意思，借过一下。", "すみません、通してもらえますか。", "不好意思，借過一下。"),
+    ("Let's get the store ready.", "先把店里的活干完。", "まずは店の仕事を片づけよう。", "先把店裡的工作做完。"),
+    ("What... was that?", "刚才……那是什么？", "今の……何だった？", "剛才……那是什麼？"),
+    ("Let go of me!", "放开我！", "離せ！", "放開我！"),
+    ("I need some distance...", "得先拉开距离……", "距離を取らないと……", "得先拉開距離……"),
+    ("Stay calm. Don't panic.", "冷静，别慌。", "落ち着け。慌てるな。", "冷靜，別慌。"),
     ("PAUSED", "游戏已暂停", "一時停止", "遊戲已暫停"),
     ("Resume Game", "继续游戏", "ゲームを再開", "繼續遊戲"),
     ("Return to Main Menu", "返回主菜单", "タイトルへ戻る", "返回主選單"),

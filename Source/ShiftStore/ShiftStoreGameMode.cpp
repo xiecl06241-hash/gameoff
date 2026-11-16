@@ -2,6 +2,8 @@
 #include "ShiftLocalization.h"
 #include "ShiftPlayerCharacter.h"
 #include "ShiftPlayerController.h"
+#include "ShiftGuideActor.h"
+#include "ShiftFeedbackTest.h"
 #include "ShiftHUD.h"
 #include "ShiftDirector.h"
 #include "ShiftTaskTarget.h"
@@ -53,6 +55,7 @@ void AShiftStoreGameMode::BeginPlay()
 	}
 
 	Director = GetWorld()->SpawnActor<AShiftDirector>(FVector::ZeroVector, FRotator::ZeroRotator);
+	GuideRenderer = GetWorld()->SpawnActor<AShiftGuideActor>(FVector::ZeroVector, FRotator::ZeroRotator);
 
 	// Permanent warehouse stock carton dispenser
 	AShiftTaskTarget* Source = GetWorld()->SpawnActor<AShiftTaskTarget>(FVector(400.f, 1380.f, 95.f), FRotator::ZeroRotator);
@@ -87,6 +90,7 @@ void AShiftStoreGameMode::BeginPlay()
 	{
 		OpenLanguageSelection();
 	}
+	if (FParse::Param(*CmdLine, TEXT("ShiftFeedbackTest"))) { GetWorld()->SpawnActor<AShiftFeedbackTest>(); }
 }
 
 void AShiftStoreGameMode::OpenLanguageSelection()
@@ -188,6 +192,7 @@ void AShiftStoreGameMode::ClearNightActors()
 
 void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 {
+	ResetDialogue();
 	ClearNightActors();
 	NightIndex = FMath::Clamp(InNightIndex, 0, ShiftData::Nights().Num() - 1);
 	CheckpointNight = NightIndex;
@@ -207,9 +212,10 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 
 	if (AShiftPlayerCharacter* P = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
 	{
-		P->ReleaseFromGrab();
+		P->ReleaseFromGrab(false);
 		P->ConsumeHeldItem();
 		P->SetActorLocationAndRotation(FVector(800.f, 150.f, 100.f), FRotator(0.f, 90.f, 0.f));
+		if (AController* C = P->GetController()) { C->SetControlRotation(FRotator(0.f, 90.f, 0.f)); }
 	}
 
 	// Re-show any hidden mop/broom props so they can be picked up again
@@ -228,7 +234,8 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 		SpawnTaskFromSpot(SpotIdx);
 	}
 	Phase = EShiftPhase::NightIntro;
-	SetStatusBanner(ShiftLoc::Format(TEXT("%s — Complete opening chores to let customers in."), {FString(Spec.Title)}), 4.f);
+	BannerText.Empty();
+	BannerTimer = 0.f;
 }
 
 void AShiftStoreGameMode::RestartCurrentNight()
@@ -259,6 +266,7 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 	else if (Phase == EShiftPhase::NightIntro)
 	{
 		Phase = EShiftPhase::Working;
+		if (NightIndex == 0) { RequestDialogue(EShiftDialogueEvent::WorkStart); }
 		PlaySynthesizedCue(520.f, 0.18f, 0.25f);
 	}
 	else if (Phase == EShiftPhase::Dawn)
@@ -298,7 +306,7 @@ void AShiftStoreGameMode::ReturnToTitle()
 {
 	if (AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
 	{
-		Player->ReleaseFromGrab();
+		Player->ReleaseFromGrab(false);
 		Player->ConsumeHeldItem();
 		Player->CrosshairPrompt.Empty();
 		Player->HoldProgress = 0.f;
@@ -313,6 +321,7 @@ void AShiftStoreGameMode::ReturnToTitle()
 	// Returning to the title must not overwrite the last dawn checkpoint.
 	bHasSavedProgress = LoadProgress();
 	Phase = EShiftPhase::Title;
+	ResetDialogue();
 }
 
 void AShiftStoreGameMode::CycleGuidedTask()
@@ -329,6 +338,7 @@ bool AShiftStoreGameMode::GetTaskGuidance(const AShiftPlayerCharacter* Player, F
 	AShiftTaskTarget* Task = ActiveTasks[FMath::Clamp(GuidedTaskIndex, 0, ActiveTasks.Num() - 1)].Get();
 	if (!Task) { return false; }
 	Out.Target = Task;
+	Out.Task = Task;
 	Out.Location = Task->GetActorLocation();
 	Out.TaskLabel = Task->Label;
 	if (Task->Type == EShiftTaskType::Restock)
@@ -436,7 +446,8 @@ void AShiftStoreGameMode::SpawnPostServiceTask()
 	++ServiceTaskRotation;
 	if (!ActiveTasks.IsEmpty())
 	{
-		SetStatusBanner(ShiftLoc::Format(TEXT("Next chore: %s. Follow the yellow marker."), {ActiveTasks[0]->Label}), 4.f);
+		BannerText.Empty();
+		BannerTimer = 0.f;
 	}
 }
 
@@ -498,7 +509,8 @@ void AShiftStoreGameMode::OnCustomerNeedsHelp(AShiftCustomer* Customer)
 {
 	if (!Customer) { return; }
 	PlaySynthesizedCue(480.f, 0.16f, 0.22f);
-	SetStatusBanner(ShiftLoc::Format(TEXT("Customer asks for help finding [%s]! Pick it up from a shelf and press [E] on them."), {FString(ShiftData::ProductLabel(Customer->Spec.WantedSku))}), 4.5f);
+	BannerText.Empty();
+	BannerTimer = 0.f;
 }
 
 void AShiftStoreGameMode::OnCustomerHelped(AShiftCustomer* Customer)
@@ -513,7 +525,8 @@ void AShiftStoreGameMode::OnCustomerHelped(AShiftCustomer* Customer)
 
 void AShiftStoreGameMode::OnCustomerAtCheckout(AShiftCustomer* Customer)
 {
-	SetStatusBanner(TEXT("Customer is waiting at the Checkout Register. Press [E] to ring them up."), 3.5f);
+	BannerText.Empty();
+	BannerTimer = 0.f;
 }
 
 void AShiftStoreGameMode::OnCheckoutCompleted(AShiftCustomer* Customer)
@@ -552,6 +565,7 @@ void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitne
 	const FString ItemName = ShiftData::ProductLabel(Monster->Spec.MonsterSku);
 	if (bWitnessed)
 	{
+		RequestDialogue(EShiftDialogueEvent::WitnessReveal);
 		SetStatusBanner(ShiftLoc::Format(TEXT("THE STORE SHIFTED! Find [%s] (Red Glow) and deliver it to the Checkout Register!"), {FString(ItemName)}), 5.f);
 	}
 	else
@@ -632,6 +646,7 @@ void AShiftStoreGameMode::OnItemBroken(AShiftItem* Item, bool bUsedOnMonster)
 
 void AShiftStoreGameMode::ModifySanity(float Delta, const FString& Reason)
 {
+	const float PreviousSanity = Sanity;
 	Sanity = FMath::Clamp(Sanity + Delta, 0.f, ShiftData::MaxSanity);
 	if (!Reason.IsEmpty())
 	{
@@ -641,6 +656,7 @@ void AShiftStoreGameMode::ModifySanity(float Delta, const FString& Reason)
 	{
 		TriggerGameOver(TEXT("Your sanity collapsed during the night shift."));
 	}
+	else if (PreviousSanity >= 35.f && Sanity < 35.f) { RequestDialogue(EShiftDialogueEvent::LowSanity); }
 }
 
 void AShiftStoreGameMode::SetStatusBanner(const FString& InText, float Seconds)
@@ -653,6 +669,8 @@ void AShiftStoreGameMode::TriggerGameOver(const FString& Reason)
 {
 	GameOverReason = Reason;
 	Phase = EShiftPhase::GameOver;
+	ResetDialogue();
+	if (AShiftPlayerCharacter* P = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0))) { P->ReleaseFromGrab(false); }
 	if (Director) { Director->SetShifted(false); }
 	PlaySynthesizedCue(95.f, 0.8f, 0.45f, true);
 }
@@ -695,6 +713,7 @@ bool AShiftStoreGameMode::LoadProgress()
 void AShiftStoreGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	TickDialogue(DeltaSeconds);
 	if (FParse::Param(FCommandLine::Get(), TEXT("ShiftLocalizationTest")))
 	{
 		TickLocalizationTest(DeltaSeconds);

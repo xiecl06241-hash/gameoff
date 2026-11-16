@@ -15,13 +15,15 @@ public:
 	static FBox2D LanguageButton(int32 Index, float Width, float Height);
 	static FBox2D PauseButton(int32 Index, float Width, float Height);
 	bool HasRuntimeFonts() const;
+	int32 ObjectiveTaskRows = 0;
+	int32 SubtitleLines = 0;
+	bool bObjectiveFitsViewport = true;
 
 private:
+	float DrawObjectivePanel(class AShiftStoreGameMode* GM, class AShiftPlayerCharacter* Player);
+	TArray<FString> WrapText(const FString& Str, float Width, float Scale, int32 MaxLines = 0) const;
+	void DrawSubtitle(class AShiftStoreGameMode* GM);
 	void DrawTaskGuidance(class AShiftStoreGameMode* GM, class AShiftPlayerCharacter* Player);
-	TWeakObjectPtr<AActor> GuideActor;
-	FVector GuideDestination = FVector::ZeroVector;
-	TArray<FVector> GuideRoute;
-	float GuideRouteCheckedAt = -10.f;
 	UPROPERTY() TObjectPtr<UFont> ChineseFont;
 	UPROPERTY() TObjectPtr<UFont> JapaneseFont;
 	UPROPERTY() TObjectPtr<UFont> TraditionalChineseFont;

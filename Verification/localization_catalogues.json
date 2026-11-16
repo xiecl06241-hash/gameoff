@@ -6,11 +6,11 @@
     "zh-Hant",
     "zh-Hans"
   ],
-  "entries_per_pack": 154,
-  "source_strings_checked": 94,
+  "entries_per_pack": 169,
+  "source_strings_checked": 98,
   "font_characters_checked": {
-    "ja": 405,
-    "zh-Hant": 435,
-    "zh-Hans": 434
+    "ja": 416,
+    "zh-Hant": 458,
+    "zh-Hans": 456
   }
 }

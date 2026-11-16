@@ -1,6 +1,7 @@
 #include "ShiftHUD.h"
 #include "ShiftLocalization.h"
 #include "ShiftGuidance.h"
+#include "ShiftGuideActor.h"
 #include "ShiftStoreGameMode.h"
 #include "ShiftPlayerCharacter.h"
 #include "ShiftPlayerController.h"
@@ -14,6 +15,7 @@
 #include "Components/TextRenderComponent.h"
 #include "Engine/Font.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Camera/CameraComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 AShiftHUD::AShiftHUD()
@@ -227,67 +229,7 @@ void AShiftHUD::DrawHUD()
 		DrawLocalizedText(HeldStr, FLinearColor(0.92f, 0.90f, 0.70f), 36.f, 197.f, Font, 0.92f);
 	}
 
-	// --- Top-Right Panel: Priority Objective, Customer / Entity Demand, Active Chores ---
-	const float RX = W - 430.f;
-	float RY = 24.f;
-	const float ChecklistHeight = FMath::Max(220.f, 70.f + GM->ActiveTasks.Num() * 32.f + (GM->ActiveCustomer.IsValid() ? 100.f : 0.f) + (GM->Phase == EShiftPhase::Cleanup ? 36.f : 0.f));
-	DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.78f), RX, RY, 406.f, ChecklistHeight);
-	DrawLocalizedText(TEXT("SHIFT CHECKLIST & ALERTS"), FLinearColor(0.75f, 0.92f, 0.86f), RX + 14.f, RY + 10.f, Font, 1.0f);
-	RY += 48.f;
-
-	if (GM->ActiveCustomer.IsValid())
-	{
-		AShiftCustomer* C = GM->ActiveCustomer.Get();
-		if (C->IsMonsterActive())
-		{
-			DrawLocalizedText(TEXT("!! ABNORMAL ENTITY IN STORE !!"), FLinearColor(1.f, 0.25f, 0.22f), RX + 14.f, RY, Font, 1.05f);
-			RY += 32.f;
-			DrawLocalizedText(ShiftLoc::Format(TEXT("Demand: Find [%s] (Red Glow)"), {FString(ShiftData::ProductLabel(C->Spec.MonsterSku))}),
-				FLinearColor(1.f, 0.82f, 0.45f), RX + 14.f, RY, Font, 0.95f);
-			RY += 32.f;
-			DrawLocalizedText(TEXT("-> Deliver it to the Checkout Register!"), FLinearColor(0.95f, 0.90f, 0.85f), RX + 14.f, RY, Font, 0.95f);
-			RY += 32.f;
-		}
-		else if (C->State == ECustomerState::WaitingForHelp)
-		{
-			DrawLocalizedText(ShiftLoc::Format(TEXT("* Customer Help: Bring [%s]"), {FString(ShiftData::ProductLabel(C->Spec.WantedSku))}),
-				FLinearColor(1.f, 0.88f, 0.40f), RX + 14.f, RY, Font, 0.98f);
-			RY += 32.f;
-		}
-		else if (C->State == ECustomerState::WaitingAtCheckout)
-		{
-			DrawLocalizedText(TEXT("* Customer waiting at Checkout Register [E]"),
-				FLinearColor(0.45f, 1.f, 0.65f), RX + 14.f, RY, Font, 0.98f);
-			RY += 32.f;
-		}
-		else
-		{
-			DrawLocalizedText(TEXT("* Customer in store (Watch them closely)"),
-				FLinearColor(0.80f, 0.92f, 0.88f), RX + 14.f, RY, Font, 0.95f);
-			RY += 32.f;
-		}
-	}
-
-	if (GM->Phase == EShiftPhase::Cleanup)
-	{
-		DrawLocalizedText(TEXT("DAWN CLEANUP (Equip Mop in Warehouse):"), FLinearColor(0.95f, 0.88f, 0.45f), RX + 14.f, RY, Font, 0.95f);
-		RY += 32.f;
-	}
-
-	for (const TWeakObjectPtr<AShiftTaskTarget>& TP : GM->ActiveTasks)
-	{
-		if (const AShiftTaskTarget* T = TP.Get())
-		{
-			const bool bOver = T->IsOverdue();
-			const FString TimeStr = (T->Deadline > 0.f)
-				? (bOver ? TEXT("OVERDUE! (-Sanity)") : ShiftLoc::Format(TEXT("%ds"), {LexToString(FMath::CeilToInt(T->TimeLeft))}))
-				: TEXT("Required");
-			DrawLocalizedText(ShiftLoc::Format(TEXT("- %s  [%s]"), {FString(T->Label), FString(TimeStr)}),
-				bOver ? FLinearColor(1.f, 0.30f, 0.25f) : FLinearColor(0.86f, 0.90f, 0.88f),
-				RX + 14.f, RY, Font, 0.92f);
-			RY += 32.f;
-		}
-	}
+	const float ChecklistHeight = DrawObjectivePanel(GM, Player);
 
 	// Status banner (center top)
 	if (GM->BannerTimer > 0.f && !GM->BannerText.IsEmpty())
@@ -298,22 +240,30 @@ void AShiftHUD::DrawHUD()
 	}
 
 	// Canvas runtime fonts support CJK. The old offline TextRender font did not.
-	if (AShiftCustomer* Customer = GM->ActiveCustomer.Get(); Customer && Customer->Speech && !Customer->Speech->Text.IsEmpty())
+	if (AShiftCustomer* Customer = GM->ActiveCustomer.Get(); Customer && Customer->State != ECustomerState::MonsterGrabbing && Customer->Speech && !Customer->Speech->Text.IsEmpty())
 	{
 		const FVector Head = Customer->Speech->GetComponentLocation();
 		if (Player && FVector::DistSquared(Player->GetActorLocation(), Head) < FMath::Square(1200.f) && PlayerOwner->LineOfSightTo(Customer))
 		{
 			const FVector Screen = Project(Head);
-			if (Screen.Z > 0.f && Screen.X > 0.f && Screen.X < W && Screen.Y > H * 0.30f && Screen.Y < H * 0.90f)
+			if (Screen.Z > 0.f && Screen.X > 0.f && Screen.X < W && Screen.Y < H * 0.90f)
 			{
 				const FString Speech = ShiftLoc::Text(Customer->Speech->Text.ToString());
-				float TW = 0.f, TH = 0.f;
-				GetTextSize(Speech, TW, TH, Font, 1.f);
-				const float Scale = TW > W * 0.7f ? W * 0.7f / TW : 1.f;
-				TW *= Scale;
+				const TArray<FString> Lines = WrapText(Speech, W * 0.65f, 0.95f, 2);
+				float TW = 0.f;
+				for (const FString& Line : Lines)
+				{
+					float LW = 0.f, LH = 0.f;
+					GetTextSize(Line, LW, LH, Font, 0.95f);
+					TW = FMath::Max(TW, LW);
+				}
 				const float X = FMath::Clamp(Screen.X - TW * 0.5f, 12.f, W - TW - 12.f);
-				DrawRect(FLinearColor(0.02f, 0.03f, 0.03f, 0.8f), X - 8.f, Screen.Y - 4.f, TW + 16.f, TH * Scale + 8.f);
-				DrawText(Speech, FLinearColor(Customer->Speech->TextRenderColor), X, Screen.Y, Font, Scale);
+				float Y = FMath::Max(Screen.Y, H * 0.35f);
+				if (X < 444.f) { Y = FMath::Max(Y, 248.f); }
+				if (X + TW > W - 455.f) { Y = FMath::Max(Y, ChecklistHeight + 42.f); }
+				Y = FMath::Min(Y, H * 0.72f);
+				DrawRect(FLinearColor(0.02f, 0.03f, 0.03f, 0.85f), X - 8.f, Y - 4.f, TW + 16.f, Lines.Num() * 30.f + 8.f);
+				for (int32 Index = 0; Index < Lines.Num(); ++Index) { DrawText(Lines[Index], FLinearColor(Customer->Speech->TextRenderColor), X, Y + Index * 30.f, Font, 0.95f); }
 			}
 		}
 	}
@@ -335,83 +285,187 @@ void AShiftHUD::DrawHUD()
 		}
 	}
 	DrawTaskGuidance(GM, Player);
+	DrawSubtitle(GM);
 	DrawLocalizedText(TEXT("[Esc] Pause"), FLinearColor(0.65f, 0.82f, 0.78f), W - 170.f, H - 36.f, Font, 0.85f, 150.f);
+}
+
+TArray<FString> AShiftHUD::WrapText(const FString& Str, float Width, float Scale, int32 MaxLines) const
+{
+	const FString Text = ShiftLoc::Text(Str);
+	TArray<FString> Lines;
+	FString Line;
+	const auto Measure = [this, Scale](const FString& Value) {
+		float W = 0.f, H = 0.f;
+		GetTextSize(Value, W, H, InterfaceFont(), Scale);
+		return W;
+	};
+	for (TCHAR Character : Text)
+	{
+		if (Character == TEXT('\n')) { Lines.Add(Line); Line.Empty(); continue; }
+		Line.AppendChar(Character);
+		if (Measure(Line) > Width && Line.Len() > 1)
+		{
+			int32 Space = INDEX_NONE;
+			Line.FindLastChar(TEXT(' '), Space);
+			const int32 Split = Space > 0 ? Space : Line.Len() - 1;
+			Lines.Add(Line.Left(Split).TrimEnd());
+			Line = Line.Mid(Split).TrimStart();
+		}
+	}
+	if (!Line.IsEmpty()) { Lines.Add(Line); }
+	if (MaxLines > 0 && Lines.Num() > MaxLines)
+	{
+		Lines.SetNum(MaxLines);
+		FString& Last = Lines.Last();
+		while (!Last.IsEmpty() && Measure(Last + TEXT("...")) > Width) { Last.LeftChopInline(1); }
+		Last += TEXT("...");
+	}
+	return Lines;
+}
+
+float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharacter* Player)
+{
+	ObjectiveTaskRows = 0;
+	struct FRow { TArray<FString> Lines; FLinearColor Color; float Scale; };
+	TArray<FRow> Rows;
+	const float Width = FMath::Min(420.f, Canvas->ClipX * 0.34f);
+	const float X = Canvas->ClipX - Width - 24.f;
+	const FLinearColor Accent(1.f, 0.85f, 0.35f), Normal(0.86f, 0.93f, 0.90f), Dim(0.62f, 0.76f, 0.71f);
+	const auto Add = [this, &Rows, Width](const FString& Text, FLinearColor Color, float Scale = 0.95f) {
+		Rows.Add({WrapText(Text, Width - 28.f, Scale), Color, Scale});
+	};
+	Add(TEXT("CURRENT OBJECTIVE"), FLinearColor(0.75f, 0.92f, 0.86f), 1.f);
+	if (const AShiftCustomer* C = GM->ActiveCustomer.Get())
+	{
+		if (C->IsMonsterActive())
+		{
+			Add(TEXT("!! ABNORMAL ENTITY IN STORE !!"), FLinearColor(1.f, 0.30f, 0.26f));
+			Add(ShiftLoc::Format(TEXT("Demand: Find [%s] (Red Glow)"), {ShiftData::ProductLabel(C->Spec.MonsterSku)}), Accent);
+			Add(TEXT("-> Deliver it to the Checkout Register!"), Normal);
+		}
+		else if (C->State == ECustomerState::WaitingForHelp)
+		{
+			Add(ShiftLoc::Format(TEXT("* Customer Help: Bring [%s]"), {ShiftData::ProductLabel(C->Spec.WantedSku)}), Accent);
+			Add(TEXT("Take the product from a shelf, then press [E] on the customer."), Normal);
+		}
+		else if (C->State == ECustomerState::WaitingAtCheckout) { Add(TEXT("* Customer waiting at Checkout Register [E]"), Accent); }
+		else if (C->State == ECustomerState::Leaving) { Add(TEXT("Customer is leaving. Keep the doorway clear."), Normal); }
+		else { Add(TEXT("* Customer in store (Watch them closely)"), Normal); }
+	}
+	else
+	{
+		FShiftTaskGuidance Guide;
+		if (GM->GetTaskGuidance(Player, Guide) && Guide.Task.IsValid())
+		{
+			const auto Time = [](const AShiftTaskTarget* Task) {
+				return Task->IsOverdue() ? ShiftLoc::Text(TEXT("OVERDUE! (-Sanity)")) :
+					ShiftLoc::Format(TEXT("%ds"), {LexToString(FMath::CeilToInt(Task->TimeLeft))});
+			};
+			Add(Guide.TaskLabel, Accent, 1.05f);
+			++ObjectiveTaskRows;
+			Add(ShiftLoc::Format(TEXT("Time left: %s"), {Time(Guide.Task.Get())}), Guide.Task->IsOverdue() ? FLinearColor(1.f, 0.35f, 0.30f) : Normal);
+			const TCHAR* Step = TEXT("Look at the task marker and HOLD [E] to work.");
+			switch (Guide.Action)
+			{
+			case EShiftGuideAction::CollectCarton: Step = TEXT("1/2  Warehouse: press [E] to take a stock carton."); break;
+			case EShiftGuideAction::DeliverCarton: Step = TEXT("2/2  Return to the marked shelf; HOLD [E] to restock."); break;
+			case EShiftGuideAction::CollectMop: Step = TEXT("1/2  Follow the marker; press [E] to take the mop."); break;
+			case EShiftGuideAction::MopFloor: Step = TEXT("2/2  Return to the marked spill; HOLD [E] to mop."); break;
+			case EShiftGuideAction::CookOden: Step = TEXT("At the oden station, HOLD [E] to prepare the broth."); break;
+			default: break;
+			}
+			Add(Step, Normal);
+			if (GM->GuideRenderer && GM->GuideRenderer->bActive && !GM->GuideRenderer->IsReplanning() && GM->GuideRenderer->Status == EShiftRouteStatus::Unreachable)
+			{
+				Add(TEXT("Route blocked. Return to an aisle."), Accent);
+			}
+			int32 Overdue = 0;
+			for (const TWeakObjectPtr<AShiftTaskTarget>& T : GM->ActiveTasks)
+			{
+				if (!T.IsValid()) { continue; }
+				if (T->IsOverdue()) { ++Overdue; }
+				if (T != Guide.Task)
+				{
+					++ObjectiveTaskRows;
+					Add(ShiftLoc::Format(TEXT("%s · %s"), {T->Label, Time(T.Get())}), T->IsOverdue() ? FLinearColor(1.f, 0.35f, 0.30f) : Dim, 0.9f);
+				}
+			}
+			if (Overdue > 0) { Add(ShiftLoc::Format(TEXT("%d overdue chores are draining sanity!"), {LexToString(Overdue)}), FLinearColor(1.f, 0.30f, 0.25f)); }
+			if (GM->ActiveTasks.Num() > 1) { Add(TEXT("[TAB] Next chore"), Dim, 0.9f); }
+		}
+		else { Add(TEXT("Waiting for the next customer."), Dim); }
+	}
+	float Height = 24.f;
+	for (const FRow& Row : Rows) { Height += Row.Lines.Num() * 27.f * Row.Scale + 10.f; }
+	bObjectiveFitsViewport = Height + 24.f < Canvas->ClipY - 100.f;
+	DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.86f), X, 24.f, Width, Height);
+	float Y = 36.f;
+	for (const FRow& Row : Rows)
+	{
+		for (const FString& Line : Row.Lines)
+		{
+			DrawText(Line, Row.Color, X + 14.f, Y, InterfaceFont(), Row.Scale);
+			Y += 27.f * Row.Scale;
+		}
+		Y += 10.f;
+	}
+	return Height;
+}
+
+void AShiftHUD::DrawSubtitle(AShiftStoreGameMode* GM)
+{
+	SubtitleLines = 0;
+	if (GM->SubtitleTime <= 0.f || GM->SubtitleText.IsEmpty()) { return; }
+	const TArray<FString> Lines = WrapText(GM->SubtitleText, Canvas->ClipX * 0.72f, 1.1f, 2);
+	SubtitleLines = Lines.Num();
+	const float Y = Canvas->ClipY - 58.f - Lines.Num() * 32.f;
+	DrawRect(FLinearColor(0.015f, 0.025f, 0.025f, 0.85f), Canvas->ClipX * 0.12f, Y - 8.f, Canvas->ClipX * 0.76f, Lines.Num() * 32.f + 16.f);
+	for (int32 Index = 0; Index < Lines.Num(); ++Index) { DrawCenteredText(Lines[Index], Y + Index * 32.f, FLinearColor(0.95f, 0.95f, 0.88f), 1.1f); }
 }
 
 void AShiftHUD::DrawTaskGuidance(AShiftStoreGameMode* GM, AShiftPlayerCharacter* Player)
 {
-	FShiftTaskGuidance Guide;
-	if (!GM->GetTaskGuidance(Player, Guide))
-	{
-		GuideActor.Reset();
-		GuideRoute.Empty();
-		return;
-	}
+	const AShiftGuideActor* Guide = GM->GuideRenderer;
+	if (!Guide || !Player || !Guide->bActive || Guide->Status == EShiftRouteStatus::Unreachable) { return; }
 	const float W = Canvas->ClipX, H = Canvas->ClipY;
-	const float Now = GetWorld()->GetTimeSeconds();
-	const bool bChanged = GuideActor != Guide.Target || !GuideDestination.Equals(Guide.Location, 1.f);
-	bool bRebuild = bChanged;
-	if (!bChanged && Now - GuideRouteCheckedAt >= 2.f)
-	{
-		GuideRouteCheckedAt = Now;
-		bRebuild = !GuideRoute.IsEmpty() && !ShiftGuidance::CanWalkSegment(GetWorld(), Player, Guide.Target.Get(), Player->GetActorLocation(), GuideRoute[0]);
-	}
-	if (bRebuild)
-	{
-		GuideActor = Guide.Target;
-		GuideDestination = Guide.Location;
-		GuideRoute = ShiftGuidance::FindRoute(GetWorld(), Player, Guide.Target.Get(), Guide.Location);
-		GuideRouteCheckedAt = Now;
-	}
-	while (!GuideRoute.IsEmpty() && FVector::Dist2D(Player->GetActorLocation(), GuideRoute[0]) < 65.f) { GuideRoute.RemoveAt(0); }
-	const FVector Waypoint = GuideRoute.IsEmpty() ? Guide.Location : GuideRoute[0];
-	const bool bViaAisle = GuideRoute.Num() > 1;
-	const FString Marker = bViaAisle ? TEXT("FOLLOW AISLE") :
-		(Guide.Action == EShiftGuideAction::CollectCarton ? TEXT("WAREHOUSE CARTON") :
-		(Guide.Action == EShiftGuideAction::CollectMop ? TEXT("MOP") : TEXT("WORK HERE")));
-	const FVector Screen = Project(Waypoint + FVector(0,0,70));
+	const FVector Target = Guide->MarkerLocation() + FVector(0.f, 0.f, 50.f);
+	const FVector Screen = Project(Target);
 	FVector2D Position(Screen.X, Screen.Y);
-	if (Screen.Z <= 0.f)
+	const bool bOnScreen = Screen.Z > 0.f && Position.X > 70.f && Position.X < W - 70.f && Position.Y > H * 0.32f && Position.Y < H - 135.f;
+	FVector2D Direction(0.f, -1.f);
+	if (!bOnScreen)
 	{
-		const FVector Right = PlayerOwner->PlayerCameraManager->GetCameraRotation().RotateVector(FVector::RightVector);
-		Position = FVector2D(FVector::DotProduct(Waypoint - Player->GetActorLocation(), Right) >= 0.f ? W - 86.f : 86.f, H * 0.57f);
-	}
-	Position.X = FMath::Clamp(Position.X, 86.f, W - 86.f);
-	Position.Y = FMath::Clamp(Position.Y, H * 0.39f, H - 215.f);
-	const FLinearColor Accent(1.f, 0.85f, 0.25f);
-	DrawLine(Position.X, Position.Y - 12.f, Position.X + 12.f, Position.Y, Accent, 3.f);
-	DrawLine(Position.X + 12.f, Position.Y, Position.X, Position.Y + 12.f, Accent, 3.f);
-	DrawLine(Position.X, Position.Y + 12.f, Position.X - 12.f, Position.Y, Accent, 3.f);
-	DrawLine(Position.X - 12.f, Position.Y, Position.X, Position.Y - 12.f, Accent, 3.f);
-	const FString Label = ShiftLoc::Format(TEXT("%s · %dm"), {Marker, LexToString(FMath::CeilToInt(FVector::Dist2D(Player->GetActorLocation(), Waypoint) / 100.f))});
-	UFont* Font = InterfaceFont();
-	float TW = 0.f, TH = 0.f;
-	GetTextSize(Label, TW, TH, Font, 0.9f);
-	const float LabelX = FMath::Clamp(Position.X - TW * 0.5f, 12.f, W - TW - 12.f);
-	DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.9f), LabelX - 6.f, Position.Y + 17.f, TW + 12.f, TH + 6.f);
-	DrawText(Label, Accent, LabelX, Position.Y + 18.f, Font, 0.9f);
-
-	const float PanelWidth = FMath::Min(840.f, W - 48.f), Y = H - 158.f;
-	DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.92f), 24.f, Y, PanelWidth, 140.f);
-	DrawRect(Accent, 24.f, Y, 4.f, 140.f);
-	DrawLocalizedText(ShiftLoc::Format(TEXT("NEXT CHORE: %s"), {Guide.TaskLabel}), Accent, 38.f, Y + 8.f, Font, 1.f, PanelWidth - 28.f);
-	const bool bCarton = Guide.Action == EShiftGuideAction::CollectCarton || Guide.Action == EShiftGuideAction::DeliverCarton;
-	const bool bMop = Guide.Action == EShiftGuideAction::CollectMop || Guide.Action == EShiftGuideAction::MopFloor;
-	const bool bFirstStep = Guide.Action == EShiftGuideAction::CollectCarton || Guide.Action == EShiftGuideAction::CollectMop;
-	const FLinearColor Dim(0.48f, 0.61f, 0.57f), Bright(0.92f, 0.97f, 0.94f);
-	if (bCarton || bMop)
-	{
-		DrawLocalizedText(bCarton ? TEXT("1/2  Warehouse: press [E] to take a stock carton.") : TEXT("1/2  Follow the marker; press [E] to take the mop."),
-			bFirstStep ? Bright : Dim, 38.f, Y + 43.f, Font, 0.95f, PanelWidth - 28.f);
-		DrawLocalizedText(bCarton ? TEXT("2/2  Return to the marked shelf; HOLD [E] to restock.") : TEXT("2/2  Return to the marked spill; HOLD [E] to mop."),
-			bFirstStep ? Dim : Bright, 38.f, Y + 75.f, Font, 0.95f, PanelWidth - 28.f);
+		const FRotator CameraRotation = PlayerOwner->PlayerCameraManager->GetCameraRotation();
+		const FVector Delta = Target - PlayerOwner->PlayerCameraManager->GetCameraLocation();
+		const float Bearing = FMath::Atan2(FVector::DotProduct(Delta, CameraRotation.RotateVector(FVector::RightVector)),
+			FVector::DotProduct(Delta, CameraRotation.Vector()));
+		Direction = FVector2D(FMath::Sin(Bearing), -FMath::Cos(Bearing));
+		const FVector2D Center(W * 0.5f, H * 0.58f), Extents(W * 0.5f - 86.f, H * 0.5f - 155.f);
+		const float Distance = FMath::Min(Extents.X / FMath::Max(FMath::Abs(Direction.X), 0.001f), Extents.Y / FMath::Max(FMath::Abs(Direction.Y), 0.001f));
+		Position = Center + Direction * Distance;
+		// Keep the navigation marker above the subtitle strip.
+		Position.Y = FMath::Min(Position.Y, H - 195.f);
 	}
 	else
 	{
-		DrawLocalizedText(TEXT("Follow the yellow aisle markers to the work location."), Bright, 38.f, Y + 43.f, Font, 0.95f, PanelWidth - 28.f);
-		DrawLocalizedText(Guide.Action == EShiftGuideAction::CookOden
-			? TEXT("At the oden station, HOLD [E] to prepare the broth.")
-			: TEXT("Look at the task marker and HOLD [E] to work."), Bright, 38.f, Y + 75.f, Font, 0.95f, PanelWidth - 28.f);
+		FHitResult Occlusion;
+		FCollisionQueryParams Params(TEXT("GuideMarkerView"), false, Player);
+		Params.AddIgnoredActor(Guide->Current.Target.Get());
+		if (GetWorld()->LineTraceSingleByChannel(Occlusion, Player->FirstPersonCamera->GetComponentLocation(), Target, ECC_Visibility, Params)) { return; }
 	}
-	DrawLocalizedText(TEXT("[TAB] Next chore   |   Finish all chores to admit customers."), Dim, 38.f, Y + 108.f, Font, 0.85f, PanelWidth - 28.f);
+	const FVector2D Side(-Direction.Y, Direction.X);
+	const FVector2D Tip = Position + Direction * 14.f;
+	const FLinearColor Accent(1.f, 0.86f, 0.30f);
+	DrawLine(Tip.X, Tip.Y, Position.X - Direction.X * 9.f + Side.X * 11.f, Position.Y - Direction.Y * 9.f + Side.Y * 11.f, Accent, 4.f);
+	DrawLine(Tip.X, Tip.Y, Position.X - Direction.X * 9.f - Side.X * 11.f, Position.Y - Direction.Y * 9.f - Side.Y * 11.f, Accent, 4.f);
+	const FShiftTaskGuidance& G = Guide->Current;
+	const FString Name = Guide->Status != EShiftRouteStatus::Arrived ? TEXT("FOLLOW AISLE") :
+		(G.Action == EShiftGuideAction::CollectCarton ? TEXT("WAREHOUSE CARTON") :
+		(G.Action == EShiftGuideAction::CollectMop ? TEXT("MOP") : G.TaskLabel));
+	const FString Label = ShiftLoc::Format(TEXT("%s · %dm"), {Name, LexToString(FMath::CeilToInt(FVector::Dist2D(Player->GetActorLocation(), Guide->MarkerLocation()) / 100.f))});
+	float TW = 0.f, TH = 0.f;
+	GetTextSize(Label, TW, TH, InterfaceFont(), 0.9f);
+	const float X = FMath::Clamp(Position.X - TW * 0.5f, 12.f, W - TW - 12.f);
+	DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.9f), X - 6.f, Position.Y + 18.f, TW + 12.f, TH + 6.f);
+	DrawText(Label, Accent, X, Position.Y + 19.f, InterfaceFont(), 0.9f);
 }

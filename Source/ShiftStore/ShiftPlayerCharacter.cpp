@@ -60,27 +60,65 @@ void AShiftPlayerCharacter::OnGrabbedByMonster(AShiftCustomer* Monster, bool bUn
 {
 	GrabbingMonster = Monster;
 	StruggleProgress = 0.f;
+	bGrabCameraActive = true;
+	GrabCameraTime = 0.f;
+	GrabStartRotation = GetController() ? GetController()->GetControlRotation() : GetActorRotation();
 	if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>())
 	{
+		GM->RequestDialogue(EShiftDialogueEvent::Grabbed);
 		if (bUnseenAmbush)
 		{
 			GM->ModifySanity(-ShiftData::AmbushHit, TEXT("AMBUSHED BY UNSEEN ENTITY!"));
 		}
 		else
 		{
-			GM->SetStatusBanner(TEXT("GRABBED! Hold/Mash [E] to struggle free, or [F/RMB] to smash with held item!"), 3.f);
+			// The crosshair already displays the escape controls; keep the face unobstructed.
+			GM->BannerText.Empty();
+			GM->BannerTimer = 0.f;
 		}
 	}
 }
 
-void AShiftPlayerCharacter::ReleaseFromGrab()
+void AShiftPlayerCharacter::ReleaseFromGrab(bool bEscaped)
 {
+	const bool bWasGrabbed = IsGrabbed() || bGrabCameraActive;
 	if (AShiftCustomer* M = GrabbingMonster.Get())
 	{
 		M->OnReleasedGrab();
 	}
 	GrabbingMonster.Reset();
 	StruggleProgress = 0.f;
+	ResetGrabCamera();
+	if (bWasGrabbed && bEscaped)
+	{
+		if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>()) { GM->RequestDialogue(EShiftDialogueEvent::Escaped); }
+	}
+}
+
+void AShiftPlayerCharacter::ResetGrabCamera()
+{
+	bGrabCameraActive = false;
+	GrabCameraTime = 0.f;
+	FirstPersonCamera->SetFieldOfView(85.f);
+}
+
+void AShiftPlayerCharacter::UpdateGrabCamera(float DeltaSeconds)
+{
+	const AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
+	const AShiftCustomer* Monster = GrabbingMonster.Get();
+	if (!Monster || !GM || (GM->Phase != EShiftPhase::Working && GM->Phase != EShiftPhase::Cleanup))
+	{
+		if (bGrabCameraActive) { GrabbingMonster.Reset(); StruggleProgress = 0.f; ResetGrabCamera(); }
+		return;
+	}
+	GrabCameraTime += DeltaSeconds;
+	const float Alpha = FMath::SmoothStep(0.f, 0.25f, GrabCameraTime);
+	FirstPersonCamera->SetFieldOfView(FMath::Lerp(85.f, 70.f, Alpha));
+	if (AController* C = GetController())
+	{
+		const FRotator LookAt = (Monster->GrabFocusLocation() - FirstPersonCamera->GetComponentLocation()).Rotation();
+		C->SetControlRotation(FMath::Lerp(GrabStartRotation.Quaternion(), LookAt.Quaternion(), Alpha).Rotator());
+	}
 }
 
 void AShiftPlayerCharacter::PickupItem(AShiftItem* Item)
@@ -150,6 +188,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
 	if (!PC || !GM) { return; }
+	UpdateGrabCamera(DeltaSeconds);
 	if (AShiftPlayerController* ShiftPC = Cast<AShiftPlayerController>(PC); ShiftPC && ShiftPC->BlocksGameplayInput())
 	{
 		bPrevInteractDown = false;
@@ -229,6 +268,8 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	if (PC->WasInputKeyJustPressed(EKeys::Tab)) { GM->CycleGuidedTask(); }
 
 	// Mouse look
+	if (!IsGrabbed())
+	{
 	float MouseX = 0.f, MouseY = 0.f;
 	PC->GetInputMouseDelta(MouseX, MouseY);
 	if (MouseX != 0.f) { AddControllerYawInput(MouseX * 0.7f); }
@@ -238,6 +279,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	if (PC->IsInputKeyDown(EKeys::Right)) { AddControllerYawInput(70.f * DeltaSeconds); }
 	if (PC->IsInputKeyDown(EKeys::Up))    { AddControllerPitchInput(-50.f * DeltaSeconds); }
 	if (PC->IsInputKeyDown(EKeys::Down))  { AddControllerPitchInput(50.f * DeltaSeconds); }
+	}
 
 	// Movement (disabled while grabbed by a monster)
 	if (!IsGrabbed())
@@ -266,10 +308,6 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	// Struggle mechanics when grabbed
 	if (AShiftCustomer* Monster = GrabbingMonster.Get())
 	{
-		// Pull camera slightly toward monster
-		const FRotator LookAt = (Monster->GetActorLocation() + FVector(0, 0, 55.f) - FirstPersonCamera->GetComponentLocation()).Rotation();
-		PC->SetControlRotation(FMath::RInterpTo(PC->GetControlRotation(), LookAt, DeltaSeconds, 5.f));
-
 		// Fast escape: smash monster with held product, then E
 		if ((bThrowJust || bInteractJust) && HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && !HeldItem->bLostItem)
 		{

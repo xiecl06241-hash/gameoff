@@ -52,6 +52,9 @@ public:
 	void OnReleasedGrab();
 	void SatisfyAndLeave();
 	void BeginLeaving();
+	FVector GrabFocusLocation() const;
+	bool IsBlockedByPlayer() const { return bBlockedByPlayer; }
+	int32 CourtesyLineCount() const { return CourtesyCount; }
 
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> Speech;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UPointLightComponent> EyeLight;
@@ -69,6 +72,14 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	bool UpdatePlayerBlock(float DeltaSeconds, const FVector& Direction);
+	bool bBlockedByPlayer = false;
+	float BlockedSeconds = 0.f;
+	float ClearSeconds = 0.f;
+	float CourtesyTime = 0.f;
+	double LastCourtesyTime = -100.;
+	int32 CourtesyCount = 0;
+	FText SavedSpeech;
 	void MoveToward(const FVector& Goal, float Speed, float DeltaSeconds);
 	void FollowStoreRoute(const FVector& Goal, float DeltaSeconds);
 	void RevealMonster(APawn* Player);

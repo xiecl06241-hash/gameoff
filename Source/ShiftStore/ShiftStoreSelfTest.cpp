@@ -107,7 +107,7 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 			FShiftTaskGuidance Guide;
 			if (!CheckSelfTest(TEXT("restock_guides_to_warehouse"), GetTaskGuidance(Player, Guide) && Guide.Action == EShiftGuideAction::CollectCarton && Guide.Target == CartonSource)) { return; }
-			const TArray<FVector> Route = ShiftGuidance::FindRoute(GetWorld(), Player, Guide.Target.Get(), Guide.Location);
+			const TArray<FVector> Route = ShiftGuidance::FindRoute(GetWorld(), Player, Guide.Target.Get(), Guide.Location).Waypoints;
 			if (!CheckSelfTest(TEXT("warehouse_route_uses_walkable_aisles"), Route.Num() >= 3 && FVector::Dist2D(Route.Last(), Guide.Location) < 160.f)) { return; }
 			FVector PreviousPoint = Player->GetActorLocation();
 			for (const FVector& Point : Route)
@@ -146,7 +146,7 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			if (!CheckSelfTest(TEXT("real_E_picks_up_stock_carton"), Player->HeldItem.IsValid() && Player->HeldItem->Kind == EShiftItemKind::Carton)) { return; }
 			FShiftTaskGuidance Guide;
 			if (!CheckSelfTest(TEXT("real_pickup_changes_guide_target"), GetTaskGuidance(Player, Guide) && Guide.Action == EShiftGuideAction::DeliverCarton)) { return; }
-			const TArray<FVector> Route = ShiftGuidance::FindRoute(GetWorld(), Player, Guide.Target.Get(), Guide.Location);
+			const TArray<FVector> Route = ShiftGuidance::FindRoute(GetWorld(), Player, Guide.Target.Get(), Guide.Location).Waypoints;
 			if (!CheckSelfTest(TEXT("return_to_shelf_route_exists"), !Route.IsEmpty())) { return; }
 			Player->SetActorLocation(Route.Last());
 			PC->SetControlRotation((Guide.Location - Player->FirstPersonCamera->GetComponentLocation()).Rotation());
@@ -228,7 +228,7 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 		SelfTestCookTarget = ActiveTasks[0];
 		AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 		Player->SetActorLocation(FVector(1250.f, 50.f, 100.f));
-		const TArray<FVector> CookRoute = ShiftGuidance::FindRoute(GetWorld(), Player, SelfTestCookTarget.Get(), SelfTestCookTarget->GetActorLocation());
+		const TArray<FVector> CookRoute = ShiftGuidance::FindRoute(GetWorld(), Player, SelfTestCookTarget.Get(), SelfTestCookTarget->GetActorLocation()).Waypoints;
 		if (!CheckSelfTest(TEXT("oden_route_from_cashier_side_exists"), !CookRoute.IsEmpty())) { return; }
 		Player->SetActorLocation(CookRoute.Last());
 		Player->GetController()->SetControlRotation((SelfTestCookTarget->GetActorLocation() - Player->FirstPersonCamera->GetComponentLocation()).Rotation());

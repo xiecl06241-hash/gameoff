@@ -15,7 +15,7 @@ namespace
 		Params.AddIgnoredActor(Target);
 		for (TActorIterator<AActor> It(World); It; ++It)
 		{
-			if (It->IsA<AShiftTaskTarget>() || It->IsA<AShiftCustomer>() || It->IsA<AShiftItem>()) { Params.AddIgnoredActor(*It); }
+			if (It->IsA<APawn>() || It->IsA<AShiftTaskTarget>() || It->IsA<AShiftItem>()) { Params.AddIgnoredActor(*It); }
 		}
 		return Params;
 	}
@@ -33,11 +33,20 @@ bool ShiftGuidance::CanWalkSegment(UWorld* World, APawn* Player, AActor* TargetA
 	return World && Player && Clear(World, Start, End, GuideQuery(World, Player, TargetActor));
 }
 
-TArray<FVector> ShiftGuidance::FindRoute(UWorld* World, APawn* Player, AActor* TargetActor, const FVector& Target, bool bRequireExactGoal)
+FShiftRouteResult ShiftGuidance::FindRoute(UWorld* World, APawn* Player, AActor* TargetActor, const FVector& Target, bool bRequireExactGoal)
 {
-	TArray<FVector> Result;
+	FShiftRouteResult Result;
 	if (!World || !Player) { return Result; }
 	const FCollisionQueryParams Params = GuideQuery(World, Player, TargetActor);
+	FHitResult GoalHit;
+	const float Reach = bRequireExactGoal ? 30.f : 185.f;
+	if (FVector::Dist2D(Player->GetActorLocation(), Target) <= Reach
+		&& Clear(World, Player->GetActorLocation(), Player->GetActorLocation(), Params)
+		&& !World->LineTraceSingleByChannel(GoalHit, Player->GetPawnViewLocation(), Target, ECC_Visibility, Params))
+	{
+		Result.Status = EShiftRouteStatus::Arrived;
+		return Result;
+	}
 	TArray<FVector> Nodes = { FloorPoint(Player->GetActorLocation()) };
 	for (float Y : { 280.f, 600.f, 900.f })
 	{
@@ -99,7 +108,8 @@ TArray<FVector> ShiftGuidance::FindRoute(UWorld* World, APawn* Player, AActor* T
 	}
 	for (int32 Index = EndNode; Index > 0; Index = Previous[Index])
 	{
-		Result.Insert(Nodes[Index], 0);
+		Result.Waypoints.Insert(Nodes[Index], 0);
 	}
+	if (EndNode != INDEX_NONE) { Result.Status = EShiftRouteStatus::Reachable; }
 	return Result;
 }

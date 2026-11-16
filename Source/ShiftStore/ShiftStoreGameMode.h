@@ -48,6 +48,11 @@ public:
 
 	void ModifySanity(float Delta, const FString& Reason = TEXT(""));
 	void SetStatusBanner(const FString& InText, float Seconds = 3.f);
+	bool RequestDialogue(EShiftDialogueEvent Event);
+	FString SubtitleText;
+	float SubtitleTime = 0.f;
+	UPROPERTY(EditDefaultsOnly, Category="Dialogue") TMap<EShiftDialogueEvent, TObjectPtr<class USoundBase>> DialogueVoices;
+	UPROPERTY() TObjectPtr<class AShiftGuideActor> GuideRenderer;
 
 	UFUNCTION(Exec) void ShiftForceState(int32 bShifted);
 	UFUNCTION(Exec) void ShiftSkipNight();
@@ -77,6 +82,11 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	void ResetDialogue();
+	void TickDialogue(float DeltaSeconds);
+	TSet<EShiftDialogueEvent> SpokenThisNight;
+	TMap<EShiftDialogueEvent, double> DialogueLastSpoken;
+	int32 SubtitlePriority = -1;
 	void TickLocalizationTest(float DeltaSeconds);
 	void FinishLocalizationTest();
 	void CheckLocalization(const FString& Name, bool bPassed);

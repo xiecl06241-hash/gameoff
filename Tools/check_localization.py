@@ -24,6 +24,8 @@ def main():
         r'CrosshairPrompt\s*=\s*TEXT\("((?:\\.|[^"\\])*)"\)',
         r'Speech->SetText\(FText::FromString\(TEXT\("((?:\\.|[^"\\])*)"\)',
         r'N[123]\.(?:Title|Intro)\s*=\s*TEXT\("((?:\\.|[^"\\])*)"\)',
+        r'SubtitleText\s*=\s*TEXT\("((?:\\.|[^"\\])*)"\)',
+        r'(?<![.\w])Add\(TEXT\("((?:\\.|[^"\\])*)"\)',
     ]
     checked = set()
     for path in (ROOT / "Source/ShiftStore").glob("*.cpp"):

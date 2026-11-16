@@ -19,7 +19,8 @@ public:
 	AShiftPlayerCharacter();
 
 	void OnGrabbedByMonster(AShiftCustomer* Monster, bool bUnseenAmbush);
-	void ReleaseFromGrab();
+	void ReleaseFromGrab(bool bEscaped = true);
+	void ResetGrabCamera();
 	bool IsGrabbed() const { return GrabbingMonster.IsValid(); }
 
 	void PickupItem(AShiftItem* Item);
@@ -43,6 +44,10 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+	void UpdateGrabCamera(float DeltaSeconds);
+	bool bGrabCameraActive = false;
+	float GrabCameraTime = 0.f;
+	FRotator GrabStartRotation = FRotator::ZeroRotator;
 	void UpdateFocusAndInteraction(float DeltaSeconds, bool bInteractJustPressed, bool bInteractDown, bool bThrowJustPressed);
 	FName ExtractSkuTag(const AActor* Actor) const;
 
