@@ -6,6 +6,13 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 # Columns: English source key, Simplified Chinese, Japanese, Traditional Chinese.
 ENTRIES = [
+    ("PAUSED", "游戏已暂停", "一時停止", "遊戲已暫停"),
+    ("Resume Game", "继续游戏", "ゲームを再開", "繼續遊戲"),
+    ("Return to Main Menu", "返回主菜单", "タイトルへ戻る", "返回主選單"),
+    ("Quit Game", "退出游戏", "ゲームを終了", "退出遊戲"),
+    ("Only dawn checkpoints are saved. Returning to the menu discards this night's progress.", "进度仅在天亮时保存，返回主菜单将丢失本晚未保存的进度。", "夜明けにのみセーブされます。タイトルに戻ると今夜の未保存の進行は失われます。", "進度僅在天亮時儲存，返回主選單將遺失本晚未儲存的進度。"),
+    ("[Esc] Resume    [Up / Down] Select    [Enter / Click] Confirm", "[Esc] 继续    [↑ / ↓] 选择    [Enter / 点击] 确认", "[Esc] 再開    [↑ / ↓] 選択    [Enter / クリック] 決定", "[Esc] 繼續    [↑ / ↓] 選擇    [Enter / 點擊] 確認"),
+    ("[Esc] Pause", "[Esc] 暂停", "[Esc] 一時停止", "[Esc] 暫停"),
     ("Choose your language", "选择语言", "言語を選択", "選擇語言"),
     ("Confirm [Enter]", "确认 [Enter]", "決定 [Enter]", "確認 [Enter]"),
     ("[Up / Down] Select    [1 / 2 / 3 / 4] Language    [Enter] Confirm", "[↑ / ↓] 选择    [1 / 2 / 3 / 4] 语言    [Enter] 确认", "[↑ / ↓] 選択    [1 / 2 / 3 / 4] 言語    [Enter] 決定", "[↑ / ↓] 選擇    [1 / 2 / 3 / 4] 語言    [Enter] 確認"),

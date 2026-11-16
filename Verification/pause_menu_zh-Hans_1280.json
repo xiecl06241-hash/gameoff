@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "checks": {
+    "escape_does_not_bypass_language_picker": true,
+    "escape_pauses_night_intro": true,
+    "pause_interaction_cannot_advance_intro": true,
+    "escape_resumes_without_advancing_intro": true,
+    "escape_opens_gameplay_pause_menu": true,
+    "paused_world_time_stays_fixed": true,
+    "paused_chore_timer_stays_fixed": true,
+    "paused_sanity_stays_fixed": true,
+    "paused_monster_stays_fixed": true,
+    "paused_shift_animation_stays_fixed": true,
+    "paused_input_cannot_move_or_throw": true,
+    "escape_resumes_gameplay": true,
+    "timers_and_sanity_resume": true,
+    "mouse_click_resumes_gameplay": true,
+    "resume_click_does_not_use_held_item": true,
+    "keyboard_selects_return_to_title": true,
+    "return_to_title_unpauses_and_cleans_night": true,
+    "menu_confirm_does_not_start_new_game": true,
+    "keyboard_selects_quit_game": true
+  },
+  "language": "zh-Hans",
+  "process_exit_code": 0,
+  "quit_menu_exited_process": true,
+  "player_save_and_settings_unchanged": true,
+  "resolution": [
+    1280,
+    720
+  ],
+  "editor": false
+}

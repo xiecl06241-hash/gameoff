@@ -1,4 +1,11 @@
 {
+  "PAUSED": "一時停止",
+  "Resume Game": "ゲームを再開",
+  "Return to Main Menu": "タイトルへ戻る",
+  "Quit Game": "ゲームを終了",
+  "Only dawn checkpoints are saved. Returning to the menu discards this night's progress.": "夜明けにのみセーブされます。タイトルに戻ると今夜の未保存の進行は失われます。",
+  "[Esc] Resume    [Up / Down] Select    [Enter / Click] Confirm": "[Esc] 再開    [↑ / ↓] 選択    [Enter / クリック] 決定",
+  "[Esc] Pause": "[Esc] 一時停止",
   "Choose your language": "言語を選択",
   "Confirm [Enter]": "決定 [Enter]",
   "[Up / Down] Select    [1 / 2 / 3 / 4] Language    [Enter] Confirm": "[↑ / ↓] 選択    [1 / 2 / 3 / 4] 言語    [Enter] 決定",

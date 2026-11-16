@@ -16,7 +16,7 @@
 2. 在解压后的 `Windows` 目录中双击 **`ShiftStore.exe`**；也可双击同目录的 **`启动正常场景.cmd`**，以 **1920×1080 全屏**启动。开发工作区中的对应位置是 **`Builds/Windows/ShiftStore.exe`**。
 3. 选择语言：**1 English／2 日本語／3 繁體中文／4 简体中文**。点击选项，或按数字键选择后按 `Enter` 确认。
 4. 标题页按 **`Space`／`E`／`Enter` 开始新游戏，从第一晚开始**；按 **`C` 继续已有存档**。进入夜晚说明页后，再按 `Space`／`Enter` 开始操作。
-5. 使用 **WASD 移动、鼠标观察、E 交互或长按做任务**。跟随左下角步骤和黄色路线标记，按 **Tab** 切换任务指引；按 **Alt+F4** 退出。
+5. 使用 **WASD 移动、鼠标观察、E 交互或长按做任务**。跟随左下角步骤和黄色路线标记，按 **Tab** 切换任务指引。按 **Esc** 打开暂停菜单，可继续游戏、返回主菜单或退出；也可用 **Alt+F4** 退出。
 
 试玩打包版无需安装 UE、Visual Studio 或 Python。**不要只复制单个 EXE**，游戏还需要同目录下的 `ShiftStore/`、`Engine/` 等配套文件。
 
@@ -119,9 +119,12 @@ python .github/scripts/build_windows.py
 | `Space` / `Enter` | Advance Title / Night Intro / Dawn screens |
 | `R` | Restart current night from auto-save (on Game Over screen) |
 | `Alt + F4` | Quit |
+| `Esc` | Pause / resume; menu supports mouse, Up/Down or W/S, and Enter/Space |
 | `L` (title screen) | Change language |
 | `C` (title screen) | Continue saved game |
 | `Tab` (during chores) | Guide to the next chore |
+
+Pausing freezes chores, sanity loss, customers, monsters and world physics. Returning to the title discards unsaved progress from the current night; the last dawn checkpoint is preserved.
 
 ### AI Usage Disclosure (GitHub Game Off 2026 Compliance)
 In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
@@ -142,6 +145,8 @@ In accordance with the GitHub Game Off 2026 rules on AI-assisted development:
 启动文件、源码编译和进入第一晚的完整步骤见文档开头的 [快速启动](#快速启动--quick-start)。会记住上次语言选择，标题页按 `L` 可重新选择；语言设置与夜晚进度存档独立。
 
 日常任务有常驻步骤和黄色通道／距离标记，按 `Tab` 可切换指引的任务。当前三晚每项任务时限分别为 **240／180／120 秒**，夜晚说明页暂停计时。补货时先沿标记去仓库领取补货纸箱，再跟随新标记回到货架长按 `E`。
+
+夜晚中按 `Esc` 打开暂停菜单，再按 `Esc` 继续；也可用鼠标点击，或方向键／W、S 选择后按 Enter／Space 确认。暂停时任务倒计时、清醒度扣除、顾客／怪物及物理运动均停止。返回主菜单会放弃本晚未保存的进度，保留最近一次天亮时的存档。
 
 界面、任务、交互提示、顾客对白、失败与结算文字均支持上述四个语言选项。场景中的原创品牌、包装和实体标识暂保留原样。语言包和字体制作说明见 [Docs/LOCALIZATION.md](Docs/LOCALIZATION.md)。
 

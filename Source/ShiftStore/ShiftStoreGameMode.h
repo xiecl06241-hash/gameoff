@@ -26,6 +26,7 @@ public:
 	void RestartCurrentNight();
 	void OnAdvanceScreenKey();
 	void ContinueSavedGame();
+	void ReturnToTitle();
 	void CycleGuidedTask();
 	bool GetTaskGuidance(const AShiftPlayerCharacter* Player, FShiftTaskGuidance& Out) const;
 	bool bHasSavedProgress = false;

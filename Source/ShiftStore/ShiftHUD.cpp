@@ -3,6 +3,7 @@
 #include "ShiftGuidance.h"
 #include "ShiftStoreGameMode.h"
 #include "ShiftPlayerCharacter.h"
+#include "ShiftPlayerController.h"
 #include "ShiftTaskTarget.h"
 #include "ShiftCustomer.h"
 #include "ShiftDirector.h"
@@ -46,6 +47,12 @@ FBox2D AShiftHUD::LanguageButton(int32 Index, float Width, float Height)
 		FVector2D(Width * 0.70f, Height * (0.395f + Index * 0.095f)));
 }
 
+FBox2D AShiftHUD::PauseButton(int32 Index, float Width, float Height)
+{
+	return FBox2D(FVector2D(Width * 0.30f, Height * (0.36f + Index * 0.11f)),
+		FVector2D(Width * 0.70f, Height * (0.445f + Index * 0.11f)));
+}
+
 void AShiftHUD::DrawLocalizedText(const FString& Str, FLinearColor Color, float X, float Y, UFont* Font, float Scale, float MaxWidth)
 {
 	const FString Text = ShiftLoc::Text(Str);
@@ -86,6 +93,29 @@ void AShiftHUD::DrawHUD()
 	const float W = Canvas->ClipX;
 	const float H = Canvas->ClipY;
 	UFont* Font = InterfaceFont();
+
+	if (const AShiftPlayerController* PC = Cast<AShiftPlayerController>(PlayerOwner); PC && PC->IsPauseMenuOpen())
+	{
+		DrawRect(FLinearColor(0.015f, 0.025f, 0.025f, 0.94f), 0.f, 0.f, W, H);
+		DrawRect(FLinearColor(0.18f, 0.55f, 0.48f), W * 0.25f, H * 0.29f, W * 0.50f, 3.f);
+		DrawCenteredText(TEXT("PAUSED"), H * 0.20f, FLinearColor(0.82f, 0.95f, 0.90f), 2.f);
+		const TCHAR* Labels[] = {TEXT("Resume Game"), TEXT("Return to Main Menu"), TEXT("Quit Game")};
+		for (int32 Index = 0; Index < 3; ++Index)
+		{
+			const FBox2D Box = PauseButton(Index, W, H);
+			const bool bSelected = PC->PauseSelection() == Index;
+			DrawRect(bSelected ? FLinearColor(0.13f, 0.34f, 0.29f) : FLinearColor(0.05f, 0.10f, 0.10f),
+				Box.Min.X, Box.Min.Y, Box.GetSize().X, Box.GetSize().Y);
+			if (bSelected) { DrawRect(FLinearColor(0.45f, 0.90f, 0.72f), Box.Min.X, Box.Min.Y, 4.f, Box.GetSize().Y); }
+			DrawCenteredText(Labels[Index], Box.Min.Y + Box.GetSize().Y * 0.24f,
+				bSelected ? FLinearColor::White : FLinearColor(0.65f, 0.74f, 0.70f), 1.3f);
+		}
+		DrawCenteredText(TEXT("Only dawn checkpoints are saved. Returning to the menu discards this night's progress."),
+			H * 0.77f, FLinearColor(0.85f, 0.78f, 0.60f), 0.95f);
+		DrawCenteredText(TEXT("[Esc] Resume    [Up / Down] Select    [Enter / Click] Confirm"),
+			H * 0.85f, FLinearColor(0.65f, 0.82f, 0.78f), 0.95f);
+		return;
+	}
 
 	// Full-screen overlay phases (Title, NightIntro, Dawn, GameOver, Ending)
 	if (GM->Phase != EShiftPhase::Working && GM->Phase != EShiftPhase::Cleanup)
@@ -305,6 +335,7 @@ void AShiftHUD::DrawHUD()
 		}
 	}
 	DrawTaskGuidance(GM, Player);
+	DrawLocalizedText(TEXT("[Esc] Pause"), FLinearColor(0.65f, 0.82f, 0.78f), W - 170.f, H - 36.f, Font, 0.85f, 150.f);
 }
 
 void AShiftHUD::DrawTaskGuidance(AShiftStoreGameMode* GM, AShiftPlayerCharacter* Player)

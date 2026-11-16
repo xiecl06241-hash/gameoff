@@ -5,6 +5,7 @@
 #include "ShiftCustomer.h"
 #include "ShiftStoreGameMode.h"
 #include "ShiftHUD.h"
+#include "ShiftPlayerController.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -149,6 +150,12 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
 	if (!PC || !GM) { return; }
+	if (AShiftPlayerController* ShiftPC = Cast<AShiftPlayerController>(PC); ShiftPC && ShiftPC->BlocksGameplayInput())
+	{
+		bPrevInteractDown = false;
+		bPrevThrowDown = false;
+		return;
+	}
 
 	if (GM->Phase == EShiftPhase::LanguageSelection)
 	{

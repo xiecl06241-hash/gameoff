@@ -1,6 +1,7 @@
 #include "ShiftStoreGameMode.h"
 #include "ShiftLocalization.h"
 #include "ShiftPlayerCharacter.h"
+#include "ShiftPlayerController.h"
 #include "ShiftHUD.h"
 #include "ShiftDirector.h"
 #include "ShiftTaskTarget.h"
@@ -22,6 +23,7 @@ AShiftStoreGameMode::AShiftStoreGameMode()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	DefaultPawnClass = AShiftPlayerCharacter::StaticClass();
+	PlayerControllerClass = AShiftPlayerController::StaticClass();
 	HUDClass = AShiftHUD::StaticClass();
 }
 
@@ -290,6 +292,27 @@ void AShiftStoreGameMode::ContinueSavedGame()
 	{
 		StartNight(NightIndex);
 	}
+}
+
+void AShiftStoreGameMode::ReturnToTitle()
+{
+	if (AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
+	{
+		Player->ReleaseFromGrab();
+		Player->ConsumeHeldItem();
+		Player->CrosshairPrompt.Empty();
+		Player->HoldProgress = 0.f;
+	}
+	ClearNightActors();
+	for (TActorIterator<AShiftItem> It(GetWorld()); It; ++It) { It->Destroy(); }
+	if (Director) { Director->SetShifted(false); }
+	BannerText.Empty();
+	BannerTimer = 0.f;
+	GameOverReason.Empty();
+	bHasNightCheckpoint = false;
+	// Returning to the title must not overwrite the last dawn checkpoint.
+	bHasSavedProgress = LoadProgress();
+	Phase = EShiftPhase::Title;
 }
 
 void AShiftStoreGameMode::CycleGuidedTask()

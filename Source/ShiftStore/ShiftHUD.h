@@ -13,6 +13,7 @@ public:
 	AShiftHUD();
 	virtual void DrawHUD() override;
 	static FBox2D LanguageButton(int32 Index, float Width, float Height);
+	static FBox2D PauseButton(int32 Index, float Width, float Height);
 	bool HasRuntimeFonts() const;
 
 private:

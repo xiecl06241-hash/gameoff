@@ -1,4 +1,11 @@
 {
+  "PAUSED": "PAUSED",
+  "Resume Game": "Resume Game",
+  "Return to Main Menu": "Return to Main Menu",
+  "Quit Game": "Quit Game",
+  "Only dawn checkpoints are saved. Returning to the menu discards this night's progress.": "Only dawn checkpoints are saved. Returning to the menu discards this night's progress.",
+  "[Esc] Resume    [Up / Down] Select    [Enter / Click] Confirm": "[Esc] Resume    [Up / Down] Select    [Enter / Click] Confirm",
+  "[Esc] Pause": "[Esc] Pause",
   "Choose your language": "Choose your language",
   "Confirm [Enter]": "Confirm [Enter]",
   "[Up / Down] Select    [1 / 2 / 3 / 4] Language    [Enter] Confirm": "[Up / Down] Select    [1 / 2 / 3 / 4] Language    [Enter] Confirm",

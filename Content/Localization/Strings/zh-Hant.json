@@ -1,4 +1,11 @@
 {
+  "PAUSED": "遊戲已暫停",
+  "Resume Game": "繼續遊戲",
+  "Return to Main Menu": "返回主選單",
+  "Quit Game": "退出遊戲",
+  "Only dawn checkpoints are saved. Returning to the menu discards this night's progress.": "進度僅在天亮時儲存，返回主選單將遺失本晚未儲存的進度。",
+  "[Esc] Resume    [Up / Down] Select    [Enter / Click] Confirm": "[Esc] 繼續    [↑ / ↓] 選擇    [Enter / 點擊] 確認",
+  "[Esc] Pause": "[Esc] 暫停",
   "Choose your language": "選擇語言",
   "Confirm [Enter]": "確認 [Enter]",
   "[Up / Down] Select    [1 / 2 / 3 / 4] Language    [Enter] Confirm": "[↑ / ↓] 選擇    [1 / 2 / 3 / 4] 語言    [Enter] 確認",
