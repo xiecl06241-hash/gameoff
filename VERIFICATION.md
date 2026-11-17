@@ -2,6 +2,14 @@
 
 当前工作区包含 C++ 三晚 MVP、正常／异常环境地图及 Windows 独立包。本轮加入 Esc 暂停菜单；此前的顾客离店、服务间任务轮换、开局指引和早期时间调整继续保留。以下回归结果不能替代完整的人工通关验收。
 
+## 关东煮交互区域（2026-11-17）
+
+- 将煮关东煮任务从旁边通道移到设备玻璃罩正上方。任务生成时按 `Interactive.Oden` 场景模型的实际边界定位：XY 对齐中心，交互球底部高于模型顶面 6 cm；半径仍为 42 cm。默认模型下中心高度约 220.5 cm，指引和高亮自动使用新位置。
+- Windows 独立包 54 项玩法回归通过，新增实际模型边界／交互球位置检查和顾客侧交互射线检查；收银侧可达检查与真实长按 E 六秒完成任务同时通过。预期失败用例为 55 项，只有强制失败项为 false，退出 1；正式存档未变。
+- 简体中文 1280×720 运行截图已核对：关东煮上方能显示并命中“长按 E 煮关东煮”，见 `Previews/Localization/zh-Hans_1280_CookOden.png`。
+- 编辑器编译和 Windows Development 打包成功；本机日志 `Saved/QA/OdenEditorBuild.log`、`EditorBuild.log`、`WindowsPackage.log`。原有夜晚、时限、收益及关东煮热汤杯功能保持原逻辑。
+- 本机 `Builds/Windows/` 已更新，GitHub `v0.2` 发布附件未修改。
+
 ## 游戏内鼠标灵敏度（2026-11-16）
 
 - 暂停菜单新增“鼠标灵敏度”入口。拖动滑条或用左右方向键／A、D 调整，范围 0.10–3.00 倍，步进 0.05；默认 1.00 倍保持原来的鼠标视角速度。提供恢复默认和返回按钮，设置页 Esc 返回暂停菜单，再次 Esc 继续游戏。
@@ -75,7 +83,7 @@
 | --- | --- |
 | 编辑器 C++ 编译 | `Result: Succeeded`；本机日志 `Saved/QA/EditorBuild.log` |
 | Windows 编译、烘焙、打包 | `BUILD SUCCESSFUL`，退出 0；本机日志 `Saved/QA/WindowsPackage.log` |
-| 独立包玩法回归 | 当前 52 项全部通过，退出 0；`Verification/gameplay_selftest.json` |
+| 独立包玩法回归 | 当前 54 项全部通过，退出 0；`Verification/gameplay_selftest.json` |
 | 故意注入失败 | 其余检查通过，`forced_failure=false`、总体 `passed=false`，退出 1；`Verification/gameplay_selftest_failure.json` |
 | 正式存档保护 | 正、反两次用例均核对正式存档内容；外部脚本另核对已知存档位置的 SHA-256，均未改变 |
 | 测试存档清理 | 正、反两次用例均确认专用存档槽已删除 |

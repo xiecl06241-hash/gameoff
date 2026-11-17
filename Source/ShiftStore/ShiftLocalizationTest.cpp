@@ -241,7 +241,15 @@ void AShiftStoreGameMode::TickLocalizationTest(float DeltaSeconds)
 	}
 	case 30:
 		CheckLocalization(TEXT("service_creates_one_oden_task"), ActiveTasks.Num() == 1 && ActiveTasks[0]->Type == EShiftTaskType::CookOden);
-		PC->SetControlRotation(FRotator(0.f, 15.f, 0.f));
+		if (!ActiveTasks.IsEmpty())
+		{
+			const FVector OdenTaskLocation = ActiveTasks[0]->GetActorLocation();
+			Player->SetActorLocation(FVector(OdenTaskLocation.X, OdenTaskLocation.Y + 120.f, 100.f));
+			PC->SetControlRotation((OdenTaskLocation - (Player->GetActorLocation() + FVector(0.f, 0.f, 66.f))).Rotation());
+		}
+		break;
+	case 31:
+		// Let the capped navigation update catch up with the test-only teleport before capture.
 		Screenshot(TEXT("CookOden"));
 		break;
 	default:

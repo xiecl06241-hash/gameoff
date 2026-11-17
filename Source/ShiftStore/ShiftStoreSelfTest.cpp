@@ -11,6 +11,7 @@
 #include "InputKeyEventArgs.h"
 #include "Components/RectLightComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SphereComponent.h"
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
@@ -226,11 +227,28 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 		if (!CheckSelfTest(TEXT("service_finish_callback_is_idempotent"), CustomersServed == 2)) { return; }
 		if (!CheckSelfTest(TEXT("second_service_assigns_only_oden"), ActiveTasks.Num() == 1 && ActiveTasks[0]->Type == EShiftTaskType::CookOden)) { return; }
 		SelfTestCookTarget = ActiveTasks[0];
+		AActor* OdenStation = nullptr;
+		for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+		{
+			if (It->ActorHasTag(TEXT("Interactive.Oden"))) { OdenStation = *It; break; }
+		}
+		FVector OdenOrigin = FVector::ZeroVector, OdenExtent = FVector::ZeroVector;
+		if (OdenStation) { OdenStation->GetActorBounds(false, OdenOrigin, OdenExtent); }
+		if (!CheckSelfTest(TEXT("oden_interaction_above_glass_cover"), OdenStation
+			&& FVector::Dist2D(SelfTestCookTarget->GetActorLocation(), OdenOrigin) < 1.f
+			&& SelfTestCookTarget->GetActorLocation().Z - SelfTestCookTarget->Hitbox->GetScaledSphereRadius() > OdenOrigin.Z + OdenExtent.Z)) { return; }
 		AShiftPlayerCharacter* Player = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+		const FVector CustomerView(OdenOrigin.X, OdenOrigin.Y + 120.f, 166.f);
+		const FVector CustomerRay = (SelfTestCookTarget->GetActorLocation() - CustomerView).GetSafeNormal();
+		FHitResult OdenHit;
+		FCollisionQueryParams OdenQuery(TEXT("OdenCustomerInteraction"), false, Player);
+		const bool bOdenHit = GetWorld()->SweepSingleByChannel(OdenHit, CustomerView, CustomerView + CustomerRay * 265.f,
+			FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(14.f), OdenQuery);
+		if (!CheckSelfTest(TEXT("oden_interaction_clear_from_customer_side"), bOdenHit && OdenHit.GetActor() == SelfTestCookTarget.Get())) { return; }
 		Player->SetActorLocation(FVector(1250.f, 50.f, 100.f));
-		const TArray<FVector> CookRoute = ShiftGuidance::FindRoute(GetWorld(), Player, SelfTestCookTarget.Get(), SelfTestCookTarget->GetActorLocation()).Waypoints;
-		if (!CheckSelfTest(TEXT("oden_route_from_cashier_side_exists"), !CookRoute.IsEmpty())) { return; }
-		Player->SetActorLocation(CookRoute.Last());
+		const FShiftRouteResult CookRoute = ShiftGuidance::FindRoute(GetWorld(), Player, SelfTestCookTarget.Get(), SelfTestCookTarget->GetActorLocation());
+		if (!CheckSelfTest(TEXT("oden_route_from_cashier_side_exists"), CookRoute.Status != EShiftRouteStatus::Unreachable)) { return; }
+		if (!CookRoute.Waypoints.IsEmpty()) { Player->SetActorLocation(CookRoute.Waypoints.Last()); }
 		Player->GetController()->SetControlRotation((SelfTestCookTarget->GetActorLocation() - Player->FirstPersonCamera->GetComponentLocation()).Rotation());
 		bSelfTestInteractPressed = false;
 		AdvanceSelfTest(ESelfTestStage::CookService);

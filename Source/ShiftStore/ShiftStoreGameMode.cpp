@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/AudioComponent.h"
+#include "Components/SphereComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Sound/SoundWaveProcedural.h"
 #include "Misc/FileHelper.h"
@@ -394,6 +395,18 @@ void AShiftStoreGameMode::SpawnTaskFromSpot(int32 SpotIdx)
 	if (T)
 	{
 		T->Setup(S.Type, S.Label, CurrentNightSpec().TaskTimeLimit);
+		if (S.Type == EShiftTaskType::CookOden)
+		{
+			for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+			{
+				if (!It->ActorHasTag(TEXT("Interactive.Oden"))) { continue; }
+				FVector Origin, Extent;
+				It->GetActorBounds(false, Origin, Extent);
+				// Keep the whole interaction sphere above the glass cover, clear of its collision.
+				T->SetActorLocation(FVector(Origin.X, Origin.Y, Origin.Z + Extent.Z + T->Hitbox->GetScaledSphereRadius() + 6.f));
+				break;
+			}
+		}
 		ActiveTasks.Add(T);
 	}
 }

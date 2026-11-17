@@ -46,7 +46,7 @@ namespace ShiftData
 			/*7*/ { EShiftTaskType::Trash,   FVector(1500.f, 265.f, 80.f),  TEXT("Empty checkout bin") },
 			/*8*/ { EShiftTaskType::Trash,   FVector(1350.f, 1450.f, 80.f), TEXT("Empty restroom bin") },
 			/*9*/ { EShiftTaskType::Count,   FVector(1070.f, 1450.f, 110.f),TEXT("Sign the shift log") },
-			/*10*/{ EShiftTaskType::CookOden,FVector(1380.f, 300.f, 110.f), TEXT("Prepare hot oden") },
+			/*10*/{ EShiftTaskType::CookOden,FVector(1380.f, 180.f, 220.f), TEXT("Prepare hot oden") },
 		};
 		return List;
 	}

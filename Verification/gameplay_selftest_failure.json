@@ -27,6 +27,8 @@
     "first_service_assigns_only_tidy": true,
     "service_finish_callback_is_idempotent": true,
     "second_service_assigns_only_oden": true,
+    "oden_interaction_above_glass_cover": true,
+    "oden_interaction_clear_from_customer_side": true,
     "oden_route_from_cashier_side_exists": true,
     "real_hold_E_prepares_oden": true,
     "third_paid_sale_assigns_one_batch_restock": true,
@@ -56,7 +58,7 @@
     "test_slot_cleaned": true,
     "forced_failure": false
   },
-  "test_save_slot": "ShiftStoreSelfTest_C3E7BBD34886665AA458AFAF5A10B49A",
+  "test_save_slot": "ShiftStoreSelfTest_D0D657E447783E2CE68A06AB81152B89",
   "failure": "forced_failure",
   "elapsed_world_seconds": 16.46658706665039,
   "normal_customer_exit_seconds": 3.849997043609619,
