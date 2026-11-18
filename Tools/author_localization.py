@@ -193,6 +193,29 @@ ENTRIES += [
     ("Pick up loose merchandise and press [E] at any shelf to put it back.", "捡起散落的商品，对准任意货架按 [E] 放回。", "散らばった商品を拾い、棚に向かって [E] で戻す。", "撿起散落的商品，對準任意貨架按 [E] 放回。"),
     ("Chores done! Put the loose merchandise back on the shelves (%d left).", "工作完成！请把散落的商品放回货架（还剩 {0} 件）。", "作業完了！散らばった商品を棚に戻しましょう（残り {0} 個）。", "工作完成！請把散落的商品放回貨架（還剩 {0} 件）。"),
 ]
+ENTRIES += [
+    ("Reset warped welcome sign", "复位被篡改的迎宾牌", "歪んだ歓迎看板を戻す", "復位被篡改的迎賓牌"),
+    ("Push shifted Aisle 02 gondola back", "推回暗移的二号货架", "ずれた2番棚を押し戻す", "推回暗移的二號貨架"),
+    ("Close rattling cooler & check stock", "复位异响冷柜并核对商品", "鳴動する冷蔵棚を戻し在庫確認", "復位異響冷櫃並核對商品"),
+    ("...So thirsty for thick red tomato soup in a tin can...", "……低语：想喝铁罐里的红色浓汤……", "……赤い缶のトマトスープが欲しい……", "……低語：想喝鐵罐裡的紅色濃湯……"),
+    ("...White and cold from the dairy carton... not dark...", "……低语：要冰柜里白色的鲜奶……不是黑的……", "……冷蔵棚の白いミルク……黒いのではない……", "……低語：要冰櫃裡白色的鮮奶……不是黑的……"),
+    ("...Soft sliced loaf from the morning bakery... no broth...", "……低语：要早上的切片面包……不要汤……", "……朝の柔らかい食パン……汁はいらない……", "……低語：要早上的切片麵包……不要湯……"),
+    ("Emergency Breaker", "应急电闸", "非常用ブレーカー", "應急電閘"),
+    ("Emergency Breaker (Standby — Use during Store Shift)", "应急电闸（待命——店铺异变熄灯时可用）", "非常用ブレーカー（待機中 — 異変時に使用）", "應急電閘（待命——店鋪異變熄燈時可用）"),
+    ("Emergency Breaker active (%ds left)", "应急电闸强制照明中（剩余 {0} 秒）", "非常用ブレーカー作動中（残り {0} 秒）", "應急電閘強制照明中（剩餘 {0} 秒）"),
+    ("Emergency Breaker recharging (%ds)", "应急电闸冷却中（{0} 秒）", "非常用ブレーカー冷却中（{0} 秒）", "應急電閘冷卻中（{0} 秒）"),
+    ("[E] Flip Emergency Breaker (Restore lights 10s - Attracts Entity!)", "[E] 拉下应急电闸（恢复照明与布局 10 秒 — 会吸引怪物！）", "[E] 非常用ブレーカーを入れる（10秒復旧 — 怪異を引き寄せる！）", "[E] 拉下應急電閘（恢復照明與佈局 10 秒 — 會吸引怪物！）"),
+    ("Customer: \"%s\" (Bring %s) | %s", "顾客：“{0}”（表面要 {1}） | {2}", "客：「{0}」（表向き：{1}） | {2}", "顧客：「{0}」（表面要 {1}） | {2}"),
+    ("MICRO-SHIFT ANOMALY: %s! Reset it with [Hold E]!", "局部异变：{0}！请前往长按 [E] 复位！", "局所異変：{0}！[E] 長押しで戻せ！", "局部異變：{0}！請前往長按 [E] 復位！"),
+    ("Emergency Breaker pulled! Normal lights & layout restored for 10s — The noise drew the entity toward the corridor!", "已拉下应急电闸！照明与货架恢复 10 秒——噪音正把怪物引向后勤走廊！", "ブレーカー作動！10秒間照明と棚が復旧 — 音で怪異が通路へ接近中！", "已拉下應急電閘！照明與貨架恢復 10 秒——噪音正把怪物引向後勤走廊！"),
+    ("...You knew what I truly wanted.", "……你竟然看穿了我真正想要的东西。", "……本当に欲しいものが分かったのか。", "……你竟然看穿了我真正想要的東西。"),
+    ("Disguise seen through! Appeased before the Shift (+$10.00 bonus, +Sanity).", "识破伪装！在店铺异变前平息了怪客（+$10.00 奖金，恢复清醒度）。", "偽装を見破った！異変前に退去させた（+$10.00 ボーナス・正気度回復）。", "識破偽裝！在店鋪異變前平息了怪客（+$10.00 獎金，恢復清醒度）。"),
+    ("Shelves swapped stock! Corridor Breaker [E] restores light 10s.", "货架商品已错位互换！后勤走廊电闸 [E] 可恢复照明 10 秒。", "棚の在庫が入れ替わった！通路のブレーカー [E] で10秒照明復旧。", "貨架商品已錯位互換！後勤走廊電閘 [E] 可恢復照明 10 秒。"),
+    ("Suspect disguise? Hand their whispered true item to ward off!", "怀疑是伪装？递交其低语暗示的真正商品可直接驱离！", "偽装の疑い？呟いている本当の品を渡せば撃退できる！", "懷疑是偽裝？遞交其低語暗示的真正商品可直接驅離！"),
+    ("! ANOMALY: %s (%ds)", "！局部异变：{0}（{1}秒）", "！局所異変：{0}（{1}秒）", "！局部異變：{0}（{1}秒）"),
+    ("Follow the yellow marker; HOLD [E] to reset the store anomaly.", "跟随黄色标记，长按 [E] 复位店铺局部异变。", "黄色いマーカーに従い、[E] 長押しで異変を戻す。", "跟隨黃色標記，長按 [E] 復位店鋪局部異變。"),
+]
+
 PRINTF = re.compile(r"%%|%[-+0 #]*\d*(?:\.\d+)?[sdf]")
 
 

@@ -135,19 +135,28 @@ void AShiftItem::Tick(float DeltaSeconds)
 	}
 	if (bLostItem && !Glow)
 	{
-		// A faint pulsing glow is the only hint where the monster's item ended up.
+		// Subtle breathing ember glow rather than a giant beacon; players rely on shelf memory or audio pulse.
 		Glow = NewObject<UPointLightComponent>(this);
 		Glow->SetupAttachment(Mesh);
 		Glow->RegisterComponent();
 		Glow->SetIntensityUnits(ELightUnits::Lumens);
-		Glow->SetLightColor(FLinearColor(0.9f, 0.15f, 0.1f));
-		Glow->SetAttenuationRadius(180.f);
+		Glow->SetLightColor(FLinearColor(0.85f, 0.14f, 0.08f));
+		Glow->SetAttenuationRadius(75.f);
 		Glow->SetCastShadows(false);
 	}
 	if (Glow && Glow->IsVisible())
 	{
 		GlowTime += DeltaSeconds;
-		Glow->SetIntensity(30.f + 25.f * FMath::Sin(GlowTime * 3.f));
-		Glow->SetWorldLocation(GetActorLocation() + FVector(0, 0, 25));
+		Glow->SetIntensity(12.f + 10.f * FMath::Sin(GlowTime * 2.6f));
+		Glow->SetWorldLocation(GetActorLocation() + FVector(0, 0, 22));
+		PulseCueTime -= DeltaSeconds;
+		if (PulseCueTime <= 0.f)
+		{
+			PulseCueTime = 3.2f;
+			if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>(); GM && GM->Phase == EShiftPhase::Working)
+			{
+				GM->PlayPositionalAnomalyPulse(GetActorLocation());
+			}
+		}
 	}
 }

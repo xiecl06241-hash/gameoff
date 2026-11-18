@@ -22,7 +22,9 @@ enum class EShiftTaskType : uint8
 	Trash,        // hold E to empty a bin
 	Spill,        // hold E with the mop to clean
 	CartonSource, // permanent: press E to take a carton
-	CookOden     // hold E at the oden station to prepare hot broth
+	CookOden,     // hold E at the oden station to prepare hot broth
+	FixAnomaly,   // hold E to reset a localized micro-shift anomaly
+	BreakerBox    // permanent: press E during Shift to temporarily restore normal power/layout
 };
 
 UENUM()
@@ -54,6 +56,7 @@ struct FShiftCustomerSpec
 	bool bMonster = false;
 	FName MonsterSku;          // the "lost" item a revealed monster demands
 	FString Line;              // what the customer says when asking for help
+	FString AnomalyHint;       // subtle contradictory tell hinting at MonsterSku before reveal
 };
 
 struct FShiftTaskSpot
@@ -74,7 +77,7 @@ struct FShiftNightSpec
 	bool bEerieEvents = false;
 };
 
-enum class EShiftGuideAction : uint8 { Work, CollectCarton, DeliverCarton, CollectMop, MopFloor, CookOden };
+enum class EShiftGuideAction : uint8 { Work, CollectCarton, DeliverCarton, CollectMop, MopFloor, CookOden, FixAnomaly, FlipBreaker };
 
 struct FShiftTaskGuidance
 {
@@ -94,8 +97,11 @@ namespace ShiftData
 	const TArray<FShiftProduct>& Products();
 	const FShiftProduct* FindProduct(FName Sku);
 	FString ProductLabel(FName Sku);
+	/** Returns the shifted SKU when shelves/coolers swap stock during an active Shift. */
+	FName ShiftedSku(FName NormalSku);
 
 	const TArray<FShiftTaskSpot>& TaskSpots();
+	const TArray<FShiftTaskSpot>& AnomalySpots();
 	const TArray<FVector>& BrowsePoints();
 	const TArray<FVector>& LostItemSpots();
 	const TArray<FVector>& RestockSpots();
@@ -106,6 +112,7 @@ namespace ShiftData
 	inline const FVector InsideDoor(800.f, 140.f, 100.f);
 	inline const FVector CheckoutCustomerSpot(1250.f, 300.f, 100.f);
 	inline const FVector RegisterLocation(1270.f, 180.f, 110.f);
+	inline const FVector BreakerLocation(900.f, 1125.f, 130.f);
 
 	constexpr float MaxSanity = 100.f;
 	constexpr float LossLimit = 40.f;        // store losses beyond this end the run

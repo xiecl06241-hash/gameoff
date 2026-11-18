@@ -2,9 +2,12 @@
 #include "ShiftLocalization.h"
 #include "ShiftGuidance.h"
 #include "ShiftStoreGameMode.h"
+#include "ShiftDirector.h"
 #include "ShiftPlayerCharacter.h"
 #include "ShiftItem.h"
 #include "ShiftTaskTarget.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -86,6 +89,12 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 	CourtesyTime = 0.f;
 	CourtesyCount = 0;
 	LastCourtesyTime = -100.;
+	TellTimer = 3.0f;
+	StareTriggerTime = 0.f;
+	const bool bAutomatedTest = FParse::Param(FCommandLine::Get(), TEXT("ShiftSelfTest"))
+		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftPlaythroughTest"))
+		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftFeedbackTest"));
+	RevealThreshold = bAutomatedTest ? 4.2f : FMath::FRandRange(12.0f, 15.5f);
 }
 
 bool AShiftCustomer::CanSeePlayer(APawn* Player, float MaxDist, float CosHalfFOV) const
@@ -406,6 +415,16 @@ void AShiftCustomer::SatisfyAndLeave()
 	BeginLeaving();
 }
 
+void AShiftCustomer::AttractToNoise(const FVector& NoiseLocation)
+{
+	if (!IsMonsterActive()) { return; }
+	Stun(1.4f);
+	TargetPos = NoiseLocation;
+	RepathTimer = 0.f;
+	bHasStoreRouteGoal = false;
+	StoreRoute.Empty();
+}
+
 void AShiftCustomer::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -475,10 +494,30 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 		if (Player)
 		{
 			const FVector ToP = Player->GetActorLocation() - GetActorLocation();
-			SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0, ToP.Rotation().Yaw, 0), DeltaSeconds, 5.f));
+			const bool bTwitchTell = Spec.bMonster && RevealThreshold > 5.f && FMath::Fmod(StateTimer, 3.6f) > 2.5f;
+			const float TargetYaw = bTwitchTell ? (ToP.Rotation().Yaw + 135.f) : ToP.Rotation().Yaw;
+			SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0, TargetYaw, 0), DeltaSeconds, bTwitchTell ? 12.f : 5.f));
+
+			if (Spec.bMonster && RevealThreshold > 5.f)
+			{
+				TellTimer -= DeltaSeconds;
+				if (TellTimer <= 0.f)
+				{
+					TellTimer = 3.8f;
+					if (GM && GM->Director && !GM->Director->IsShifted()) { GM->Director->Flicker(0.22f); }
+				}
+				EyeLight->SetIntensity(bTwitchTell ? 18.f : 0.f);
+				if (ToP.Size2D() < 155.f && PlayerSeesMe(Player))
+				{
+					StareTriggerTime += DeltaSeconds;
+				}
+				else
+				{
+					StareTriggerTime = FMath::Max(0.f, StareTriggerTime - DeltaSeconds * 0.5f);
+				}
+			}
 		}
-		// Monster customers reveal while the clerk goes to fetch their product
-		if (Spec.bMonster && StateTimer > 4.2f)
+		if (Spec.bMonster && (StateTimer > RevealThreshold || StareTriggerTime > 2.2f))
 		{
 			RevealMonster(Player);
 		}

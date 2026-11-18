@@ -425,6 +425,9 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			FString Failure;
 			const bool bValid = Director->ValidateState(true, Failure);
 			if (!CheckSelfTest(TEXT("shift_actual_transform"), bValid, Failure)) { return; }
+			if (!CheckSelfTest(TEXT("shifted_shelf_sku_swap"), Director->IsEffectiveShifted() && ShiftData::ShiftedSku(TEXT("Water")) == TEXT("Can") && ShiftData::ShiftedSku(TEXT("Can")) == TEXT("Water"))) { return; }
+			ActivateBreakerBox();
+			if (!CheckSelfTest(TEXT("breaker_override_works_during_shift"), Director->IsBreakerOverridden() && !Director->IsEffectiveShifted())) { return; }
 			OnMonsterDemandDelivered(ActiveCustomer.Get());
 			AdvanceSelfTest(ESelfTestStage::Restore);
 		}
@@ -453,6 +456,19 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			FString Failure;
 			const bool bValid = Director->ValidateState(false, Failure);
 			if (!CheckSelfTest(TEXT("flicker_restores_lights"), bValid, Failure)) { return; }
+			TriggerMicroShift();
+			if (!CheckSelfTest(TEXT("micro_shift_runs_parallel_without_blocking"), HasActiveAnomaly() && !HasBlockingChore())) { return; }
+			while (!ActiveTasks.IsEmpty()) { OnTaskCompleted(ActiveTasks.Last().Get()); }
+			if (!CheckSelfTest(TEXT("micro_shift_reset_restores_scene"), !HasActiveAnomaly() && Director->ValidateState(false, Failure), Failure)) { return; }
+			if (AShiftCustomer* Disguised = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::InsideDoor, FRotator::ZeroRotator))
+			{
+				const float IncomeBeforeWard = Income;
+				Disguised->Init(CurrentNightSpec().Customers[2]);
+				OnMonsterWardedOff(Disguised);
+				const bool bWarded = !Director->IsShifted() && Disguised->State == ECustomerState::Leaving && FMath::IsNearlyEqual(Income, IncomeBeforeWard + 10.f);
+				Disguised->Destroy();
+				if (!CheckSelfTest(TEXT("disguised_monster_warded_off_before_shift"), bWarded)) { return; }
+			}
 			if (!CheckSelfTest(TEXT("isolated_save_written"), SaveProgress())) { return; }
 			const UShiftSaveGame* Saved = Cast<UShiftSaveGame>(UGameplayStatics::LoadGameFromSlot(ProgressSlotName(), 0));
 			if (!CheckSelfTest(TEXT("isolated_save_roundtrip"), Saved && Saved->SavedNightIndex == NightIndex && Saved->CumulativeIncome == Income && Saved->CumulativeLosses == Losses)) { return; }

@@ -101,6 +101,39 @@ void AShiftDirector::Collect()
 void AShiftDirector::SetShifted(bool bInShift)
 {
 	bShift = bInShift;
+	if (!bInShift)
+	{
+		BreakerOverrideLeft = 0.f;
+		BreakerCooldownLeft = 0.f;
+	}
+	ClearMicroShifts();
+}
+
+bool AShiftDirector::TriggerBreakerOverride(float Duration)
+{
+	if (!bShift || BreakerOverrideLeft > 0.f || BreakerCooldownLeft > 0.f) { return false; }
+	BreakerOverrideLeft = Duration;
+	BreakerCooldownLeft = Duration + 20.f;
+	Flicker(0.35f);
+	return true;
+}
+
+void AShiftDirector::SetMicroShift(int32 AnomalyIndex, bool bActive)
+{
+	if (AnomalyIndex == 0) { bMicroSignWarped = bActive; }
+	else if (AnomalyIndex == 1) { bMicroGondolaShifted = bActive; }
+	if (!bActive) { FlickerLeft = 0.f; }
+	Apply(CurrentAlpha);
+}
+
+void AShiftDirector::ClearMicroShifts()
+{
+	if (bMicroSignWarped || bMicroGondolaShifted)
+	{
+		bMicroSignWarped = false;
+		bMicroGondolaShifted = false;
+		AppliedAlpha = -1.f;
+	}
 }
 
 void AShiftDirector::Flicker(float Duration)
@@ -111,8 +144,14 @@ void AShiftDirector::Flicker(float Duration)
 void AShiftDirector::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	const float Target = bShift ? 1.f : 0.f;
-	CurrentAlpha = FMath::FInterpConstantTo(CurrentAlpha, Target, DeltaSeconds, bShift ? 0.8f : 0.5f);
+	if (BreakerCooldownLeft > 0.f) { BreakerCooldownLeft = FMath::Max(0.f, BreakerCooldownLeft - DeltaSeconds); }
+	if (BreakerOverrideLeft > 0.f)
+	{
+		BreakerOverrideLeft = FMath::Max(0.f, BreakerOverrideLeft - DeltaSeconds);
+		if (BreakerOverrideLeft == 0.f && bShift) { Flicker(0.45f); }
+	}
+	const float Target = (bShift && BreakerOverrideLeft <= 0.f) ? 1.f : 0.f;
+	CurrentAlpha = FMath::FInterpConstantTo(CurrentAlpha, Target, DeltaSeconds, Target > CurrentAlpha ? 0.8f : 0.65f);
 	const bool bWasFlickering = FlickerLeft > 0.f;
 	FlickerLeft = FMath::Max(0.f, FlickerLeft - DeltaSeconds);
 
@@ -195,15 +234,20 @@ void AShiftDirector::Apply(float A)
 
 	for (const FMovedActor& M : Moved)
 	{
-		if (AActor* Actor = M.Actor.Get()) { Actor->SetActorLocation(M.Base + M.Offset * Smooth); }
+		if (AActor* Actor = M.Actor.Get())
+		{
+			const float LocalAlpha = (!bShift && bMicroGondolaShifted && M.Base.Y < 600.f) ? 0.65f : Smooth;
+			Actor->SetActorLocation(M.Base + M.Offset * LocalAlpha);
+		}
 	}
 	TSet<UInstancedStaticMeshComponent*> Dirty;
 	for (const FMovedInstance& M : MovedInstances)
 	{
 		if (UInstancedStaticMeshComponent* C = M.Comp.Get())
 		{
+			const float LocalAlpha = (!bShift && bMicroGondolaShifted && M.Base.GetLocation().Y < 600.f) ? 0.65f : Smooth;
 			FTransform T = M.Base;
-			T.AddToTranslation(M.Offset * Smooth);
+			T.AddToTranslation(M.Offset * LocalAlpha);
 			C->UpdateInstanceTransform(M.Index, T, true, false, true);
 			Dirty.Add(C);
 		}
@@ -227,7 +271,7 @@ void AShiftDirector::Apply(float A)
 	}
 	if (UStaticMeshComponent* Sign = WelcomeSign.Get())
 	{
-		Sign->SetStaticMesh(bDark ? NoticeMesh.Get() : WelcomeMesh.Get());
+		Sign->SetStaticMesh((bDark || bMicroSignWarped) ? NoticeMesh.Get() : WelcomeMesh.Get());
 	}
 	if (APostProcessVolume* PPV = PostProcess.Get())
 	{

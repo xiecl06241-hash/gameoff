@@ -3,6 +3,7 @@
 #include "ShiftItem.h"
 #include "ShiftTaskTarget.h"
 #include "ShiftCustomer.h"
+#include "ShiftDirector.h"
 #include "ShiftStoreGameMode.h"
 #include "ShiftHUD.h"
 #include "ShiftPlayerController.h"
@@ -410,6 +411,30 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 	if (AShiftTaskTarget* Task = Cast<AShiftTaskTarget>(HitActor))
 	{
 		FocusedTask = Task;
+		if (Task->Type == EShiftTaskType::BreakerBox)
+		{
+			if (!GM->Director || !GM->Director->IsShifted())
+			{
+				CrosshairPrompt = ShiftLoc::Text(TEXT("Emergency Breaker (Standby — Use during Store Shift)"));
+			}
+			else if (GM->Director->IsBreakerOverridden())
+			{
+				CrosshairPrompt = ShiftLoc::Format(TEXT("Emergency Breaker active (%ds left)"), {LexToString(FMath::CeilToInt(GM->Director->BreakerOverrideRemaining()))});
+			}
+			else if (GM->Director->BreakerCooldownRemaining() > 0.f)
+			{
+				CrosshairPrompt = ShiftLoc::Format(TEXT("Emergency Breaker recharging (%ds)"), {LexToString(FMath::CeilToInt(GM->Director->BreakerCooldownRemaining()))});
+			}
+			else
+			{
+				CrosshairPrompt = ShiftLoc::Text(TEXT("[E] Flip Emergency Breaker (Restore lights 10s - Attracts Entity!)"));
+				if (bInteractJustPressed)
+				{
+					GM->ActivateBreakerBox();
+				}
+			}
+			return;
+		}
 		if (Task->Type == EShiftTaskType::CartonSource)
 		{
 			if (HeldItem.IsValid())
@@ -466,14 +491,37 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		if (Cust->State == ECustomerState::WaitingForHelp)
 		{
 			const FString WantedLabel = ShiftData::ProductLabel(Cust->Spec.WantedSku);
-			if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == Cust->Spec.WantedSku)
+			if (Cust->Spec.bMonster && HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == Cust->Spec.MonsterSku)
+			{
+				const FString TrueLabel = ShiftData::ProductLabel(Cust->Spec.MonsterSku);
+				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Hand %s to Customer"), {FString(TrueLabel)});
+				if (bInteractJustPressed)
+				{
+					ConsumeHeldItem();
+					GM->OnMonsterWardedOff(Cust);
+				}
+			}
+			else if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == Cust->Spec.WantedSku)
 			{
 				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Hand %s to Customer"), {FString(WantedLabel)});
 				if (bInteractJustPressed)
 				{
-					ConsumeHeldItem();
-					GM->OnCustomerHelped(Cust);
+					if (Cust->Spec.bMonster)
+					{
+						DropHeldItem();
+						Cust->RevealMonster(this);
+					}
+					else
+					{
+						ConsumeHeldItem();
+						GM->OnCustomerHelped(Cust);
+					}
 				}
+			}
+			else if (Cust->Spec.bMonster && !Cust->Spec.AnomalyHint.IsEmpty())
+			{
+				CrosshairPrompt = ShiftLoc::Format(TEXT("Customer: \"%s\" (Bring %s) | %s"),
+					{FString(Cust->Spec.Line.IsEmpty() ? TEXT("Can you find this for me?") : *Cust->Spec.Line), FString(WantedLabel), ShiftLoc::Text(Cust->Spec.AnomalyHint)});
 			}
 			else
 			{
@@ -668,6 +716,10 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			}
 			if (!BestSku.IsNone())
 			{
+				if (GM->Director && GM->Director->IsEffectiveShifted())
+				{
+					BestSku = ShiftData::ShiftedSku(BestSku);
+				}
 				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Take %s from shelf"), {FString(ShiftData::ProductLabel(BestSku))});
 				if (bInteractJustPressed)
 				{

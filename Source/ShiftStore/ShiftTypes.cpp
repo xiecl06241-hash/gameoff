@@ -33,6 +33,34 @@ namespace ShiftData
 		return P ? FString(P->Label) : Sku.ToString();
 	}
 
+	FName ShiftedSku(FName NormalSku)
+	{
+		// During a store Shift, cold storage and dry shelves swap stock categories.
+		if (NormalSku == TEXT("Water"))    { return TEXT("Can"); }
+		if (NormalSku == TEXT("Can"))      { return TEXT("Water"); }
+		if (NormalSku == TEXT("Milk"))     { return TEXT("Sauce"); }
+		if (NormalSku == TEXT("Sauce"))    { return TEXT("Milk"); }
+		if (NormalSku == TEXT("Soda"))     { return TEXT("Bread"); }
+		if (NormalSku == TEXT("Bread"))    { return TEXT("Soda"); }
+		if (NormalSku == TEXT("Noodles"))  { return TEXT("Meal"); }
+		if (NormalSku == TEXT("Meal"))     { return TEXT("Noodles"); }
+		if (NormalSku == TEXT("Chips"))    { return TEXT("Biscuits"); }
+		if (NormalSku == TEXT("Biscuits")) { return TEXT("Chips"); }
+		if (NormalSku == TEXT("Tissue"))   { return TEXT("Cleaner"); }
+		if (NormalSku == TEXT("Cleaner"))  { return TEXT("Tissue"); }
+		return NormalSku;
+	}
+
+	const TArray<FShiftTaskSpot>& AnomalySpots()
+	{
+		static const TArray<FShiftTaskSpot> List = {
+			/*0*/ { EShiftTaskType::FixAnomaly, FVector(1080.f, 940.f, 120.f), TEXT("Reset warped welcome sign") },
+			/*1*/ { EShiftTaskType::FixAnomaly, FVector(800.f, 450.f, 110.f),  TEXT("Push shifted Aisle 02 gondola back") },
+			/*2*/ { EShiftTaskType::FixAnomaly, FVector(350.f, 925.f, 120.f),  TEXT("Close rattling cooler & check stock") },
+		};
+		return List;
+	}
+
 	const TArray<FShiftTaskSpot>& TaskSpots()
 	{
 		static const TArray<FShiftTaskSpot> List = {
@@ -83,8 +111,8 @@ namespace ShiftData
 			auto Customer = [](const TCHAR* Sku, bool bHelp, const TCHAR* Line = TEXT("")) {
 				FShiftCustomerSpec C; C.WantedSku = Sku; C.bAsksHelp = bHelp; C.Line = Line; return C;
 			};
-			auto Monster = [](const TCHAR* Sku, const TCHAR* Lost, const TCHAR* Line) {
-				FShiftCustomerSpec C; C.WantedSku = Sku; C.bAsksHelp = true; C.bMonster = true; C.MonsterSku = Lost; C.Line = Line; return C;
+			auto Monster = [](const TCHAR* Sku, const TCHAR* Lost, const TCHAR* Line, const TCHAR* Hint) {
+				FShiftCustomerSpec C; C.WantedSku = Sku; C.bAsksHelp = true; C.bMonster = true; C.MonsterSku = Lost; C.Line = Line; C.AnomalyHint = Hint; return C;
 			};
 
 			FShiftNightSpec N1;
@@ -99,7 +127,7 @@ namespace ShiftData
 			N2.Title = TEXT("NIGHT 2");
 			N2.Intro = TEXT("Note from the day shift: \"Some customers are not customers.\n If the lights go out, give them what they want. Don't let them touch you.\"");
 			N2.Customers = { Customer(TEXT("Milk"), false), Customer(TEXT("Bread"), true, TEXT("Do you have any bread left?")),
-				Monster(TEXT("Soda"), TEXT("Can"), TEXT("I... need something to drink.")), Customer(TEXT("Meal"), false) };
+				Monster(TEXT("Soda"), TEXT("Can"), TEXT("I... need something to drink."), TEXT("...So thirsty for thick red tomato soup in a tin can...")), Customer(TEXT("Meal"), false) };
 			N2.OpeningTasks = { 0, 4 };
 			N2.Spills = 3; N2.TaskTimeLimit = 180.f;
 			List.Add(N2);
@@ -108,9 +136,9 @@ namespace ShiftData
 			N3.Title = TEXT("NIGHT 3");
 			N3.Intro = TEXT("Last night of the week. The store keeps changing when they come.\nRemember where everything was.");
 			N3.Customers = { Customer(TEXT("Cleaner"), true, TEXT("Where do you keep the cleaner?")),
-				Monster(TEXT("Sauce"), TEXT("Milk"), TEXT("Soy sauce. Where.")), Customer(TEXT("Biscuits"), false),
+				Monster(TEXT("Sauce"), TEXT("Milk"), TEXT("Soy sauce. Where."), TEXT("...White and cold from the dairy carton... not dark...")), Customer(TEXT("Biscuits"), false),
 				Customer(TEXT("Water"), true, TEXT("Sorry, where's the water?")),
-				Monster(TEXT("Noodles"), TEXT("Bread"), TEXT("Something warm... please.")) };
+				Monster(TEXT("Noodles"), TEXT("Bread"), TEXT("Something warm... please."), TEXT("...Soft sliced loaf from the morning bakery... no broth...")) };
 			N3.OpeningTasks = { 1, 7, 9 };
 			N3.Spills = 3; N3.TaskTimeLimit = 120.f;
 			List.Add(N3);

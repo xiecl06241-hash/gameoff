@@ -25,7 +25,19 @@ public:
 
 	void SetShifted(bool bInShift);
 	bool IsShifted() const { return bShift; }
+	/** True when the store is shifted and the emergency breaker is not overriding it back to normal. */
+	bool IsEffectiveShifted() const { return bShift && BreakerOverrideLeft <= 0.f; }
 	float Alpha() const { return CurrentAlpha; }
+
+	/** Temporarily force normal lighting & shelf positions during a Shift (returns false if on cooldown or not shifted). */
+	bool TriggerBreakerOverride(float Duration = 10.f);
+	bool IsBreakerOverridden() const { return BreakerOverrideLeft > 0.f; }
+	float BreakerOverrideRemaining() const { return BreakerOverrideLeft; }
+	float BreakerCooldownRemaining() const { return BreakerCooldownLeft; }
+
+	/** Toggle a localized pre-shift anomaly (0 = warped welcome sign, 1 = half-shifted front gondola). */
+	void SetMicroShift(int32 AnomalyIndex, bool bActive);
+	void ClearMicroShifts();
 
 	/** Brief flicker of the main lights (night 1 foreshadowing). */
 	void Flicker(float Duration);
@@ -59,4 +71,8 @@ private:
 	float CurrentAlpha = 0.f;
 	float AppliedAlpha = -1.f;
 	float FlickerLeft = 0.f;
+	float BreakerOverrideLeft = 0.f;
+	float BreakerCooldownLeft = 0.f;
+	bool bMicroSignWarped = false;
+	bool bMicroGondolaShifted = false;
 };

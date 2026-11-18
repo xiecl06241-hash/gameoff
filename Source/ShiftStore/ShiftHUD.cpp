@@ -380,15 +380,27 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 			Add(TEXT("!! ABNORMAL ENTITY IN STORE !!"), FLinearColor(1.f, 0.30f, 0.26f));
 			Add(ShiftLoc::Format(TEXT("Demand: Find [%s] (Red Glow)"), {ShiftData::ProductLabel(C->Spec.MonsterSku)}), Accent);
 			Add(TEXT("-> Deliver it to the Checkout Register!"), Normal);
+			Add(TEXT("Shelves swapped stock! Corridor Breaker [E] restores light 10s."), Dim, 0.88f);
 		}
 		else if (C->State == ECustomerState::WaitingForHelp)
 		{
 			Add(ShiftLoc::Format(TEXT("* Customer Help: Bring [%s]"), {ShiftData::ProductLabel(C->Spec.WantedSku)}), Accent);
 			Add(TEXT("Take the product from a shelf, then press [E] on the customer."), Normal);
+			if (C->Spec.bMonster && !C->Spec.AnomalyHint.IsEmpty())
+			{
+				Add(TEXT("Suspect disguise? Hand their whispered true item to ward off!"), FLinearColor(1.f, 0.62f, 0.35f), 0.88f);
+			}
 		}
 		else if (C->State == ECustomerState::WaitingAtCheckout) { Add(TEXT("* Customer waiting at Checkout Register [E]"), Accent); }
 		else if (C->State == ECustomerState::Leaving) { Add(TEXT("Customer is leaving. Keep the doorway clear."), Normal); }
 		else { Add(TEXT("* Customer in store (Watch them closely)"), Normal); }
+		for (const TWeakObjectPtr<AShiftTaskTarget>& T : GM->ActiveTasks)
+		{
+			if (T.IsValid() && T->Type == EShiftTaskType::FixAnomaly)
+			{
+				Add(ShiftLoc::Format(TEXT("! ANOMALY: %s (%ds)"), {ShiftLoc::Text(T->Label), LexToString(FMath::CeilToInt(T->TimeLeft))}), FLinearColor(1.f, 0.45f, 0.30f), 0.9f);
+			}
+		}
 	}
 	else
 	{
@@ -410,6 +422,7 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 			case EShiftGuideAction::CollectMop: Step = TEXT("1/2  Follow the marker; press [E] to take the mop."); break;
 			case EShiftGuideAction::MopFloor: Step = TEXT("2/2  Return to the marked spill; HOLD [E] to mop."); break;
 			case EShiftGuideAction::CookOden: Step = TEXT("At the oden station, HOLD [E] to prepare the broth."); break;
+			case EShiftGuideAction::FixAnomaly: Step = TEXT("Follow the yellow marker; HOLD [E] to reset the store anomaly."); break;
 			default: break;
 			}
 			Add(Step, Normal);

@@ -26,7 +26,8 @@ public:
 	bool NeedsItem(EShiftItemKind& OutKind) const;
 
 	bool IsOverdue() const { return Deadline > 0.f && TimeLeft <= 0.f; }
-	bool IsPermanent() const { return Type == EShiftTaskType::CartonSource; }
+	bool IsPermanent() const { return Type == EShiftTaskType::CartonSource || Type == EShiftTaskType::BreakerBox; }
+	int32 AnomalyIndex = INDEX_NONE;
 
 	/** Reset the countdown (tasks are re-assigned after each customer). */
 	void RestartTimer(float TimeLimit);

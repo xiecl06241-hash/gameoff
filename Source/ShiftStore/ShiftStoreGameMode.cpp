@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/AudioComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Sound/SoundWaveProcedural.h"
@@ -66,10 +67,23 @@ void AShiftStoreGameMode::BeginPlay()
 		CartonSource = Source;
 	}
 
+	// Permanent back-corridor emergency breaker for overriding a Store Shift
+	if (AShiftTaskTarget* Breaker = GetWorld()->SpawnActor<AShiftTaskTarget>(ShiftData::BreakerLocation, FRotator::ZeroRotator))
+	{
+		Breaker->Setup(EShiftTaskType::BreakerBox, TEXT("Emergency Breaker"), 0.f);
+		BreakerBoxTarget = Breaker;
+	}
+
 	SetupProceduralAudio();
 
 	// If launched with -ShiftAutoStart or -ShiftSelfTest, jump straight into working state
 	const FString CmdLine = FCommandLine::Get();
+	bAutomatedSession = FParse::Param(*CmdLine, TEXT("ShiftSelfTest"))
+		|| FParse::Param(*CmdLine, TEXT("ShiftLocalizationTest"))
+		|| FParse::Param(*CmdLine, TEXT("ShiftFeedbackTest"))
+		|| FParse::Param(*CmdLine, TEXT("ShiftPlaythroughTest"))
+		|| FParse::Param(*CmdLine, TEXT("ShiftPauseTest"))
+		|| FParse::Param(*CmdLine, TEXT("ShiftSensitivityTest"));
 	if (FParse::Param(*CmdLine, TEXT("ShiftSelfTest")))
 	{
 		ShiftRunSelfTest();
@@ -157,6 +171,26 @@ void AShiftStoreGameMode::SetupProceduralAudio()
 	FridgeHumComp = UGameplayStatics::SpawnSoundAtLocation(this, HumWave, FridgePos, FRotator::ZeroRotator, 0.45f, 1.f, 0.f);
 }
 
+void AShiftStoreGameMode::PlayPositionalAnomalyPulse(const FVector& Location)
+{
+	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(this);
+	Wave->SetSampleRate(22050);
+	Wave->NumChannels = 1;
+	Wave->Duration = 0.22f;
+	const int32 Samples = FMath::RoundToInt(22050.f * 0.22f);
+	TArray<int16> Pcm;
+	Pcm.SetNumUninitialized(Samples);
+	for (int32 i = 0; i < Samples; ++i)
+	{
+		const float T = static_cast<float>(i) / 22050.f;
+		const float Env = FMath::Sin(PI * static_cast<float>(i) / Samples);
+		const float Sig = 0.65f * FMath::Sin(2.f * PI * 210.f * T) + 0.35f * FMath::Sin(2.f * PI * 420.f * T);
+		Pcm[i] = static_cast<int16>(FMath::Clamp(Sig * Env * 8500.f, -32000.f, 32000.f));
+	}
+	Wave->QueueAudio(reinterpret_cast<const uint8*>(Pcm.GetData()), Pcm.Num() * sizeof(int16));
+	UGameplayStatics::PlaySoundAtLocation(this, Wave, Location, 0.55f, 1.f, 0.f);
+}
+
 void AShiftStoreGameMode::PlaySynthesizedCue(float FreqHz, float DurationSec, float Volume, bool bNoise)
 {
 	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(this);
@@ -235,6 +269,7 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	Sanity = ShiftData::MaxSanity;
 	CustomerSpawnCooldown = 1.5f;
 	EerieFlickerTimer = 12.f;
+	MicroShiftTimer = FMath::Max(18.f, 30.f - NightIndex * 4.f);
 
 	if (Director) { Director->SetShifted(false); }
 
@@ -361,7 +396,11 @@ bool AShiftStoreGameMode::GetTaskGuidance(const AShiftPlayerCharacter* Player, F
 {
 	Out = FShiftTaskGuidance();
 	// Clerk guidance never reveals a monster or the position of its hidden demand item.
-	if (!Player || ActiveCustomer.IsValid() || ActiveTasks.IsEmpty()
+	const bool bCustomerBlocksGuide = ActiveCustomer.IsValid() && (ActiveCustomer->IsMonsterActive()
+		|| ActiveCustomer->State == ECustomerState::WaitingForHelp
+		|| ActiveCustomer->State == ECustomerState::WaitingAtCheckout
+		|| !HasActiveAnomaly());
+	if (!Player || bCustomerBlocksGuide || ActiveTasks.IsEmpty()
 		|| (Phase != EShiftPhase::Working && Phase != EShiftPhase::Cleanup)) { return false; }
 	AShiftTaskTarget* Task = ActiveTasks[FMath::Clamp(GuidedTaskIndex, 0, ActiveTasks.Num() - 1)].Get();
 	if (!Task) { return false; }
@@ -410,6 +449,7 @@ bool AShiftStoreGameMode::GetTaskGuidance(const AShiftPlayerCharacter* Player, F
 		}
 	}
 	if (Task->Type == EShiftTaskType::CookOden) { Out.Action = EShiftGuideAction::CookOden; }
+	if (Task->Type == EShiftTaskType::FixAnomaly) { Out.Action = EShiftGuideAction::FixAnomaly; }
 	return true;
 }
 
@@ -491,10 +531,69 @@ void AShiftStoreGameMode::SpawnPostServiceTask()
 	}
 }
 
+bool AShiftStoreGameMode::HasActiveAnomaly() const
+{
+	return ActiveTasks.ContainsByPredicate([](const TWeakObjectPtr<AShiftTaskTarget>& T) {
+		return T.IsValid() && T->Type == EShiftTaskType::FixAnomaly;
+	});
+}
+
+bool AShiftStoreGameMode::HasBlockingChore() const
+{
+	return ActiveTasks.ContainsByPredicate([](const TWeakObjectPtr<AShiftTaskTarget>& T) {
+		return T.IsValid() && T->Type != EShiftTaskType::FixAnomaly;
+	});
+}
+
+void AShiftStoreGameMode::TriggerMicroShift()
+{
+	if (Phase != EShiftPhase::Working || HasActiveAnomaly() || (Director && Director->IsShifted())) { return; }
+	const TArray<FShiftTaskSpot>& Spots = ShiftData::AnomalySpots();
+	if (Spots.IsEmpty()) { return; }
+	const int32 AnomalyIdx = (NightIndex + MicroShiftRotation++) % Spots.Num();
+	const FShiftTaskSpot& S = Spots[AnomalyIdx];
+	if (AShiftTaskTarget* T = GetWorld()->SpawnActor<AShiftTaskTarget>(S.Location, FRotator::ZeroRotator))
+	{
+		T->Setup(EShiftTaskType::FixAnomaly, S.Label, 75.f);
+		T->AnomalyIndex = AnomalyIdx;
+		ActiveTasks.Add(T);
+	}
+	if (Director)
+	{
+		Director->SetMicroShift(AnomalyIdx, true);
+		Director->Flicker(0.40f);
+	}
+	if (AnomalyIdx == 2)
+	{
+		if (AShiftItem* Knocked = GetWorld()->SpawnActor<AShiftItem>(FVector(350.f, 890.f, 60.f), FRotator::ZeroRotator))
+		{
+			Knocked->InitProduct(TEXT("Milk"));
+			Knocked->SetHeld(false);
+		}
+	}
+	PlaySynthesizedCue(140.f, 0.32f, 0.30f, true);
+	SetStatusBanner(ShiftLoc::Format(TEXT("MICRO-SHIFT ANOMALY: %s! Reset it with [Hold E]!"), {ShiftLoc::Text(S.Label)}), 4.f);
+}
+
+void AShiftStoreGameMode::ActivateBreakerBox()
+{
+	if (!Director || !Director->TriggerBreakerOverride(10.f)) { return; }
+	PlaySynthesizedCue(920.f, 0.25f, 0.38f, true);
+	if (AShiftCustomer* C = ActiveCustomer.Get(); C && C->IsMonsterActive())
+	{
+		C->AttractToNoise(ShiftData::BreakerLocation);
+	}
+	SetStatusBanner(TEXT("Emergency Breaker pulled! Normal lights & layout restored for 10s — The noise drew the entity toward the corridor!"), 4.5f);
+}
+
 void AShiftStoreGameMode::OnTaskCompleted(AShiftTaskTarget* Task)
 {
 	if (!Task) { return; }
 	const bool bWasOverdue = Task->IsOverdue();
+	if (Task->Type == EShiftTaskType::FixAnomaly && Director)
+	{
+		Director->SetMicroShift(Task->AnomalyIndex, false);
+	}
 	ActiveTasks.RemoveAll([Task](const TWeakObjectPtr<AShiftTaskTarget>& P) { return !P.IsValid() || P.Get() == Task; });
 	GuidedTaskIndex = 0;
 	Task->Destroy();
@@ -517,13 +616,14 @@ void AShiftStoreGameMode::OnTaskCompleted(AShiftTaskTarget* Task)
 
 void AShiftStoreGameMode::TrySpawnNextCustomer()
 {
-	if (Phase != EShiftPhase::Working || ActiveCustomer.IsValid() || ActiveTasks.Num() > 0)
+	if (Phase != EShiftPhase::Working || ActiveCustomer.IsValid() || HasBlockingChore())
 	{
 		return;
 	}
 	const FShiftNightSpec& Spec = CurrentNightSpec();
 	if (NextCustomerIdx >= Spec.Customers.Num())
 	{
+		if (!ActiveTasks.IsEmpty()) { return; }
 		Phase = EShiftPhase::Cleanup;
 		SpawnCleanupSpills(Spec.Spills);
 		SetStatusBanner(TEXT("All customers served! Equip the Mop in the warehouse and clean the floor before 06:00."), 5.f);
@@ -560,6 +660,19 @@ void AShiftStoreGameMode::OnCustomerHelped(AShiftCustomer* Customer)
 	Customer->TargetPos = ShiftData::CheckoutCustomerSpot;
 	Customer->StateTimer = 0.f;
 	PlaySynthesizedCue(620.f, 0.15f, 0.22f);
+}
+
+void AShiftStoreGameMode::OnMonsterWardedOff(AShiftCustomer* Customer)
+{
+	if (!Customer) { return; }
+	Income += 10.f;
+	ModifySanity(8.f);
+	Customer->EyeLight->SetIntensity(0.f);
+	Customer->Speech->SetTextRenderColor(FColor(180, 235, 210));
+	Customer->Speech->SetText(FText::FromString(ShiftLoc::Text(TEXT("...You knew what I truly wanted."))));
+	Customer->BeginLeaving();
+	PlaySynthesizedCue(760.f, 0.28f, 0.30f);
+	SetStatusBanner(TEXT("Disguise seen through! Appeased before the Shift (+$10.00 bonus, +Sanity)."), 4.f);
 }
 
 void AShiftStoreGameMode::OnCustomerAtCheckout(AShiftCustomer* Customer)
@@ -833,8 +946,27 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 	// 3b. Cleanup ends only after the floor is tidy: loose products must be put back on shelves.
 	if (Phase == EShiftPhase::Cleanup && ActiveTasks.IsEmpty() && TryFinishCleanup()) { return; }
 
-	// 4. Spawn next customer when all chores are done and store is clear
-	if (Phase == EShiftPhase::Working && !ActiveCustomer.IsValid() && ActiveTasks.Num() == 0)
+	// 3c. Periodic localized micro-shifts (can happen in parallel while a customer is browsing/waiting)
+	if (!bAutomatedSession && Phase == EShiftPhase::Working && Director && !Director->IsShifted()
+		&& CustomersServed + (ActiveCustomer.IsValid() ? 1 : 0) > 0 && !HasActiveAnomaly())
+	{
+		MicroShiftTimer -= DeltaSeconds;
+		if (MicroShiftTimer <= 0.f)
+		{
+			MicroShiftTimer = FMath::FRandRange(32.f, 45.f) - NightIndex * 4.f;
+			TriggerMicroShift();
+		}
+	}
+	if (HasActiveAnomaly())
+	{
+		if (AShiftCustomer* C = ActiveCustomer.Get(); C && C->Spec.bMonster && C->State == ECustomerState::WaitingForHelp)
+		{
+			C->StateTimer += DeltaSeconds * 0.45f;
+		}
+	}
+
+	// 4. Spawn next customer when blocking chores are done and store is clear (micro-shift anomalies can run in parallel)
+	if (Phase == EShiftPhase::Working && !ActiveCustomer.IsValid() && !HasBlockingChore())
 	{
 		CustomerSpawnCooldown -= DeltaSeconds;
 		if (CustomerSpawnCooldown <= 0.f)

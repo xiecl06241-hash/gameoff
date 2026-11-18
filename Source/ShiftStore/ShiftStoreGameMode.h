@@ -43,7 +43,13 @@ public:
 	void OnCheckoutCompleted(AShiftCustomer* Customer);
 	void OnMonsterRevealed(AShiftCustomer* Monster, bool bWitnessed);
 	void OnMonsterDemandDelivered(AShiftCustomer* Monster);
+	void OnMonsterWardedOff(AShiftCustomer* Customer);
 	void OnCustomerFinished(AShiftCustomer* Customer);
+	void ActivateBreakerBox();
+	void TriggerMicroShift();
+	bool HasActiveAnomaly() const;
+	bool HasBlockingChore() const;
+	void PlayPositionalAnomalyPulse(const FVector& Location);
 
 	void OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Customer);
 	void OnItemBroken(AShiftItem* Item, bool bUsedOnMonster);
@@ -62,6 +68,7 @@ public:
 
 	UPROPERTY() TObjectPtr<AShiftDirector> Director;
 	UPROPERTY() TWeakObjectPtr<AShiftTaskTarget> CartonSource;
+	UPROPERTY() TWeakObjectPtr<AShiftTaskTarget> BreakerBoxTarget;
 	TArray<TWeakObjectPtr<AShiftTaskTarget>> ActiveTasks;
 	TWeakObjectPtr<AShiftCustomer> ActiveCustomer;
 	TWeakObjectPtr<AShiftItem> ActiveLostItem;
@@ -146,5 +153,8 @@ private:
 	UPROPERTY() TObjectPtr<UAudioComponent> CueAudioComp;
 	float CustomerSpawnCooldown = 2.0f;
 	float EerieFlickerTimer = 14.f;
+	float MicroShiftTimer = 28.f;
+	int32 MicroShiftRotation = 0;
+	bool bAutomatedSession = false;
 	float AudioFeedTimer = 0.f;
 };

@@ -41,5 +41,6 @@ protected:
 private:
 	float FlightTime = 0.f;
 	float GlowTime = 0.f;
+	float PulseCueTime = 1.5f;
 	TObjectPtr<class UPointLightComponent> Glow;
 };

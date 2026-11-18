@@ -52,8 +52,21 @@ void AShiftTaskTarget::Setup(EShiftTaskType InType, const FString& InLabel, floa
 			MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.12f, 0.06f, 0.02f));
 		}
 	}
-	Marker->SetText(FText::FromString(Type == EShiftTaskType::CartonSource ? TEXT("[ E ]") : TEXT("[ ! ]")));
-	Marker->SetTextRenderColor(Type == EShiftTaskType::CartonSource ? FColor(180, 200, 190) : FColor(255, 210, 90));
+	if (Type == EShiftTaskType::BreakerBox)
+	{
+		Marker->SetText(FText::FromString(TEXT("[ BREAKER ]")));
+		Marker->SetTextRenderColor(FColor(120, 225, 255));
+	}
+	else if (Type == EShiftTaskType::FixAnomaly)
+	{
+		Marker->SetText(FText::FromString(TEXT("[ SHIFT! ]")));
+		Marker->SetTextRenderColor(FColor(255, 110, 80));
+	}
+	else
+	{
+		Marker->SetText(FText::FromString(Type == EShiftTaskType::CartonSource ? TEXT("[ E ]") : TEXT("[ ! ]")));
+		Marker->SetTextRenderColor(Type == EShiftTaskType::CartonSource ? FColor(180, 200, 190) : FColor(255, 210, 90));
+	}
 }
 
 void AShiftTaskTarget::RestartTimer(float TimeLimit)
@@ -73,6 +86,7 @@ float AShiftTaskTarget::HoldDuration() const
 	case EShiftTaskType::Trash: return 2.0f;
 	case EShiftTaskType::Spill: return 2.5f;
 	case EShiftTaskType::CookOden: return 6.f;
+	case EShiftTaskType::FixAnomaly: return 1.5f;
 	default: return 0.f;
 	}
 }

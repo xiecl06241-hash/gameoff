@@ -52,6 +52,8 @@ public:
 	void OnReleasedGrab();
 	void SatisfyAndLeave();
 	void BeginLeaving();
+	void RevealMonster(APawn* Player);
+	void AttractToNoise(const FVector& NoiseLocation);
 	FVector GrabFocusLocation() const;
 	bool IsBlockedByPlayer() const { return bBlockedByPlayer; }
 	int32 CourtesyLineCount() const { return CourtesyCount; }
@@ -84,12 +86,14 @@ private:
 	void FollowStoreRoute(const FVector& Goal, float DeltaSeconds);
 	void MonsterMoveToward(const FVector& Goal, float DeltaSeconds);
 	bool MonsterPathClear(const FVector& From, const FVector& Dir, float Distance) const;
-	void RevealMonster(APawn* Player);
 	void PickSearchPoint();
 	void ApplyMonsterVisuals();
 
 	int32 PatrolIdx = 0;
 	float RepathTimer = 0.f;
+	float TellTimer = 3.2f;
+	float StareTriggerTime = 0.f;
+	float RevealThreshold = 13.5f;
 	TArray<FVector> StoreRoute;
 	FVector StoreRouteGoal = FVector::ZeroVector;
 	FVector PreviousRouteLocation = FVector::ZeroVector;
