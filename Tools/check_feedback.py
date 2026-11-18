@@ -4,8 +4,10 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +18,44 @@ SAVED_DIRS = [ROOT / 'Saved', ROOT / 'Builds/Windows/ShiftStore/Saved',
 def save_hashes():
     paths = [folder / 'SaveGames/ShiftStoreSlot.sav' for folder in SAVED_DIRS]
     return {str(p): hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None for p in paths}
+
+
+def run_playthrough():
+    """Advance the real three-night state machine and time the first Shift during a walk."""
+    before = save_hashes()
+    out = ROOT / 'Saved/QA'
+    out.mkdir(parents=True, exist_ok=True)
+    log = out / 'playthrough_1920.log'
+    exe = ROOT / 'Builds/Windows/ShiftStore.exe'
+    with tempfile.TemporaryDirectory(prefix='ShiftStorePlaythrough-', dir=out) as user_dir:
+        args = [str(exe), '/Game/ShiftStore/Maps/Normal', '-ShiftPlaythroughTest', '-ShiftLanguage=zh-Hans',
+                '-UserDir=' + Path(user_dir).as_posix(), '-fullscreen', '-ForceRes', '-ResX=1920', '-ResY=1080',
+                '-unattended', '-NoVSync', '-abslog=' + log.as_posix(),
+                '-ExecCmds=sg.ViewDistanceQuality 2,sg.AntiAliasingQuality 2,sg.ShadowQuality 2,'
+                'sg.GlobalIlluminationQuality 2,sg.ReflectionQuality 2,sg.PostProcessQuality 2,'
+                'sg.TextureQuality 2,sg.EffectsQuality 2,sg.FoliageQuality 2,sg.ShadingQuality 2,'
+                'r.ScreenPercentage 100,r.VSync 0,t.MaxFPS 0']
+        result = subprocess.run(args, cwd=exe.parent, timeout=300, check=False)
+        assert save_hashes() == before, 'Playthrough changed a player checkpoint'
+        report_file = Path(user_dir) / 'Saved/Feedback/zh-Hans/report.json'
+        assert report_file.is_file(), f'No isolated report. Inspect {log}'
+        report = json.loads(report_file.read_text(encoding='utf-8-sig'))
+        failures = [name for name, passed in report['checks'].items() if not passed]
+        assert result.returncode == 0 and report['passed'] and not failures, f'{failures}; inspect {log}'
+        assert (Path(user_dir) / 'Saved/SaveGames/ShiftStoreSlot.sav').is_file(), 'No isolated dawn save'
+    sample = re.search(r'SHIFT_WALK_METRICS frames=(\d+) avg_fps=([\d.]+) p95_ms=([\d.]+) '
+                       r'reveal_ms=([\d.]+) max_ms=([\d.]+)', log.read_text(encoding='utf-8', errors='replace'))
+    assert sample, f'No route performance measurements. Inspect {log}'
+    frames, avg_fps, p95_ms, reveal_ms, max_ms = sample.groups()
+    report.update(process_exit_code=result.returncode, player_saves_unchanged=True, performance={
+        'resolution': [1920, 1080], 'mode': 'fullscreen', 'quality': 'High, 100% screen percentage',
+        'route': 'cashier side to warehouse during the first Night 2 reveal',
+        'samples': int(frames), 'average_fps': float(avg_fps), 'p95_frame_ms': float(p95_ms),
+        'reveal_frame_ms': float(reveal_ms), 'max_frame_ms': float(max_ms),
+    })
+    (ROOT / 'Verification/playthrough_1920.json').write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    print(json.dumps(report['performance']), flush=True)
 
 
 def run(language, editor, width, height):
@@ -74,10 +114,14 @@ def run(language, editor, width, height):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--editor', action='store_true')
+    parser.add_argument('--playthrough', action='store_true', help='Run three-night and walking benchmark on the Windows package')
     parser.add_argument('--languages', nargs='+', choices=['en', 'ja', 'zh-Hant', 'zh-Hans'],
                         default=['en', 'ja', 'zh-Hant', 'zh-Hans'])
     parser.add_argument('--width', type=int, default=1280)
     parser.add_argument('--height', type=int, default=720)
     options = parser.parse_args()
-    for language in options.languages:
-        run(language, options.editor, options.width, options.height)
+    if options.playthrough:
+        run_playthrough()
+    else:
+        for language in options.languages:
+            run(language, options.editor, options.width, options.height)

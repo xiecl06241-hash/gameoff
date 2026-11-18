@@ -8,6 +8,7 @@
 #include "ShiftLocalization.h"
 #include "ShiftHUD.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -44,24 +45,40 @@ void AShiftFeedbackTest::SetupBlockedCustomer()
 	APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	AShiftPlayerCharacter* Clerk = Cast<AShiftPlayerCharacter>(PC->GetPawn());
 	if (Customer.IsValid()) { Customer->Destroy(); }
-	Clerk->SetActorLocation(FVector(900.f, 50.f, 100.f));
-	PC->SetControlRotation(FRotator(0.f, 180.f, 0.f));
+	Clerk->SetActorLocation(FVector(1455.f, 50.f, 100.f));
 	FActorSpawnParameters Spawn;
 	Spawn.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Customer = GetWorld()->SpawnActor<AShiftCustomer>(FVector(800.f, 50.f, 100.f), FRotator::ZeroRotator, Spawn);
-	Customer->Init(ShiftData::Nights()[0].Customers[0]);
 	const ECustomerState States[] = {ECustomerState::Entering, ECustomerState::Browsing, ECustomerState::WalkingToCheckout, ECustomerState::Leaving};
+	const FVector Starts[] = {ShiftData::OutsideDoor, ShiftData::InsideDoor, ShiftData::BrowsePoints()[1], ShiftData::CheckoutCustomerSpot};
+	const FVector Goals[] = {ShiftData::InsideDoor, ShiftData::BrowsePoints()[2], ShiftData::CheckoutCustomerSpot, ShiftData::OutsideDoor};
+	Customer = GetWorld()->SpawnActor<AShiftCustomer>(Starts[BlockCase], FRotator::ZeroRotator, Spawn);
+	if (!Customer.IsValid())
+	{
+		Check(TEXT("block_fixture_spawned"), false);
+		Finish();
+		return;
+	}
+	// Exercise a disguised customer as well as ordinary shoppers.
+	Customer->Init(BlockCase == 1 ? ShiftData::Nights()[1].Customers[2] : ShiftData::Nights()[0].Customers[0]);
 	Customer->State = States[BlockCase];
-	Customer->TargetPos = FVector(1150.f, 50.f, 100.f);
-	Customer->StateTimer = 6.4f;
+	Customer->TargetPos = Goals[BlockCase];
 	SavedState = Customer->State;
+	SavedCustomerGoal = Customer->TargetPos;
 	SavedLocation = Customer->GetActorLocation();
 	GM->ActiveCustomer = Customer;
+	// Give the customer time to start walking before placing the clerk in its path.
+	Step = 29;
+	NextStepTime = FPlatformTime::Seconds() + 0.25;
 }
 
 void AShiftFeedbackTest::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (FParse::Param(FCommandLine::Get(), TEXT("ShiftPlaythroughTest")))
+	{
+		TickPlaythrough(DeltaSeconds);
+		return;
+	}
 	const double Now = FPlatformTime::Seconds();
 	if (StartedAt == 0.) { StartedAt = Now; NextStepTime = Now + 1.; }
 	if (Now - StartedAt > 75.) { Check(TEXT("probe_timeout"), false); Finish(); return; }
@@ -121,8 +138,15 @@ void AShiftFeedbackTest::Tick(float DeltaSeconds)
 		Check(TEXT("arrival_replaces_arrows_with_target_highlight"), Guide->Status == EShiftRouteStatus::Arrived && Guide->Arrows->GetInstanceCount() == 0 && Guide->Highlight->GetInstanceCount() > 0);
 		Screenshot(TEXT("Target"));
 		Key(EKeys::E, true);
+		SavedTimer = GetWorld()->GetTimeSeconds();
 		break;
 	case 5:
+		if (!Clerk->HeldItem.IsValid() && GetWorld()->GetTimeSeconds() - SavedTimer < 1.f)
+		{
+			--Step;
+			NextStepTime = Now;
+			break;
+		}
 		Key(EKeys::E, false);
 		Check(TEXT("real_pickup_takes_carton"), Clerk->HeldItem.IsValid() && Clerk->HeldItem->Kind == EShiftItemKind::Carton);
 		NextStepTime = Now + 0.7;
@@ -200,24 +224,54 @@ void AShiftFeedbackTest::Tick(float DeltaSeconds)
 		GM->Phase = EShiftPhase::Working;
 		ClearTasks();
 		SetupBlockedCustomer();
-		NextStepTime = Now + 1.15;
+		break;
+	}
+	case 29:
+	{
+		const FString Prefix = FString::Printf(TEXT("block_state_%d_"), BlockCase);
+		if (!Customer.IsValid()) { Check(Prefix + TEXT("fixture_survived"), false); Finish(); return; }
+		const FVector Position = Customer->GetActorLocation();
+		const FShiftRouteResult Route = ShiftGuidance::FindRoute(GetWorld(), Customer.Get(), nullptr, SavedCustomerGoal, true);
+		const bool bWalking = Customer->State == SavedState && FVector::Dist2D(Position, SavedLocation) > 6.f
+			&& !Customer->IsBlockedByPlayer() && !Route.Waypoints.IsEmpty();
+		Check(Prefix + TEXT("walks_unobstructed"), bWalking);
+		if (!bWalking) { Finish(); return; }
+		const FVector Direction = Customer->GetVelocity().GetSafeNormal2D();
+		const FVector Blocker = Position + Direction * 104.f;
+		const bool bClear = !Direction.IsNearlyZero() && ShiftGuidance::CanWalkSegment(GetWorld(), Clerk, nullptr, Position, Blocker);
+		Check(Prefix + TEXT("player_placed_on_clear_segment"), bClear);
+		if (!bClear) { Finish(); return; }
+		Clerk->SetActorLocation(FVector(Blocker.X, Blocker.Y, 100.f));
+		PC->SetControlRotation((Position - Blocker).Rotation());
+		NextStepTime = Now + 0.18;
+		break;
+	}
+	case 30:
+	{
+		const bool bStopped = Customer.IsValid() && Customer->IsBlockedByPlayer() && Customer->GetVelocity().Size2D() < 1.f;
+		Check(FString::Printf(TEXT("block_state_%d_stops_promptly"), BlockCase), bStopped);
+		if (!bStopped) { Finish(); return; }
+		SavedLocation = Customer->GetActorLocation();
+		SavedTimer = Customer->StateTimer;
+		Step = 15;
+		NextStepTime = Now + 0.9;
 		break;
 	}
 	case 15:
 	{
 		const FString Prefix = FString::Printf(TEXT("block_state_%d_"), BlockCase);
-		Check(Prefix + TEXT("stops_and_keeps_goal"), Customer->IsBlockedByPlayer() && Customer->State == SavedState && Customer->TargetPos.Equals(FVector(1150.f, 50.f, 100.f)));
-		Check(Prefix + TEXT("stops_walk_animation"), Customer->GetVelocity().Size2D() < 1.f && FVector::Dist2D(Customer->GetActorLocation(), SavedLocation) < 3.f);
-		Check(Prefix + TEXT("pauses_state_timeout"), FMath::IsNearlyEqual(Customer->StateTimer, 6.4f, 0.05f));
+		Check(Prefix + TEXT("stops_and_keeps_goal"), Customer->IsBlockedByPlayer() && Customer->State == SavedState && Customer->TargetPos.Equals(SavedCustomerGoal));
+		Check(Prefix + TEXT("stays_still"), Customer->GetVelocity().Size2D() < 1.f && FVector::Dist2D(Customer->GetActorLocation(), SavedLocation) < 3.f);
+		Check(Prefix + TEXT("pauses_state_timeout"), FMath::IsNearlyEqual(Customer->StateTimer, SavedTimer, 0.05f));
 		Check(Prefix + TEXT("courtesy_once"), Customer->CourtesyLineCount() == 1 && Customer->Speech->Text.ToString() == TEXT("Excuse me, could I get through?"));
-		if (BlockCase == 0) { Screenshot(TEXT("Courtesy")); }
+		if (BlockCase == 1) { Screenshot(TEXT("Courtesy")); }
 		SavedCourtesyCount = Customer->CourtesyLineCount();
 		NextStepTime = Now + 0.8;
 		break;
 	}
 	case 16:
 		Check(FString::Printf(TEXT("block_state_%d_no_courtesy_spam"), BlockCase), Customer->CourtesyLineCount() == SavedCourtesyCount);
-		Clerk->SetActorLocation(FVector(600.f, 50.f, 100.f));
+		Clerk->SetActorLocation(FVector(1455.f, 50.f, 100.f));
 		NextStepTime = Now + 0.12;
 		break;
 	case 17:
@@ -226,7 +280,7 @@ void AShiftFeedbackTest::Tick(float DeltaSeconds)
 		break;
 	case 18:
 		Check(FString::Printf(TEXT("block_state_%d_resumes_original_route"), BlockCase), !Customer->IsBlockedByPlayer() && FVector::Dist2D(Customer->GetActorLocation(), SavedLocation) > 8.f);
-		if (++BlockCase < 4) { SetupBlockedCustomer(); Step = 15; NextStepTime = Now + 1.15; }
+		if (++BlockCase < 4) { SetupBlockedCustomer(); }
 		else
 		{
 			Customer->Destroy();
@@ -236,8 +290,7 @@ void AShiftFeedbackTest::Tick(float DeltaSeconds)
 			PC->SetControlRotation(FRotator(0.f, -90.f, 0.f));
 			Customer = GetWorld()->SpawnActor<AShiftCustomer>(FVector(800.f, 210.f, 100.f), FRotator(0.f, -90.f, 0.f));
 			if (!Customer.IsValid()) { Check(TEXT("grab_fixture_spawned"), false); Finish(); return; }
-			FShiftCustomerSpec Spec = ShiftData::Nights()[1].Customers.Last();
-			Spec.bMonster = true;
+			FShiftCustomerSpec Spec = ShiftData::Nights()[1].Customers[2];
 			Spec.MonsterSku = ShiftData::Products()[0].Sku;
 			Customer->Init(Spec);
 			Customer->State = ECustomerState::WaitingForHelp;
@@ -346,6 +399,134 @@ void AShiftFeedbackTest::Tick(float DeltaSeconds)
 		break;
 	default: break;
 	}
+}
+
+void AShiftFeedbackTest::TickPlaythrough(float DeltaSeconds)
+{
+	AShiftStoreGameMode* Game = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	AShiftPlayerCharacter* Clerk = PC ? Cast<AShiftPlayerCharacter>(PC->GetPawn()) : nullptr;
+	const double Now = FPlatformTime::Seconds();
+	if (!Game || !Clerk) { return; }
+	if (StartedAt == 0.)
+	{
+		FString UserDir;
+		if (!FParse::Value(FCommandLine::Get(), TEXT("UserDir="), UserDir)
+			|| FPaths::IsRelative(UserDir) || !FPaths::GetCleanFilename(UserDir).StartsWith(TEXT("ShiftStorePlaythrough-")))
+		{
+			Check(TEXT("playthrough_requires_isolated_user_dir"), false);
+			Finish();
+			return;
+		}
+		StartedAt = LastProgressAt = Now;
+		FMath::RandInit(24);
+		Game->ConfirmLanguage();
+		Game->OnAdvanceScreenKey();
+		Check(TEXT("starts_at_night_one"), Game->Phase == EShiftPhase::NightIntro && Game->NightIndex == 0);
+	}
+	const AShiftCustomer* ActiveCustomer = Game->ActiveCustomer.Get();
+	const int32 CustomerState = ActiveCustomer ? int32(ActiveCustomer->State) : 15;
+	const int32 Beat = Game->NightIndex * 100000 + Game->NextCustomerIdx * 1000 + Game->CustomersServed * 128
+		+ int32(Game->Phase) * 16 + CustomerState;
+	if (Beat != PlaythroughBeat)
+	{
+		LastProgressAt = Now;
+		PlaythroughBeat = Beat;
+	}
+	if (Now - LastProgressAt > 25. || Now - StartedAt > 270. || Game->Phase == EShiftPhase::GameOver)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Playthrough stalled: night %d phase %d customer %d state %d at %s going to %s"),
+			Game->NightIndex + 1, int32(Game->Phase), Game->NextCustomerIdx, CustomerState,
+			ActiveCustomer ? *ActiveCustomer->GetActorLocation().ToString() : TEXT("-"), ActiveCustomer ? *ActiveCustomer->TargetPos.ToString() : TEXT("-"));
+		Check(TEXT("playthrough_reaches_ending_without_stalling"), false);
+		Finish();
+		return;
+	}
+	if (Game->Phase == EShiftPhase::NightIntro)
+	{
+		Check(FString::Printf(TEXT("night_%d_has_opening_tasks"), Game->NightIndex + 1),
+			Game->ActiveTasks.Num() == Game->CurrentNightSpec().OpeningTasks.Num() && !Game->ActiveTasks.IsEmpty());
+		// Give departing/entering customers room to walk through the normal entrance.
+		Clerk->SetActorLocation(FVector(1250.f, 50.f, 100.f));
+		Game->OnAdvanceScreenKey();
+	}
+	else if (Game->Phase == EShiftPhase::Dawn)
+	{
+		Check(FString::Printf(TEXT("night_%d_dawn_after_all_customers_and_cleanup"), Game->NightIndex + 1),
+			Game->CustomersServed == Game->CurrentNightSpec().Customers.Num() && Game->ActiveTasks.IsEmpty() && !Game->Director->IsShifted());
+		Game->OnAdvanceScreenKey();
+	}
+	else if (Game->Phase == EShiftPhase::Ending)
+	{
+		Check(TEXT("playthrough_reaches_ending_without_stalling"), Game->NightIndex + 1 == ShiftData::Nights().Num());
+		Check(TEXT("walk_records_first_reveal"), bBenchmarkFinished && bSampledShift && RevealFrameMs > 0.);
+		Finish();
+	}
+	else if (AShiftCustomer* Active = Game->ActiveCustomer.Get())
+	{
+		if (Game->NightIndex == 1 && Active->Spec.bMonster && !bBenchmarkFinished
+			&& (Active->State == ECustomerState::WaitingForHelp || bBenchmarkStarted))
+		{
+			if (RunBenchmarkRoute(*Game, *Clerk, DeltaSeconds)) { return; }
+		}
+		if (Active->State == ECustomerState::WaitingForHelp && !Active->Spec.bMonster) { Game->OnCustomerHelped(Active); }
+		else if (Active->State == ECustomerState::WaitingAtCheckout) { Game->OnCheckoutCompleted(Active); }
+		else if (Active->IsMonsterActive())
+		{
+			const AShiftItem* Demand = Game->ActiveLostItem.Get();
+			Check(FString::Printf(TEXT("night_%d_customer_%d_reveals_and_spawns_demand"), Game->NightIndex + 1, Game->NextCustomerIdx),
+				Game->Director->IsShifted() && Demand && Demand->bLostItem);
+			Clerk->SetActorLocation(FVector(1250.f, 50.f, 100.f));
+			Game->OnMonsterDemandDelivered(Active);
+		}
+	}
+	else if (!Game->ActiveTasks.IsEmpty() && (Game->Phase == EShiftPhase::Working || Game->Phase == EShiftPhase::Cleanup))
+	{
+		// Exercise the full scheduling and save flow. Input and hold duration are covered in the core self-test.
+		Game->OnTaskCompleted(Game->ActiveTasks[0].Get());
+	}
+}
+
+bool AShiftFeedbackTest::RunBenchmarkRoute(AShiftStoreGameMode& Game, AShiftPlayerCharacter& Clerk, float DeltaSeconds)
+{
+	const FVector Destination(395.f, 1380.f, 100.f);
+	const double Now = FPlatformTime::Seconds();
+	const bool bShifted = Game.Director->IsShifted();
+	if (!bBenchmarkStarted || bShifted != bSampledShift)
+	{
+		if (bBenchmarkStarted) { RevealFrameMs = (Now - LastFrameTime) * 1000.; }
+		else { Clerk.SetActorLocation(FVector(1250.f, 50.f, 100.f)); }
+		bBenchmarkStarted = true;
+		bSampledShift = bShifted;
+		BenchmarkRoute = ShiftGuidance::FindRoute(GetWorld(), &Clerk, nullptr, Destination, true).Waypoints;
+		BenchmarkPoint = 0;
+	}
+	if (LastFrameTime > 0.) { FrameTimes.Add((Now - LastFrameTime) * 1000.); }
+	LastFrameTime = Now;
+	const FVector Position = Clerk.GetActorLocation();
+	while (BenchmarkRoute.IsValidIndex(BenchmarkPoint) && FVector::Dist2D(Position, BenchmarkRoute[BenchmarkPoint]) < 14.f) { ++BenchmarkPoint; }
+	if (BenchmarkRoute.IsValidIndex(BenchmarkPoint) && !Clerk.IsGrabbed())
+	{
+		const FVector Offset = BenchmarkRoute[BenchmarkPoint] - Position;
+		const FVector Direction = Offset.GetSafeNormal2D();
+		Clerk.GetController()->SetControlRotation(FMath::RInterpConstantTo(Clerk.GetControlRotation(), Direction.Rotation(), DeltaSeconds, 270.f));
+		Clerk.AddMovementInput(Direction, Offset.Size2D() < 35.f ? 0.5f : 1.f);
+		return true;
+	}
+	Clerk.GetCharacterMovement()->StopMovementImmediately();
+	bBenchmarkFinished = true;
+	const bool bReached = FVector::Dist2D(Position, Destination) < 30.f && bShifted && !FrameTimes.IsEmpty();
+	Check(TEXT("benchmark_walk_reaches_back_room_after_shift"), bReached);
+	if (bReached)
+	{
+		double TotalMs = 0.;
+		for (double Ms : FrameTimes) { TotalMs += Ms; }
+		FrameTimes.Sort();
+		const int32 P95Index = FMath::Clamp(FMath::CeilToInt(FrameTimes.Num() * 0.95) - 1, 0, FrameTimes.Num() - 1);
+		UE_LOG(LogTemp, Display, TEXT("SHIFT_WALK_METRICS frames=%d avg_fps=%.2f p95_ms=%.2f reveal_ms=%.2f max_ms=%.2f"),
+			FrameTimes.Num(), 1000. * FrameTimes.Num() / TotalMs, FrameTimes[P95Index], RevealFrameMs, FrameTimes.Last());
+	}
+	return false;
 }
 
 void AShiftFeedbackTest::Finish()

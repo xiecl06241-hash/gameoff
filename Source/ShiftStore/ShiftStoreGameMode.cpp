@@ -91,7 +91,10 @@ void AShiftStoreGameMode::BeginPlay()
 	{
 		OpenLanguageSelection();
 	}
-	if (FParse::Param(*CmdLine, TEXT("ShiftFeedbackTest"))) { GetWorld()->SpawnActor<AShiftFeedbackTest>(); }
+	if (FParse::Param(*CmdLine, TEXT("ShiftFeedbackTest")) || FParse::Param(*CmdLine, TEXT("ShiftPlaythroughTest")))
+	{
+		GetWorld()->SpawnActor<AShiftFeedbackTest>();
+	}
 }
 
 void AShiftStoreGameMode::OpenLanguageSelection()

@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "checks": {
+    "starts_at_night_one": true,
+    "night_1_has_opening_tasks": true,
+    "night_1_dawn_after_all_customers_and_cleanup": true,
+    "night_2_has_opening_tasks": true,
+    "benchmark_walk_reaches_back_room_after_shift": true,
+    "night_2_customer_3_reveals_and_spawns_demand": true,
+    "night_2_dawn_after_all_customers_and_cleanup": true,
+    "night_3_has_opening_tasks": true,
+    "night_3_customer_2_reveals_and_spawns_demand": true,
+    "night_3_customer_5_reveals_and_spawns_demand": true,
+    "night_3_dawn_after_all_customers_and_cleanup": true,
+    "playthrough_reaches_ending_without_stalling": true,
+    "walk_records_first_reveal": true
+  },
+  "language": "zh-Hans",
+  "process_exit_code": 0,
+  "player_saves_unchanged": true,
+  "performance": {
+    "resolution": [
+      1920,
+      1080
+    ],
+    "mode": "fullscreen",
+    "quality": "High, 100% screen percentage",
+    "route": "cashier side to warehouse during the first Night 2 reveal",
+    "samples": 676,
+    "average_fps": 54.98,
+    "p95_frame_ms": 22.11,
+    "reveal_frame_ms": 18.59,
+    "max_frame_ms": 47.8
+  }
+}
