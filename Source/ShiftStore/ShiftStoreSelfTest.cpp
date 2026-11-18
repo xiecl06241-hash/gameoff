@@ -12,6 +12,7 @@
 #include "Components/RectLightComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/BoxComponent.h"
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
@@ -290,6 +291,46 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 		const bool bOnlyCleanup = ActiveTasks.Num() == CurrentNightSpec().Spills
 			&& !ActiveTasks.ContainsByPredicate([](const TWeakObjectPtr<AShiftTaskTarget>& Task) { return !Task.IsValid() || Task->Type != EShiftTaskType::Spill; });
 		if (!CheckSelfTest(TEXT("last_customer_goes_directly_to_cleanup"), Phase == EShiftPhase::Cleanup && bOnlyCleanup)) { return; }
+		AShiftPlayerCharacter* Player = CastChecked<AShiftPlayerCharacter>(PC->GetPawn());
+		Player->SetActorLocation(FVector(600.f, 280.f, 100.f));
+		PC->SetControlRotation(FRotator::ZeroRotator);
+		// A thin shelf face 48 cm ahead reproduces the former 65 cm through-wall drop.
+		AActor* Shelf = GetWorld()->SpawnActor<AActor>();
+		UBoxComponent* Face = NewObject<UBoxComponent>(Shelf);
+		Shelf->SetRootComponent(Face);
+		Face->SetBoxExtent(FVector(2.f, 40.f, 35.f));
+		Face->SetCollisionProfileName(TEXT("BlockAll"));
+		Face->RegisterComponent();
+		const FVector Eye = Player->FirstPersonCamera->GetComponentLocation();
+		Shelf->SetActorLocation(Eye + FVector(48.f, 0.f, 0.f));
+		Shelf->Tags.Add(TEXT("Fixture.Shelf"));
+		Shelf->SetLifeSpan(1.f);
+		AShiftItem* Water = GetWorld()->SpawnActor<AShiftItem>();
+		Water->InitProduct(TEXT("Water"));
+		Player->PickupItem(Water);
+		// Align the camera component for the same-frame drop (control rotation updates on tick).
+		Player->FirstPersonCamera->SetWorldRotation(FRotator::ZeroRotator);
+		Player->DropHeldItem();
+		if (!CheckSelfTest(TEXT("product_drop_stays_in_front_of_thin_shelf"), Water->GetActorLocation().X < Shelf->GetActorLocation().X - 2.f)) { return; }
+		while (!ActiveTasks.IsEmpty()) { OnTaskCompleted(ActiveTasks.Last().Get()); }
+		if (!CheckSelfTest(TEXT("loose_stock_blocks_dawn"), Phase == EShiftPhase::Cleanup && CountLooseMerchandise() == 1)) { return; }
+		Player->PickupItem(Water);
+		if (!CheckSelfTest(TEXT("held_stock_still_blocks_dawn"), !TryFinishCleanup())) { return; }
+		bSelfTestInteractPressed = false;
+		AdvanceSelfTest(ESelfTestStage::ReturnStock);
+		break;
+	}
+	case ESelfTestStage::ReturnStock:
+	{
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		if (!bSelfTestInteractPressed && SelfTestStageTime > 0.15f)
+		{
+			PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Pressed, 1.f));
+			bSelfTestInteractPressed = true;
+		}
+		if (SelfTestStageTime < 0.4f) { break; }
+		PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E, IE_Released, 0.f));
+		if (!CheckSelfTest(TEXT("real_E_returns_last_product_and_reaches_dawn"), CountLooseMerchandise() == 0 && TryFinishCleanup() && Phase == EShiftPhase::Dawn)) { return; }
 		AdvanceSelfTest(ESelfTestStage::Regression);
 		break;
 	}

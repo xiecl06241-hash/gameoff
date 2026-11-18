@@ -115,7 +115,7 @@ private:
 	int32 SalesSinceRestock = 0;
 	int32 ServiceTaskRotation = 0;
 
-	enum class ESelfTestStage : uint8 { Idle, Setup, IntroPause, ActiveTimer, RestockPickup, RestockWork, ServiceSetup, CustomerExit, CookService, Regression, Projectile, Reveal, Shift, Restore, Flicker, Finished };
+	enum class ESelfTestStage : uint8 { Idle, Setup, IntroPause, ActiveTimer, RestockPickup, RestockWork, ServiceSetup, CustomerExit, CookService, ReturnStock, Regression, Projectile, Reveal, Shift, Restore, Flicker, Finished };
 	void TickSelfTest(float DeltaSeconds);
 	bool CheckSelfTest(const FString& Name, bool bSuccess, const FString& Detail = TEXT(""));
 	void AdvanceSelfTest(ESelfTestStage Stage);

@@ -136,13 +136,33 @@ void AShiftPlayerCharacter::PickupItem(AShiftItem* Item)
 	Item->SetActorRelativeRotation(FRotator(0.f, -20.f, 0.f));
 }
 
+FVector AShiftPlayerCharacter::ReleaseLocation(const AShiftItem& Item) const
+{
+	const FVector Start = FirstPersonCamera->GetComponentLocation();
+	const FVector Direction = FirstPersonCamera->GetForwardVector();
+	const FVector End = Start + Direction * 65.f;
+	if (Item.Kind != EShiftItemKind::Product) { return End; }
+
+	// Store meshes can have an off-centre pivot. Keep the entire product on the player's side of the surface.
+	const float Radius = Item.Mesh->Bounds.SphereRadius + FVector::Dist(Item.GetActorLocation(), Item.Mesh->Bounds.Origin);
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ProductRelease), false, this);
+	Params.AddIgnoredActor(&Item);
+	FHitResult Hit;
+	if (GetWorld()->SweepSingleByChannel(Hit, Start, End, FQuat::Identity, ECC_PhysicsBody,
+		FCollisionShape::MakeSphere(FMath::Max(1.f, Radius)), Params))
+	{
+		return Start + Direction * FMath::Max(0.f, Hit.Distance - 1.f);
+	}
+	return End;
+}
+
 void AShiftPlayerCharacter::DropHeldItem()
 {
 	if (AShiftItem* Item = HeldItem.Get())
 	{
 		HeldItem.Reset();
 		Item->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		Item->SetActorLocation(FirstPersonCamera->GetComponentLocation() + FirstPersonCamera->GetForwardVector() * 65.f);
+		Item->SetActorLocation(ReleaseLocation(*Item));
 		Item->SetHeld(false);
 	}
 }
@@ -364,7 +384,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		if (ToThrow->CanSimulate())
 		{
 			HeldItem.Reset();
-			ToThrow->SetActorLocation(FirstPersonCamera->GetComponentLocation() + FirstPersonCamera->GetForwardVector() * 65.f);
+			ToThrow->SetActorLocation(ReleaseLocation(*ToThrow));
 			ToThrow->Throw(FirstPersonCamera->GetForwardVector() * 980.f + FVector(0, 0, 140.f), this);
 			return;
 		}

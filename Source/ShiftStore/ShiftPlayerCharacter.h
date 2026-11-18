@@ -45,6 +45,7 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+	FVector ReleaseLocation(const AShiftItem& Item) const;
 	void UpdateGrabCamera(float DeltaSeconds);
 	bool bGrabCameraActive = false;
 	float GrabCameraTime = 0.f;

@@ -163,8 +163,12 @@ void AShiftCustomer::MonsterMoveToward(const FVector& Goal, float DeltaSeconds)
 	MonsterReplanCooldown -= DeltaSeconds;
 
 	// Stuck watchdog: if input is applied but we are not progressing, swap sides and force a fresh route.
-	MonsterStuckTime = FVector::DistSquared2D(Current, MonsterLastPosition) < 4.f ? MonsterStuckTime + DeltaSeconds : 0.f;
-	MonsterLastPosition = Current;
+	if (FVector::DistSquared2D(Current, MonsterLastPosition) >= 4.f)
+	{
+		MonsterLastPosition = Current;
+		MonsterStuckTime = 0.f;
+	}
+	MonsterStuckTime += DeltaSeconds;
 	if (MonsterStuckTime > 0.45f)
 	{
 		MonsterStuckTime = 0.f;
@@ -184,7 +188,7 @@ void AShiftCustomer::MonsterMoveToward(const FVector& Goal, float DeltaSeconds)
 	}
 
 	// 2. Blocked: follow a route through the store's aisle graph, replanning at most twice a second.
-	const bool bNeedRoute = !bHasStoreRouteGoal || !StoreRouteGoal.Equals(Goal, 120.f) || StoreRoute.IsEmpty();
+	const bool bNeedRoute = !bHasStoreRouteGoal || !StoreRouteGoal.Equals(Goal, 120.f) || !StoreRoute.IsValidIndex(StoreRouteIndex);
 	if (bNeedRoute && MonsterReplanCooldown <= 0.f)
 	{
 		MonsterReplanCooldown = 0.5f;
