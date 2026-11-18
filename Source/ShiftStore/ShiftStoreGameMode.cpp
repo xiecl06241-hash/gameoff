@@ -192,6 +192,30 @@ void AShiftStoreGameMode::ClearNightActors()
 	ActiveCustomer.Reset();
 	if (AShiftItem* L = ActiveLostItem.Get()) { L->Destroy(); }
 	ActiveLostItem.Reset();
+	// Merchandise left over from the previous night does not carry into the next one.
+	for (TActorIterator<AShiftItem> It(GetWorld()); It; ++It)
+	{
+		if (It->Kind == EShiftItemKind::Product) { It->Destroy(); }
+	}
+}
+
+int32 AShiftStoreGameMode::CountLooseMerchandise() const
+{
+	int32 Count = 0;
+	for (TActorIterator<AShiftItem> It(GetWorld()); It; ++It)
+	{
+		if (It->Kind == EShiftItemKind::Product && !It->bLostItem && !It->bHotCup && !It->IsActorBeingDestroyed()) { ++Count; }
+	}
+	return Count;
+}
+
+bool AShiftStoreGameMode::TryFinishCleanup()
+{
+	if (Phase != EShiftPhase::Cleanup || !ActiveTasks.IsEmpty() || CountLooseMerchandise() > 0) { return false; }
+	Phase = EShiftPhase::Dawn;
+	SaveProgress();
+	PlaySynthesizedCue(880.f, 0.35f, 0.30f);
+	return true;
 }
 
 void AShiftStoreGameMode::StartNight(int32 InNightIndex)
@@ -481,9 +505,8 @@ void AShiftStoreGameMode::OnTaskCompleted(AShiftTaskTarget* Task)
 
 	if (Phase == EShiftPhase::Cleanup && ActiveTasks.Num() == 0)
 	{
-		Phase = EShiftPhase::Dawn;
-		SaveProgress();
-		PlaySynthesizedCue(880.f, 0.35f, 0.30f);
+		if (TryFinishCleanup()) { return; }
+		SetStatusBanner(ShiftLoc::Format(TEXT("Chores done! Put the loose merchandise back on the shelves (%d left)."), {LexToString(CountLooseMerchandise())}), 4.f);
 		return;
 	}
 
@@ -806,6 +829,9 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 			PlaySynthesizedCue(90.f, 0.25f, 0.18f, true);
 		}
 	}
+
+	// 3b. Cleanup ends only after the floor is tidy: loose products must be put back on shelves.
+	if (Phase == EShiftPhase::Cleanup && ActiveTasks.IsEmpty() && TryFinishCleanup()) { return; }
 
 	// 4. Spawn next customer when all chores are done and store is clear
 	if (Phase == EShiftPhase::Working && !ActiveCustomer.IsValid() && ActiveTasks.Num() == 0)

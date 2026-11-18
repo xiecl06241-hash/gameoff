@@ -82,6 +82,8 @@ private:
 	FText SavedSpeech;
 	void MoveToward(const FVector& Goal, float Speed, float DeltaSeconds);
 	void FollowStoreRoute(const FVector& Goal, float DeltaSeconds);
+	void MonsterMoveToward(const FVector& Goal, float DeltaSeconds);
+	bool MonsterPathClear(const FVector& From, const FVector& Dir, float Distance) const;
 	void RevealMonster(APawn* Player);
 	void PickSearchPoint();
 	void ApplyMonsterVisuals();
@@ -95,4 +97,9 @@ private:
 	float StoreRouteRetry = 0.f;
 	float RouteStalledTime = 0.f;
 	bool bHasStoreRouteGoal = false;
+	float StoreRouteGoalTolerance = 1.f;
+	float MonsterReplanCooldown = 0.f;
+	float MonsterStuckTime = 0.f;
+	FVector MonsterLastPosition = FVector::ZeroVector;
+	bool bMonsterSteerRight = false;
 };

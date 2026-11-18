@@ -504,6 +504,12 @@ bool AShiftFeedbackTest::RunBenchmarkRoute(AShiftStoreGameMode& Game, AShiftPlay
 	if (LastFrameTime > 0.) { FrameTimes.Add((Now - LastFrameTime) * 1000.); }
 	LastFrameTime = Now;
 	const FVector Position = Clerk.GetActorLocation();
+	// The walk measures frame time through the Shift transition, not monster pursuit: keep a close monster stunned.
+	if (AShiftCustomer* Pursuer = Game.ActiveCustomer.Get(); Pursuer && Pursuer->IsMonsterActive()
+		&& FVector::Dist2D(Pursuer->GetActorLocation(), Position) < 260.f)
+	{
+		Pursuer->Stun(1.5f);
+	}
 	while (BenchmarkRoute.IsValidIndex(BenchmarkPoint) && FVector::Dist2D(Position, BenchmarkRoute[BenchmarkPoint]) < 14.f) { ++BenchmarkPoint; }
 	if (BenchmarkRoute.IsValidIndex(BenchmarkPoint) && !Clerk.IsGrabbed())
 	{
@@ -516,6 +522,11 @@ bool AShiftFeedbackTest::RunBenchmarkRoute(AShiftStoreGameMode& Game, AShiftPlay
 	Clerk.GetCharacterMovement()->StopMovementImmediately();
 	bBenchmarkFinished = true;
 	const bool bReached = FVector::Dist2D(Position, Destination) < 30.f && bShifted && !FrameTimes.IsEmpty();
+	if (!bReached)
+	{
+		UE_LOG(LogTemp, Display, TEXT("BENCHMARK_FAIL pos=%s grabbed=%d shifted=%d route=%d point=%d"),
+			*Position.ToString(), Clerk.IsGrabbed() ? 1 : 0, bShifted ? 1 : 0, BenchmarkRoute.Num(), BenchmarkPoint);
+	}
 	Check(TEXT("benchmark_walk_reaches_back_room_after_shift"), bReached);
 	if (bReached)
 	{

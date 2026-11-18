@@ -26,10 +26,10 @@
     "mode": "fullscreen",
     "quality": "High, 100% screen percentage",
     "route": "cashier side to warehouse during the first Night 2 reveal",
-    "samples": 676,
-    "average_fps": 54.98,
-    "p95_frame_ms": 22.11,
-    "reveal_frame_ms": 18.59,
-    "max_frame_ms": 47.8
+    "samples": 741,
+    "average_fps": 60.0,
+    "p95_frame_ms": 17.11,
+    "reveal_frame_ms": 17.12,
+    "max_frame_ms": 25.34
   }
 }

@@ -1,8 +1,10 @@
-#include "ShiftCustomer.h"
+﻿#include "ShiftCustomer.h"
 #include "ShiftLocalization.h"
 #include "ShiftGuidance.h"
 #include "ShiftStoreGameMode.h"
 #include "ShiftPlayerCharacter.h"
+#include "ShiftItem.h"
+#include "ShiftTaskTarget.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -128,28 +130,95 @@ void AShiftCustomer::MoveToward(const FVector& Goal, float Speed, float DeltaSec
 		FollowStoreRoute(Goal, DeltaSeconds);
 		return;
 	}
-	FVector Current = GetActorLocation();
+	MonsterMoveToward(Goal, DeltaSeconds);
+}
+
+bool AShiftCustomer::MonsterPathClear(const FVector& From, const FVector& Dir, float Distance) const
+{
+	// Full-height capsule sweep so low props (bins, extinguishers, carts) block just like they do the body.
+	TArray<FHitResult> Hits;
+	FCollisionQueryParams Params(TEXT("MonsterPath"), false, this);
+	const FVector Start = From + FVector(0.f, 0.f, 6.f);
+	GetWorld()->SweepMultiByChannel(Hits, Start, Start + Dir * Distance, FQuat::Identity, ECC_Visibility,
+		FCollisionShape::MakeCapsule(34.f, 82.f), Params);
+	for (const FHitResult& Hit : Hits)
+	{
+		const AActor* Other = Hit.GetActor();
+		if (Hit.bBlockingHit && !Hit.bStartPenetrating && Other && !Other->IsA<APawn>() && !Other->IsA<AShiftItem>() && !Other->IsA<AShiftTaskTarget>())
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void AShiftCustomer::MonsterMoveToward(const FVector& Goal, float DeltaSeconds)
+{
+	const FVector Current = GetActorLocation();
 	FVector Flat = Goal - Current;
 	Flat.Z = 0.f;
 	const float Dist = Flat.Size();
 	if (Dist < 15.f) { return; }
+	const FVector Direct = Flat / Dist;
+	MonsterReplanCooldown -= DeltaSeconds;
 
-	FVector Dir = Flat / Dist;
-	// Simple obstacle avoidance around store gondolas when direct line is blocked
-	FHitResult Hit;
-	FCollisionQueryParams Params(TEXT("CustomerSteer"), false, this);
-	const FVector ProbeStart = Current + FVector(0, 0, 40.f);
-	if (GetWorld()->SweepSingleByChannel(Hit, ProbeStart, ProbeStart + Dir * 85.f, FQuat::Identity,
-		ECC_Visibility, FCollisionShape::MakeSphere(26.f), Params))
+	// Stuck watchdog: if input is applied but we are not progressing, swap sides and force a fresh route.
+	MonsterStuckTime = FVector::DistSquared2D(Current, MonsterLastPosition) < 4.f ? MonsterStuckTime + DeltaSeconds : 0.f;
+	MonsterLastPosition = Current;
+	if (MonsterStuckTime > 0.45f)
 	{
-		// Steer along aisle axes (X=200/600/1000/1400 or Y=220/600/910)
-		const FVector Left(-Dir.Y, Dir.X, 0.f);
-		const FVector Right(Dir.Y, -Dir.X, 0.f);
-		FHitResult HitL;
-		const bool bBlockedL = GetWorld()->LineTraceSingleByChannel(HitL, ProbeStart, ProbeStart + Left * 110.f, ECC_Visibility, Params);
-		Dir = bBlockedL ? Right : Left;
+		MonsterStuckTime = 0.f;
+		bMonsterSteerRight = !bMonsterSteerRight;
+		bHasStoreRouteGoal = false;
+		StoreRoute.Empty();
+		MonsterReplanCooldown = 0.f;
 	}
-	AddMovementInput(Dir, 1.f);
+
+	// 1. Straight line is clear: chase directly.
+	if (MonsterPathClear(Current, Direct, FMath::Min(Dist, 110.f)))
+	{
+		StoreRoute.Empty();
+		bHasStoreRouteGoal = false;
+		AddMovementInput(Direct, 1.f);
+		return;
+	}
+
+	// 2. Blocked: follow a route through the store's aisle graph, replanning at most twice a second.
+	const bool bNeedRoute = !bHasStoreRouteGoal || !StoreRouteGoal.Equals(Goal, 120.f) || StoreRoute.IsEmpty();
+	if (bNeedRoute && MonsterReplanCooldown <= 0.f)
+	{
+		MonsterReplanCooldown = 0.5f;
+		StoreRoute = ShiftGuidance::FindRoute(GetWorld(), this, nullptr, Goal, false).Waypoints;
+		StoreRouteGoal = Goal;
+		bHasStoreRouteGoal = true;
+		StoreRouteIndex = 0;
+	}
+	while (StoreRoute.IsValidIndex(StoreRouteIndex) && FVector::Dist2D(Current, StoreRoute[StoreRouteIndex]) < 40.f) { ++StoreRouteIndex; }
+	if (StoreRoute.IsValidIndex(StoreRouteIndex))
+	{
+		const FVector WaypointDir = (StoreRoute[StoreRouteIndex] - Current).GetSafeNormal2D();
+		if (MonsterPathClear(Current, WaypointDir, 80.f))
+		{
+			AddMovementInput(WaypointDir, 1.f);
+			return;
+		}
+	}
+
+	// 3. No usable route: slide around the obstacle, trying progressively wider angles on the preferred side.
+	const float Side = bMonsterSteerRight ? -1.f : 1.f;
+	for (const float Angle : { 35.f, 70.f, 105.f, 140.f })
+	{
+		for (const float Sign : { Side, -Side })
+		{
+			const FVector Candidate = Direct.RotateAngleAxis(Angle * Sign, FVector::UpVector);
+			if (MonsterPathClear(Current, Candidate, 90.f))
+			{
+				AddMovementInput(Candidate, 1.f);
+				return;
+			}
+		}
+	}
+	AddMovementInput(Direct, 1.f);
 }
 
 void AShiftCustomer::FollowStoreRoute(const FVector& Goal, float DeltaSeconds)

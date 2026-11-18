@@ -29,6 +29,8 @@ public:
 	void ReturnToTitle();
 	void CycleGuidedTask();
 	bool GetTaskGuidance(const AShiftPlayerCharacter* Player, FShiftTaskGuidance& Out) const;
+	/** Products that are on the floor or in the clerk's hands and still have to go back on a shelf. */
+	int32 CountLooseMerchandise() const;
 	bool bHasSavedProgress = false;
 	void OpenLanguageSelection();
 	void ConfirmLanguage();
@@ -98,6 +100,7 @@ private:
 	void SpawnPostServiceTask();
 	void SpawnCleanupSpills(int32 Count);
 	void ClearNightActors();
+	bool TryFinishCleanup();
 	void TrySpawnNextCustomer();
 	void TriggerGameOver(const FString& Reason);
 	bool SaveProgress();

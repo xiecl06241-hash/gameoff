@@ -392,6 +392,11 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		FocusedTask = Task;
 		if (Task->Type == EShiftTaskType::CartonSource)
 		{
+			if (HeldItem.IsValid())
+			{
+				CrosshairPrompt = ShiftLoc::Text(TEXT("Hands full. Put it back on a shelf, or press [G] to drop it."));
+				return;
+			}
 			CrosshairPrompt = TEXT("[E] Take Stock Carton");
 			if (bInteractJustPressed)
 			{
@@ -514,19 +519,54 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		// 4. Oden station — take a hot broth cup to throw at the monster
 		if (HitActor->ActorHasTag(TEXT("Interactive.Oden")))
 		{
+			if (HeldItem.IsValid())
+			{
+				if (HeldItem->bHotCup)
+				{
+					CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Put back %s"), {FString(HeldItem->DisplayName())});
+					if (bInteractJustPressed) { ConsumeHeldItem(); }
+				}
+				else
+				{
+					CrosshairPrompt = ShiftLoc::Text(TEXT("Hands full. Put it back on a shelf, or press [G] to drop it."));
+				}
+				return;
+			}
 			CrosshairPrompt = TEXT("[E] Take Hot Oden Cup (Strong Stun Throwable)");
 			if (bInteractJustPressed)
 			{
 				AShiftItem* Oden = GetWorld()->SpawnActor<AShiftItem>(GetActorLocation(), FRotator::ZeroRotator);
 				Oden->InitProduct(TEXT("Noodles"));
+				Oden->bHotCup = true;
 				PickupItem(Oden);
 			}
 			return;
 		}
 
+		// Put merchandise back: aim a held (non-demanded) product at any shelf, cooler or display prop.
+		if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && !HeldItem->bLostItem && !HeldItem->bHotCup)
+		{
+			const FString HitName = HitActor->GetName();
+			const bool bShelfLike = HitActor->ActorHasTag(TEXT("Fixture.Shelf")) || HitActor->ActorHasTag(TEXT("Interactive.FridgeDoor"))
+				|| HitName.Contains(TEXT("Fridge")) || HitName.Contains(TEXT("WallShelf")) || HitName.Contains(TEXT("Drinks"))
+				|| HitName.Contains(TEXT("Gondola")) || HitName.Contains(TEXT("Shelf"))
+				|| !ExtractSkuTag(HitActor).IsNone();
+			if (bShelfLike)
+			{
+				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Put back %s"), {FString(HeldItem->DisplayName())});
+				if (bInteractJustPressed) { ConsumeHeldItem(); }
+				return;
+			}
+		}
+
 		// 5. Already-spawned AShiftItem
 		if (AShiftItem* ShiftItem = Cast<AShiftItem>(HitActor))
 		{
+			if (HeldItem.IsValid())
+			{
+				CrosshairPrompt = ShiftLoc::Text(TEXT("Hands full. Put it back on a shelf, or press [G] to drop it."));
+				return;
+			}
 			CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Pick up %s"), {FString(ShiftItem->DisplayName())});
 			if (bInteractJustPressed)
 			{
@@ -538,6 +578,11 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		// 6. Mop / Broom props in the level
 		if (HitActor->ActorHasTag(TEXT("Tool.Mop")) || HitActor->ActorHasTag(TEXT("Tool.Broom")))
 		{
+			if (HeldItem.IsValid())
+			{
+				CrosshairPrompt = ShiftLoc::Text(TEXT("Hands full. Put it back on a shelf, or press [G] to drop it."));
+				return;
+			}
 			CrosshairPrompt = TEXT("[E] Equip Mop");
 			if (bInteractJustPressed)
 			{
@@ -552,6 +597,13 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 
 		// 7. Hero product props or shelf display stock -> pick up a carryable product
 		const FName Sku = ExtractSkuTag(HitActor);
+		const bool bTakeTarget = !Sku.IsNone() || HitActor->ActorHasTag(TEXT("Fixture.Shelf")) || HitActor->ActorHasTag(TEXT("Interactive.FridgeDoor"))
+			|| HitActor->GetName().Contains(TEXT("Fridge")) || HitActor->GetName().Contains(TEXT("WallShelf")) || HitActor->GetName().Contains(TEXT("Drinks"));
+		if (bTakeTarget && HeldItem.IsValid())
+		{
+			CrosshairPrompt = ShiftLoc::Text(TEXT("Hands full. Put it back on a shelf, or press [G] to drop it."));
+			return;
+		}
 		if (!Sku.IsNone())
 		{
 			CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Pick up %s"), {FString(ShiftData::ProductLabel(Sku))});

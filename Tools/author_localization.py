@@ -186,6 +186,13 @@ ENTRIES += [
     ("At the oden station, HOLD [E] to prepare the broth.", "在关东煮台前长按 [E]，准备热汤。", "おでん台で [E] を長押しして、だしを準備する。", "在關東煮臺前長按 [E]，準備熱湯。"),
 ]
 
+ENTRIES += [
+    ("Hands full. Put it back on a shelf, or press [G] to drop it.", "手里已有物品。放回货架，或按 [G] 放下。", "手がふさがっています。棚に戻すか、[G] で置きましょう。", "手上已有物品。放回貨架，或按 [G] 放下。"),
+    ("[E] Put back %s", "[E] 放回 {0}", "[E] {0} を戻す", "[E] 放回 {0}"),
+    ("Tidy up: %d items left on the floor", "整理：地上还有 {0} 件商品", "片付け：床に商品が {0} 個残っています", "整理：地上還有 {0} 件商品"),
+    ("Pick up loose merchandise and press [E] at any shelf to put it back.", "捡起散落的商品，对准任意货架按 [E] 放回。", "散らばった商品を拾い、棚に向かって [E] で戻す。", "撿起散落的商品，對準任意貨架按 [E] 放回。"),
+    ("Chores done! Put the loose merchandise back on the shelves (%d left).", "工作完成！请把散落的商品放回货架（还剩 {0} 件）。", "作業完了！散らばった商品を棚に戻しましょう（残り {0} 個）。", "工作完成！請把散落的商品放回貨架（還剩 {0} 件）。"),
+]
 PRINTF = re.compile(r"%%|%[-+0 #]*\d*(?:\.\d+)?[sdf]")
 
 

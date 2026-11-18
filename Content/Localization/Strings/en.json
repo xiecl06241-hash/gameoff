@@ -173,5 +173,10 @@
   "[TAB] Next chore   |   Finish all chores to admit customers.": "[TAB] Next chore   |   Finish all chores to admit customers.",
   "Prepare hot oden": "Prepare hot oden",
   "Next chore: %s. Follow the yellow marker.": "Next chore: {0}. Follow the yellow marker.",
-  "At the oden station, HOLD [E] to prepare the broth.": "At the oden station, HOLD [E] to prepare the broth."
+  "At the oden station, HOLD [E] to prepare the broth.": "At the oden station, HOLD [E] to prepare the broth.",
+  "Hands full. Put it back on a shelf, or press [G] to drop it.": "Hands full. Put it back on a shelf, or press [G] to drop it.",
+  "[E] Put back %s": "[E] Put back {0}",
+  "Tidy up: %d items left on the floor": "Tidy up: {0} items left on the floor",
+  "Pick up loose merchandise and press [E] at any shelf to put it back.": "Pick up loose merchandise and press [E] at any shelf to put it back.",
+  "Chores done! Put the loose merchandise back on the shelves (%d left).": "Chores done! Put the loose merchandise back on the shelves ({0} left)."
 }

@@ -31,6 +31,8 @@ public:
 	bool bInFlight = false;
 	/** Set for the out-of-place item a revealed monster wants. */
 	bool bLostItem = false;
+	/** Hot oden cup: disposable, never counted as loose shelf merchandise. */
+	bool bHotCup = false;
 
 protected:
 	UFUNCTION() void OnHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector Impulse, const FHitResult& Hit);

@@ -431,6 +431,11 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 			if (Overdue > 0) { Add(ShiftLoc::Format(TEXT("%d overdue chores are draining sanity!"), {LexToString(Overdue)}), FLinearColor(1.f, 0.30f, 0.25f)); }
 			if (GM->ActiveTasks.Num() > 1) { Add(TEXT("[TAB] Next chore"), Dim, 0.9f); }
 		}
+		else if (const int32 Loose = GM->Phase == EShiftPhase::Cleanup ? GM->CountLooseMerchandise() : 0; Loose > 0)
+		{
+			Add(ShiftLoc::Format(TEXT("Tidy up: %d items left on the floor"), {LexToString(Loose)}), Accent, 1.05f);
+			Add(TEXT("Pick up loose merchandise and press [E] at any shelf to put it back."), Normal);
+		}
 		else { Add(TEXT("Waiting for the next customer."), Dim); }
 	}
 	float Height = 24.f;

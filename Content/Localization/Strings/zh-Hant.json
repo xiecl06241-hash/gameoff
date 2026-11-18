@@ -173,5 +173,10 @@
   "[TAB] Next chore   |   Finish all chores to admit customers.": "[TAB] 切換任務  |  全部完成後，顧客才會進店。",
   "Prepare hot oden": "煮關東煮",
   "Next chore: %s. Follow the yellow marker.": "下一項工作：{0}，請跟隨黃色標記。",
-  "At the oden station, HOLD [E] to prepare the broth.": "在關東煮臺前長按 [E]，準備熱湯。"
+  "At the oden station, HOLD [E] to prepare the broth.": "在關東煮臺前長按 [E]，準備熱湯。",
+  "Hands full. Put it back on a shelf, or press [G] to drop it.": "手上已有物品。放回貨架，或按 [G] 放下。",
+  "[E] Put back %s": "[E] 放回 {0}",
+  "Tidy up: %d items left on the floor": "整理：地上還有 {0} 件商品",
+  "Pick up loose merchandise and press [E] at any shelf to put it back.": "撿起散落的商品，對準任意貨架按 [E] 放回。",
+  "Chores done! Put the loose merchandise back on the shelves (%d left).": "工作完成！請把散落的商品放回貨架（還剩 {0} 件）。"
 }

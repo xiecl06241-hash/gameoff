@@ -173,5 +173,10 @@
   "[TAB] Next chore   |   Finish all chores to admit customers.": "[Tab] 次の作業  |  全作業を終えると、お客様が来店します。",
   "Prepare hot oden": "おでんを仕込む",
   "Next chore: %s. Follow the yellow marker.": "次の作業：{0}。黄色いマーカーに従いましょう。",
-  "At the oden station, HOLD [E] to prepare the broth.": "おでん台で [E] を長押しして、だしを準備する。"
+  "At the oden station, HOLD [E] to prepare the broth.": "おでん台で [E] を長押しして、だしを準備する。",
+  "Hands full. Put it back on a shelf, or press [G] to drop it.": "手がふさがっています。棚に戻すか、[G] で置きましょう。",
+  "[E] Put back %s": "[E] {0} を戻す",
+  "Tidy up: %d items left on the floor": "片付け：床に商品が {0} 個残っています",
+  "Pick up loose merchandise and press [E] at any shelf to put it back.": "散らばった商品を拾い、棚に向かって [E] で戻す。",
+  "Chores done! Put the loose merchandise back on the shelves (%d left).": "作業完了！散らばった商品を棚に戻しましょう（残り {0} 個）。"
 }
