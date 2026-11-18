@@ -28,8 +28,8 @@
     "route": "cashier side to warehouse during the first Night 2 reveal",
     "samples": 741,
     "average_fps": 60.0,
-    "p95_frame_ms": 17.11,
-    "reveal_frame_ms": 17.12,
-    "max_frame_ms": 25.34
+    "p95_frame_ms": 17.13,
+    "reveal_frame_ms": 16.99,
+    "max_frame_ms": 21.58
   }
 }

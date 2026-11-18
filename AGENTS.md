@@ -1,6 +1,6 @@
 # SHIFT / 24 开发交接
 
-更新于 2026-11-18。本文件包含商品放回与散落清理规则、怪物追逐寻路修复、顾客挡路复测及三晚流程验证记录。此前提交基线为 `68d2dfe`。
+更新于 2026-11-18。当前交接版本为 [SHIFT / 24 v0.3](https://github.com/xiecl06241-hash/gameoff/releases/tag/v0.3)。发布审查基线为 `2a01629`。查本版相对上一版的完整改动，运行 `git diff v0.2..v0.3`。
 
 ## 工程与启动
 
@@ -9,7 +9,7 @@
 - 使用 UE 5.8.2，本机引擎位于 `D:\UE\UE_5.8`。编译工具为 Visual Studio 2022、MSVC 14.44 和 Windows SDK。
 - 本机试玩入口为 `Builds/Windows/ShiftStore.exe`，同目录的 `启动正常场景.cmd` 以 1080p 全屏启动。完整保留 `Windows` 文件夹才能运行。
 - 选择语言后，Space／E／Enter 从第一晚开始，C 继续存档。WASD 移动，E 交互或长按做任务，Tab 切换目标，Esc 暂停。暂停菜单可调整鼠标灵敏度。
-- 当前公开下载为 `v0.2`，对应提交 `e50bec2`。本机包包含此后的关东煮位置调整、挡路复测与本次商品放回／怪物寻路修复。`Builds/` 为本地交付目录，由 Git 忽略，源码提交和 Release 附件有各自的更新时间。
+- 下载 Release 的 `ShiftStore-v0.3-Windows-x64.zip`，完整解压后运行 `Windows/ShiftStore.exe`。同页 `SHA256SUMS.txt` 可用 Git Bash 的 `sha256sum -c SHA256SUMS.txt` 校验。复现源码版本使用 `git switch --detach v0.3`，再执行 `git lfs pull`。
 
 ## 当前玩法
 
@@ -50,44 +50,50 @@ Windows 第一人称 3D 三晚原型，支持英语、日语、繁体中文和�
 - 显式测试参数 `-ShiftPlaythroughTest` 由 `ShiftStoreGameMode::BeginPlay` 创建测试 Actor，使用独立的 `ShiftStorePlaythrough-*` 用户目录跑完三晚流程并核对正式存档哈希。
 - `README.md`、`Docs/ONBOARDING.md`、`Tools/write_launchers.py` 及 `Builds/Windows/操作说明.txt` 已统一说明右上角任务区、黄色箭头和到达高亮。
 
-## 验证结果与范围
+## v0.3 发布审查
 
-| 项目 | 本次结果 | 证据 |
+- 普通商品成为打烊条件后，原先固定在镜头前方 65 厘米放下物品的做法可能把商品送到薄墙另一侧。放下与投掷商品现共用一次按模型尺寸进行的碰撞检测。新增回归在薄货架前放下普通商品，检查物品仍在可拾取侧、拖地结束后地面或手中的商品会阻止天亮，以及对准货架按 E 归还最后一件后可以下班。
+- 怪物绕行按一段时间内的实际位移判断卡住，走完仍受阻的路径后可重新规划。收银区拖住怪物的人工走位体验列入下一轮实测。
+
+## 发布验证
+
+Windows Development 包来自独立干净检出。以下测试使用最终 ZIP 解压出的程序。报告中特定机器的绝对路径只用于定位本次测试文件。
+
+| 测试 | 结果 | 证据 |
 | --- | --- | --- |
-| 编辑器及 Windows Development 构建 | 成功 | `Saved/QA/EditorBuild.log`、`WindowsPackage.log` |
-| 核心玩法回归 | 54 项通过，正式存档哈希一致 | `Verification/gameplay_selftest.json` |
-| 故意失败检查 | 55 项中只有强制失败项失败，退出码 1 | `Verification/gameplay_selftest_failure.json` |
-| 简体中文 720p 试玩反馈专项 | 84 项通过，其中挡路相关 40 项 | `Verification/feedback_zh-Hans_1280.json` |
-| 三晚自动流程 | 13 项通过，走到第三晚结局，退出码 0 | `Verification/playthrough_1920.json` |
-| 四语言词条与字体覆盖检查 | 各 180 条，简繁日字形覆盖通过 | `Verification/localization_catalogues.json` |
-| 静态仓库检查 | 33 个 Python 脚本、37 个 JSON、476 个 LFS 资产通过 | `.github/scripts/check_repository.py` |
+| 核心玩法与存档 | 58 项通过，正式存档一致 | `Verification/gameplay_selftest.json` |
+| 测试失败能否正确上报 | 59 项中仅强制失败项失败，退出码 1 | `Verification/gameplay_selftest_failure.json` |
+| 四语言 720p 试玩反馈 | 每种语言 84 项，含指引、挡路和抓取 | `Verification/feedback_*_1280.json` |
+| 四语言 720p 暂停及灵敏度 | 暂停每种 19 项，灵敏度每种 20 项，含重启读取 | `Verification/pause_menu_*_1280.json`、`Verification/sensitivity_*_1280.json` |
+| 三晚自动流程 | 13 项通过，完成第三晚并写入隔离存档 | `Verification/playthrough_1920.json` |
+| 文本与字体 | 四套语言各 180 条，简繁日字形覆盖通过 | `Verification/localization_catalogues.json` |
 
-性能样本来自 RTX 5060 Laptop GPU，1920×1080 全屏 High，渲染比例 100%。第二晚收银区至仓库路线共 741 帧，平均 **60.00 FPS**，P95 **17.11 ms**，显形帧 **17.12 ms**，最慢帧 **25.34 ms**（见 `Verification/playthrough_1920.json`）。
+1920×1080 全屏 High、100% 渲染比例，RTX 5060 Laptop GPU。第二晚显形走测共 741 帧，平均 60.00 FPS，P95 17.13 ms，显形帧 16.99 ms，最慢帧 21.58 ms。该固定路线在怪物贴近时会短暂眩晕怪物，不能代表持续追逐的最低帧率。三晚测试脚本代办部分任务、递交和结账，人工操作体验需另验。
 
 ## 构建与复现
 
-在 Git Bash 中进入仓库目录。源码检出先完成 `git lfs pull`。构建时关闭占用本工程模块的 UE 编辑器。
+用 Git Bash 从仓库根目录运行。构建脚本需要 UE 5.8.2、VS 2022 C++ 工具及 Windows SDK。语言包字体检查需要 Python 的 fontTools。
 
 ```bash
-cd '/d/Game Jam/Game Off 2026/ShiftStore'
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 export UE_ROOT='D:/UE/UE_5.8'
-python Tools/author_localization.py
-python Tools/check_localization.py
+git lfs pull
 python .github/scripts/check_repository.py --require-lfs
+python Tools/check_localization.py
 python .github/scripts/build_windows.py
 python Tools/check_gameplay.py
-python Tools/check_feedback.py --languages zh-Hans
 python Tools/check_feedback.py --playthrough
+python Tools/check_feedback.py
+python Tools/check_pause_menu.py
+python Tools/check_sensitivity.py
 ```
 
-## 后续优先项
+发布使用干净检出，避免把开发机设置带入安装目录。压缩包保留完整 Windows 目录、运行库及许可，排除 Saved、日志和调试符号。上传后核对 GitHub 附件大小及 SHA-256。仓库中保留各版标签和下载说明。
 
-1. 实机试玩验证本次新增的两项改动：检查各类货架／冷柜按 E 放回商品与夜末散落清理的交互手感，以及收银台旁垃圾桶／灭火器附近拉扯怪物的追逐体验。
-2. 安排没看过策划的玩家从第一晚开始盲测，完成完整键鼠三晚人工通关验收。
-3. 补充环境音效与怪物显形视觉表现，视剩余时间决定是否整理并发布新版下载包（如 `v0.3`）。
-4. 扩展反馈专项到另外三种语言和 1080p，并在一台没有 UE／Python 的干净 Windows 电脑上验证完整下载包。
+## 下一阶段验收目标
 
-## 交接时的工作区状态
+1. **首次玩家通关。** 请一名没读过策划的玩家从第一晚开始，看能否独立找到补货点、弄懂关东煮交互、放下拖把并归还最后一件商品。记录首次卡住的位置和耗时，再实际用键鼠走完三晚，覆盖死亡重开和跨晚续档。
+2. **追逐体验与性能。** 在第二晚按相同路线分别绕收银台、垃圾桶和货架端头，测量怪物能否继续追击以及玩家能否挣脱。实测全程不启用测试眩晕，记录 1080p High 的平均帧率及 P95 帧耗时，目标为平均至少 60 FPS。
+3. **外部交付。** 用一台未装 UE 的 Windows x64 电脑从 Release 下载、解压、启动、存档并重启续玩。人工检查四语言在 720p 和 1080p 的任务区与字幕。三项通过后再排第四晚的内容。
 
-`Config/DefaultEngine.ini` 在此前工作前已有 15 行 `AndroidFileServer` 本地改动，留在工作区未提交。其余改动为本次商品放回、夜末清理、怪物寻路修复、四语言词条及最新生成的验证证据。
+本机主工作区里的 `Config/DefaultEngine.ini` 有开发机专用 AndroidFileServer 设置。发布从 Git 中的已提交配置构建。
