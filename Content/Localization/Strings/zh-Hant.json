@@ -198,5 +198,12 @@
   "Shelves swapped stock! Corridor Breaker [E] restores light 10s.": "貨架商品已錯位互換！後勤走廊電閘 [E] 可恢復照明 10 秒。",
   "Suspect disguise? Hand their whispered true item to ward off!": "懷疑是偽裝？遞交其低語暗示的真正商品可直接驅離！",
   "! ANOMALY: %s (%ds)": "！局部異變：{0}（{1}秒）",
-  "Follow the yellow marker; HOLD [E] to reset the store anomaly.": "跟隨黃色標記，長按 [E] 復位店鋪局部異變。"
+  "Follow the yellow marker; HOLD [E] to reset the store anomaly.": "跟隨黃色標記，長按 [E] 復位店鋪局部異變。",
+  "Excuse me... could you grab me a bag of potato chips?": "不好意思……能幫我拿包薯片嗎？",
+  "SPRINT [Shift]": "衝刺 [Shift]",
+  "SHIFT RULES — Observe Customer Before Handing:": "夜班異常守則 —— 遞交商品前先觀察顧客體態：",
+  "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]": "① 歪頭死盯空牆 → 別給原商品，遞【番茄濃湯罐頭】",
+  "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]": "② 紅眼微光+頂燈閃爍 → 別給原商品，遞【每日全脂鮮奶】",
+  "3. Feet floating off floor -> Hand [MORNING Bread]": "③ 腳不沾地懸空漂浮 → 別給原商品，遞【晨光切片麵包】",
+  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "核對左下角《夜班異常守則》：先觀察顧客體態再遞交！"
 }

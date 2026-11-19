@@ -171,6 +171,67 @@ void AShiftStoreGameMode::SetupProceduralAudio()
 	FridgeHumComp = UGameplayStatics::SpawnSoundAtLocation(this, HumWave, FridgePos, FRotator::ZeroRotator, 0.45f, 1.f, 0.f);
 }
 
+void AShiftStoreGameMode::PlayHeartbeatCue(float Tension)
+{
+	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(this);
+	Wave->SetSampleRate(22050);
+	Wave->NumChannels = 1;
+	Wave->Duration = 0.28f;
+	const int32 Samples = FMath::RoundToInt(22050.f * 0.28f);
+	TArray<int16> Pcm;
+	Pcm.SetNumUninitialized(Samples);
+	const float Vol = FMath::Lerp(0.18f, 0.46f, FMath::Clamp(Tension, 0.f, 1.f));
+	for (int32 i = 0; i < Samples; ++i)
+	{
+		const float T = static_cast<float>(i) / 22050.f;
+		// Lub-dub double thump envelope at t=0..0.09s and t=0.14..0.24s
+		float Env = 0.f;
+		if (T < 0.09f) { Env = FMath::Sin(PI * T / 0.09f); }
+		else if (T >= 0.13f && T < 0.23f) { Env = 0.78f * FMath::Sin(PI * (T - 0.13f) / 0.10f); }
+		const float Sig = 0.70f * FMath::Sin(2.f * PI * 54.f * T) + 0.30f * FMath::Sin(2.f * PI * 82.f * T);
+		Pcm[i] = static_cast<int16>(FMath::Clamp(Sig * Env * Vol * 28000.f, -32000.f, 32000.f));
+	}
+	Wave->QueueAudio(reinterpret_cast<const uint8*>(Pcm.GetData()), Pcm.Num() * sizeof(int16));
+	UGameplayStatics::PlaySound2D(this, Wave);
+}
+
+void AShiftStoreGameMode::BuildNightCustomerRoster()
+{
+	ActiveNightCustomers = CurrentNightSpec().Customers;
+	if (bAutomatedSession || ActiveNightCustomers.IsEmpty()) { return; }
+
+	// Night 1 gets an early disguised entity on customer #3 so the very first night has real stakes.
+	if (NightIndex == 0 && ActiveNightCustomers.Num() >= 3)
+	{
+		FShiftCustomerSpec& C3 = ActiveNightCustomers[2];
+		C3.bAsksHelp = true;
+		C3.bMonster = true;
+		C3.Line = TEXT("Excuse me... could you grab me a bag of potato chips?");
+	}
+
+	// Shuffle the 3 visual tells and assign each disguised entity its matching rulebook counter-product.
+	TArray<EDisguiseTell> Tells = { EDisguiseTell::HeadTilt, EDisguiseTell::RedGlare, EDisguiseTell::Floating };
+	for (int32 i = Tells.Num() - 1; i > 0; --i)
+	{
+		Tells.Swap(i, FMath::RandRange(0, i));
+	}
+	int32 TellCursor = 0;
+	for (FShiftCustomerSpec& C : ActiveNightCustomers)
+	{
+		if (C.bMonster)
+		{
+			C.Tell = Tells[TellCursor++ % Tells.Num()];
+			C.MonsterSku = ShiftData::CounterSkuForTell(C.Tell);
+		}
+	}
+
+	// Shuffle arrival order after the first customer so repeat runs cannot memorize who is a monster.
+	for (int32 i = ActiveNightCustomers.Num() - 1; i > 1; --i)
+	{
+		ActiveNightCustomers.Swap(i, FMath::RandRange(1, i));
+	}
+}
+
 void AShiftStoreGameMode::PlayPositionalAnomalyPulse(const FVector& Location)
 {
 	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(this);
@@ -270,6 +331,9 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	CustomerSpawnCooldown = 1.5f;
 	EerieFlickerTimer = 12.f;
 	MicroShiftTimer = FMath::Max(18.f, 30.f - NightIndex * 4.f);
+	HeartbeatPulseAlpha = 0.f;
+	HeartbeatTimer = 0.f;
+	BuildNightCustomerRoster();
 
 	if (Director) { Director->SetShifted(false); }
 
@@ -277,6 +341,8 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	{
 		P->ReleaseFromGrab(false);
 		P->ConsumeHeldItem();
+		P->Stamina = 100.f;
+		P->bIsSprinting = false;
 		P->SetActorLocationAndRotation(FVector(800.f, 150.f, 100.f), FRotator(0.f, 90.f, 0.f));
 		if (AController* C = P->GetController()) { C->SetControlRotation(FRotator(0.f, 90.f, 0.f)); }
 	}
@@ -621,7 +687,8 @@ void AShiftStoreGameMode::TrySpawnNextCustomer()
 		return;
 	}
 	const FShiftNightSpec& Spec = CurrentNightSpec();
-	if (NextCustomerIdx >= Spec.Customers.Num())
+	const TArray<FShiftCustomerSpec>& Roster = ActiveNightCustomers.IsEmpty() ? Spec.Customers : ActiveNightCustomers;
+	if (NextCustomerIdx >= Roster.Num())
 	{
 		if (!ActiveTasks.IsEmpty()) { return; }
 		Phase = EShiftPhase::Cleanup;
@@ -631,7 +698,7 @@ void AShiftStoreGameMode::TrySpawnNextCustomer()
 		return;
 	}
 
-	const FShiftCustomerSpec& CSpec = Spec.Customers[NextCustomerIdx++];
+	const FShiftCustomerSpec& CSpec = Roster[NextCustomerIdx++];
 	FActorSpawnParameters SP;
 	SP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	AShiftCustomer* Cust = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::OutsideDoor, FRotator(0.f, 90.f, 0.f), SP);
@@ -713,7 +780,9 @@ void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitne
 		ActiveLostItem = Lost;
 	}
 
+	HeartbeatPulseAlpha = 1.f;
 	PlaySynthesizedCue(110.f, 0.65f, 0.40f, true);
+	if (bWitnessed) { PlaySynthesizedCue(68.f, 0.42f, 0.42f, true); }
 	const FString ItemName = ShiftData::ProductLabel(Monster->Spec.MonsterSku);
 	if (bWitnessed)
 	{
@@ -918,7 +987,8 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 		ModifySanity(-ShiftData::OverdueDrainPerSec * OverdueCount * DeltaSeconds);
 	}
 
-	// 2. Monster line-of-sight and grab sanity drain
+	// 2. Monster line-of-sight, grab sanity drain, and proximity heartbeat pulse
+	HeartbeatPulseAlpha = FMath::Max(0.f, HeartbeatPulseAlpha - DeltaSeconds * 2.2f);
 	if (AShiftCustomer* C = ActiveCustomer.Get())
 	{
 		if (C->State == ECustomerState::MonsterGrabbing)
@@ -928,6 +998,23 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 		else if (C->IsMonsterActive() && C->bSeeingPlayer)
 		{
 			ModifySanity(-ShiftData::SeenDrainPerSec * DeltaSeconds);
+		}
+
+		if (const APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0))
+		{
+			const float Dist = FVector::Dist2D(Player->GetActorLocation(), C->GetActorLocation());
+			const bool bActiveThreat = C->IsMonsterActive() || (C->Spec.bMonster && C->State == ECustomerState::WaitingForHelp && Dist < 420.f);
+			if (bActiveThreat && Dist < 950.f)
+			{
+				const float Tension = FMath::Clamp(1.f - (Dist - 120.f) / 830.f, 0.15f, 1.f);
+				HeartbeatTimer -= DeltaSeconds;
+				if (HeartbeatTimer <= 0.f)
+				{
+					HeartbeatTimer = FMath::Lerp(0.92f, 0.36f, Tension);
+					HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, FMath::Lerp(0.25f, 0.85f, Tension));
+					if (!bAutomatedSession) { PlayHeartbeatCue(Tension); }
+				}
+			}
 		}
 	}
 

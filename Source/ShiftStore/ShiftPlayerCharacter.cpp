@@ -309,15 +309,42 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	if (PC->IsInputKeyDown(EKeys::Down))  { AddControllerPitchInput(50.f * DeltaSeconds); }
 	}
 
-	// Movement (disabled while grabbed by a monster)
+	// Movement & [Shift] Sprint (disabled while grabbed by a monster)
 	if (!IsGrabbed())
 	{
 		FVector Fwd = GetActorForwardVector(); Fwd.Z = 0.f; Fwd.Normalize();
 		FVector Right = GetActorRightVector(); Right.Z = 0.f; Right.Normalize();
-		if (PC->IsInputKeyDown(EKeys::W)) { AddMovementInput(Fwd, 1.f); }
-		if (PC->IsInputKeyDown(EKeys::S)) { AddMovementInput(Fwd, -1.f); }
-		if (PC->IsInputKeyDown(EKeys::D)) { AddMovementInput(Right, 1.f); }
-		if (PC->IsInputKeyDown(EKeys::A)) { AddMovementInput(Right, -1.f); }
+		bool bMovingInput = false;
+		if (PC->IsInputKeyDown(EKeys::W)) { AddMovementInput(Fwd, 1.f); bMovingInput = true; }
+		if (PC->IsInputKeyDown(EKeys::S)) { AddMovementInput(Fwd, -1.f); bMovingInput = true; }
+		if (PC->IsInputKeyDown(EKeys::D)) { AddMovementInput(Right, 1.f); bMovingInput = true; }
+		if (PC->IsInputKeyDown(EKeys::A)) { AddMovementInput(Right, -1.f); bMovingInput = true; }
+
+		const bool bShiftKey = PC->IsInputKeyDown(EKeys::LeftShift) || PC->IsInputKeyDown(EKeys::RightShift);
+		bIsSprinting = bShiftKey && bMovingInput && Stamina > 1.f;
+		if (bIsSprinting)
+		{
+			Stamina = FMath::Max(0.f, Stamina - 24.f * DeltaSeconds);
+			SprintRecoverDelay = 0.55f;
+		}
+		else
+		{
+			SprintRecoverDelay = FMath::Max(0.f, SprintRecoverDelay - DeltaSeconds);
+			if (SprintRecoverDelay <= 0.f)
+			{
+				Stamina = FMath::Min(100.f, Stamina + 34.f * DeltaSeconds);
+			}
+		}
+		const float BaseSpeed = GM->IsAutomatedSession() ? 260.f : 285.f;
+		GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? 435.f : BaseSpeed;
+		if (!bGrabCameraActive)
+		{
+			FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(FirstPersonCamera->FieldOfView, bIsSprinting ? 93.f : 85.f, DeltaSeconds, 10.f));
+		}
+	}
+	else
+	{
+		bIsSprinting = false;
 	}
 
 	const bool bInteractDown = PC->IsInputKeyDown(EKeys::E) || PC->IsInputKeyDown(EKeys::LeftMouseButton);
@@ -518,13 +545,9 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 					}
 				}
 			}
-			else if (Cust->Spec.bMonster && !Cust->Spec.AnomalyHint.IsEmpty())
-			{
-				CrosshairPrompt = ShiftLoc::Format(TEXT("Customer: \"%s\" (Bring %s) | %s"),
-					{FString(Cust->Spec.Line.IsEmpty() ? TEXT("Can you find this for me?") : *Cust->Spec.Line), FString(WantedLabel), ShiftLoc::Text(Cust->Spec.AnomalyHint)});
-			}
 			else
 			{
+				// Never spoil the monster's true item on the crosshair; the player must observe visual tells and check the Shift Rules!
 				CrosshairPrompt = ShiftLoc::Format(TEXT("Customer: \"%s\" (Bring %s)"), {FString(Cust->Spec.Line.IsEmpty() ? TEXT("Can you find this for me?") : *Cust->Spec.Line), FString(WantedLabel)});
 			}
 			return;

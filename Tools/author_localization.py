@@ -216,6 +216,16 @@ ENTRIES += [
     ("Follow the yellow marker; HOLD [E] to reset the store anomaly.", "跟随黄色标记，长按 [E] 复位店铺局部异变。", "黄色いマーカーに従い、[E] 長押しで異変を戻す。", "跟隨黃色標記，長按 [E] 復位店鋪局部異變。"),
 ]
 
+ENTRIES += [
+    ("Excuse me... could you grab me a bag of potato chips?", "不好意思……能帮我拿包薯片吗？", "すみません……ポテトチップスを取ってもらえますか？", "不好意思……能幫我拿包薯片嗎？"),
+    ("SPRINT [Shift]", "冲刺 [Shift]", "ダッシュ [Shift]", "衝刺 [Shift]"),
+    ("SHIFT RULES — Observe Customer Before Handing:", "夜班异常守则 —— 递交商品前先观察顾客体态：", "夜勤異変則 —— 商品を渡す前に客の様子を観察：", "夜班異常守則 —— 遞交商品前先觀察顧客體態："),
+    ("1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]", "① 歪头死盯空墙 → 别给原商品，递【番茄浓汤罐头】", "① 首傾げ・壁凝視 → 要求品ではなく【トマトスープ缶】", "① 歪頭死盯空牆 → 別給原商品，遞【番茄濃湯罐頭】"),
+    ("2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]", "② 红眼微光+顶灯闪烁 → 别给原商品，递【每日全脂鲜奶】", "② 赤い眼光・照明点滅 → 要求品ではなく【毎日牛乳】", "② 紅眼微光+頂燈閃爍 → 別給原商品，遞【每日全脂鮮奶】"),
+    ("3. Feet floating off floor -> Hand [MORNING Bread]", "③ 脚不沾地悬空漂浮 → 别给原商品，递【晨光切片面包】", "③ 足が床から浮遊 → 要求品ではなく【朝食パン】", "③ 腳不沾地懸空漂浮 → 別給原商品，遞【晨光切片麵包】"),
+    ("Check SHIFT RULES (Bottom-Left): Observe posture before handing!", "核对左下角《夜班异常守则》：先观察顾客体态再递交！", "左下の『夜勤異変則』を確認：姿勢を観察してから渡せ！", "核對左下角《夜班異常守則》：先觀察顧客體態再遞交！"),
+]
+
 PRINTF = re.compile(r"%%|%[-+0 #]*\d*(?:\.\d+)?[sdf]")
 
 

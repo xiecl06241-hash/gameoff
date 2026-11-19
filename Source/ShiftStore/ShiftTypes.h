@@ -27,6 +27,16 @@ enum class EShiftTaskType : uint8
 	BreakerBox    // permanent: press E during Shift to temporarily restore normal power/layout
 };
 
+/** Visual / behavioral tell exhibited by a disguised entity before it reveals. */
+UENUM()
+enum class EDisguiseTell : uint8
+{
+	None,
+	HeadTilt,   // Rule 1: Neck tilted 26 deg & stares at blank walls -> Ward off with Tomato Soup (Can)
+	RedGlare,   // Rule 2: Crimson eye gleam & overhead light flicker -> Ward off with Whole Milk (Milk)
+	Floating    // Rule 3: Feet hovering 22 cm above floor -> Ward off with Morning Bread (Bread)
+};
+
 UENUM()
 enum class EShiftPhase : uint8
 {
@@ -57,6 +67,7 @@ struct FShiftCustomerSpec
 	FName MonsterSku;          // the "lost" item a revealed monster demands
 	FString Line;              // what the customer says when asking for help
 	FString AnomalyHint;       // subtle contradictory tell hinting at MonsterSku before reveal
+	EDisguiseTell Tell = EDisguiseTell::None;
 };
 
 struct FShiftTaskSpot
@@ -99,6 +110,8 @@ namespace ShiftData
 	FString ProductLabel(FName Sku);
 	/** Returns the shifted SKU when shelves/coolers swap stock during an active Shift. */
 	FName ShiftedSku(FName NormalSku);
+	/** Returns the rulebook counter-product SKU for a disguised entity's visual tell. */
+	FName CounterSkuForTell(EDisguiseTell Tell);
 
 	const TArray<FShiftTaskSpot>& TaskSpots();
 	const TArray<FShiftTaskSpot>& AnomalySpots();

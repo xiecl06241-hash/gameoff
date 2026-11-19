@@ -91,10 +91,22 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 	LastCourtesyTime = -100.;
 	TellTimer = 3.0f;
 	StareTriggerTime = 0.f;
+	if (Spec.bMonster && Spec.Tell == EDisguiseTell::None)
+	{
+		if (Spec.MonsterSku == TEXT("Milk"))       { Spec.Tell = EDisguiseTell::RedGlare; }
+		else if (Spec.MonsterSku == TEXT("Bread")) { Spec.Tell = EDisguiseTell::Floating; }
+		else                                       { Spec.Tell = EDisguiseTell::HeadTilt; }
+	}
+	if (USkeletalMeshComponent* Skel = GetMesh())
+	{
+		Skel->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
+		Skel->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+	}
+	EyeLight->SetIntensity(0.f);
 	const bool bAutomatedTest = FParse::Param(FCommandLine::Get(), TEXT("ShiftSelfTest"))
 		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftPlaythroughTest"))
 		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftFeedbackTest"));
-	RevealThreshold = bAutomatedTest ? 4.2f : FMath::FRandRange(12.0f, 15.5f);
+	RevealThreshold = bAutomatedTest ? 4.2f : FMath::FRandRange(13.0f, 17.0f);
 }
 
 bool AShiftCustomer::CanSeePlayer(APawn* Player, float MaxDist, float CosHalfFOV) const
@@ -337,6 +349,8 @@ void AShiftCustomer::ApplyMonsterVisuals()
 {
 	if (USkeletalMeshComponent* Skel = GetMesh())
 	{
+		Skel->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
+		Skel->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 		Skel->SetRelativeScale3D(FVector(0.92f, 0.92f, 1.18f)); // elongated silhouette
 		UMaterialInterface* DarkMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ShiftStore/Materials/M_Charcoal.M_Charcoal"));
 		if (DarkMat)
@@ -494,19 +508,34 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 		if (Player)
 		{
 			const FVector ToP = Player->GetActorLocation() - GetActorLocation();
-			const bool bTwitchTell = Spec.bMonster && RevealThreshold > 5.f && FMath::Fmod(StateTimer, 3.6f) > 2.5f;
-			const float TargetYaw = bTwitchTell ? (ToP.Rotation().Yaw + 135.f) : ToP.Rotation().Yaw;
-			SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0, TargetYaw, 0), DeltaSeconds, bTwitchTell ? 12.f : 5.f));
+			const bool bLiveTell = Spec.bMonster && RevealThreshold > 5.f;
+			const bool bWallStare = bLiveTell && Spec.Tell == EDisguiseTell::HeadTilt && FMath::Fmod(StateTimer, 3.0f) > 1.2f;
+			const float TargetYaw = bWallStare ? (ToP.Rotation().Yaw + 150.f) : ToP.Rotation().Yaw;
+			SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0, TargetYaw, 0), DeltaSeconds, bWallStare ? 10.f : 5.f));
 
-			if (Spec.bMonster && RevealThreshold > 5.f)
+			if (bLiveTell)
 			{
-				TellTimer -= DeltaSeconds;
-				if (TellTimer <= 0.f)
+				if (USkeletalMeshComponent* Skel = GetMesh())
 				{
-					TellTimer = 3.8f;
-					if (GM && GM->Director && !GM->Director->IsShifted()) { GM->Director->Flicker(0.22f); }
+					if (Spec.Tell == EDisguiseTell::HeadTilt)
+					{
+						Skel->SetRelativeRotation(FRotator(16.f, -90.f, 26.f));
+					}
+					else if (Spec.Tell == EDisguiseTell::Floating)
+					{
+						Skel->SetRelativeLocation(FVector(0.f, 0.f, -64.f + 7.f * FMath::Sin(StateTimer * 3.4f)));
+					}
 				}
-				EyeLight->SetIntensity(bTwitchTell ? 18.f : 0.f);
+				if (Spec.Tell == EDisguiseTell::RedGlare)
+				{
+					EyeLight->SetIntensity(32.f + 22.f * FMath::Sin(StateTimer * 6.f));
+					TellTimer -= DeltaSeconds;
+					if (TellTimer <= 0.f)
+					{
+						TellTimer = 2.6f;
+						if (GM && GM->Director && !GM->Director->IsShifted()) { GM->Director->Flicker(0.24f); }
+					}
+				}
 				if (ToP.Size2D() < 155.f && PlayerSeesMe(Player))
 				{
 					StareTriggerTime += DeltaSeconds;

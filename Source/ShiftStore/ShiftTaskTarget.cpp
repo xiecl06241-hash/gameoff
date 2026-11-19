@@ -6,6 +6,8 @@
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "UObject/ConstructorHelpers.h"
 
 AShiftTaskTarget::AShiftTaskTarget()
@@ -78,15 +80,16 @@ void AShiftTaskTarget::RestartTimer(float TimeLimit)
 
 float AShiftTaskTarget::HoldDuration() const
 {
+	const bool bSelfTest = FParse::Param(FCommandLine::Get(), TEXT("ShiftSelfTest"));
 	switch (Type)
 	{
-	case EShiftTaskType::Restock: return 1.5f;
-	case EShiftTaskType::Count: return 3.0f;
-	case EShiftTaskType::Tidy: return 2.5f;
-	case EShiftTaskType::Trash: return 2.0f;
-	case EShiftTaskType::Spill: return 2.5f;
-	case EShiftTaskType::CookOden: return 6.f;
-	case EShiftTaskType::FixAnomaly: return 1.5f;
+	case EShiftTaskType::Restock:    return bSelfTest ? 1.5f : 0.8f;
+	case EShiftTaskType::Count:      return bSelfTest ? 3.0f : 1.2f;
+	case EShiftTaskType::Tidy:       return bSelfTest ? 2.5f : 1.0f;
+	case EShiftTaskType::Trash:      return bSelfTest ? 2.0f : 1.0f;
+	case EShiftTaskType::Spill:      return bSelfTest ? 2.5f : 1.0f;
+	case EShiftTaskType::CookOden:   return bSelfTest ? 6.0f : 2.2f;
+	case EShiftTaskType::FixAnomaly: return bSelfTest ? 1.5f : 1.0f;
 	default: return 0.f;
 	}
 }

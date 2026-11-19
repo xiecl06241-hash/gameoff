@@ -198,5 +198,12 @@
   "Shelves swapped stock! Corridor Breaker [E] restores light 10s.": "棚の在庫が入れ替わった！通路のブレーカー [E] で10秒照明復旧。",
   "Suspect disguise? Hand their whispered true item to ward off!": "偽装の疑い？呟いている本当の品を渡せば撃退できる！",
   "! ANOMALY: %s (%ds)": "！局所異変：{0}（{1}秒）",
-  "Follow the yellow marker; HOLD [E] to reset the store anomaly.": "黄色いマーカーに従い、[E] 長押しで異変を戻す。"
+  "Follow the yellow marker; HOLD [E] to reset the store anomaly.": "黄色いマーカーに従い、[E] 長押しで異変を戻す。",
+  "Excuse me... could you grab me a bag of potato chips?": "すみません……ポテトチップスを取ってもらえますか？",
+  "SPRINT [Shift]": "ダッシュ [Shift]",
+  "SHIFT RULES — Observe Customer Before Handing:": "夜勤異変則 —— 商品を渡す前に客の様子を観察：",
+  "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]": "① 首傾げ・壁凝視 → 要求品ではなく【トマトスープ缶】",
+  "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]": "② 赤い眼光・照明点滅 → 要求品ではなく【毎日牛乳】",
+  "3. Feet floating off floor -> Hand [MORNING Bread]": "③ 足が床から浮遊 → 要求品ではなく【朝食パン】",
+  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "左下の『夜勤異変則』を確認：姿勢を観察してから渡せ！"
 }

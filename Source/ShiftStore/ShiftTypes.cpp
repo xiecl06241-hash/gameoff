@@ -33,6 +33,17 @@ namespace ShiftData
 		return P ? FString(P->Label) : Sku.ToString();
 	}
 
+	FName CounterSkuForTell(EDisguiseTell Tell)
+	{
+		switch (Tell)
+		{
+		case EDisguiseTell::HeadTilt: return TEXT("Can");
+		case EDisguiseTell::RedGlare: return TEXT("Milk");
+		case EDisguiseTell::Floating: return TEXT("Bread");
+		default: return TEXT("Can");
+		}
+	}
+
 	FName ShiftedSku(FName NormalSku)
 	{
 		// During a store Shift, cold storage and dry shelves swap stock categories.
@@ -112,7 +123,12 @@ namespace ShiftData
 				FShiftCustomerSpec C; C.WantedSku = Sku; C.bAsksHelp = bHelp; C.Line = Line; return C;
 			};
 			auto Monster = [](const TCHAR* Sku, const TCHAR* Lost, const TCHAR* Line, const TCHAR* Hint) {
-				FShiftCustomerSpec C; C.WantedSku = Sku; C.bAsksHelp = true; C.bMonster = true; C.MonsterSku = Lost; C.Line = Line; C.AnomalyHint = Hint; return C;
+				FShiftCustomerSpec C; C.WantedSku = Sku; C.bAsksHelp = true; C.bMonster = true; C.MonsterSku = Lost; C.Line = Line; C.AnomalyHint = Hint;
+				if (FName(Lost) == TEXT("Can"))   { C.Tell = EDisguiseTell::HeadTilt; }
+				else if (FName(Lost) == TEXT("Milk"))  { C.Tell = EDisguiseTell::RedGlare; }
+				else if (FName(Lost) == TEXT("Bread")) { C.Tell = EDisguiseTell::Floating; }
+				else { C.Tell = EDisguiseTell::HeadTilt; }
+				return C;
 			};
 
 			FShiftNightSpec N1;

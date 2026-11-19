@@ -38,6 +38,9 @@ public:
 	FString CrosshairPrompt;
 	float HoldProgress = 0.f;      // 0..1 for current chore
 	float StruggleProgress = 0.f;  // 0..1 when grabbed
+	float Stamina = 100.f;         // 0..100 for [Shift] sprint
+	bool bIsSprinting = false;
+	float SprintRecoverDelay = 0.f;
 
 protected:
 	virtual void BeginPlay() override;

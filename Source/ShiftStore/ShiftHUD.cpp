@@ -257,14 +257,40 @@ void AShiftHUD::DrawHUD()
 		LossPct > 0.7f ? FLinearColor(1.f, 0.4f, 0.3f) : FLinearColor(0.85f, 0.90f, 0.85f), 36.f, 111.f, Font, 0.92f);
 	DrawBar(36.f, 146.f, 394.f, 12.f, LossPct, FLinearColor(0.90f, 0.42f, 0.18f, 1.f), FLinearColor(0.12f, 0.15f, 0.15f, 0.9f));
 
-	// Held item indicator
+	// Held item & [Shift] Sprint Stamina indicator
 	if (Player)
 	{
 		const FString HeldStr = Player->HeldItem.IsValid()
 			? ShiftLoc::Format(TEXT("CARRYING: %s  ([F/RMB] Throw  [G] Drop)"), {FString(Player->HeldItem->DisplayName())})
 			: TEXT("HANDS: Empty  ([E] Pick up / Interact)");
-		DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.72f), 24.f, 188.f, 420.f, 44.f);
-		DrawLocalizedText(HeldStr, FLinearColor(0.92f, 0.90f, 0.70f), 36.f, 197.f, Font, 0.92f);
+		DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.72f), 24.f, 188.f, 420.f, 76.f);
+		DrawLocalizedText(HeldStr, FLinearColor(0.92f, 0.90f, 0.70f), 36.f, 195.f, Font, 0.90f);
+		const float StamPct = FMath::Clamp(Player->Stamina / 100.f, 0.f, 1.f);
+		DrawLocalizedText(TEXT("SPRINT [Shift]"), FLinearColor(0.72f, 0.88f, 0.96f), 36.f, 232.f, Font, 0.84f, 155.f);
+		DrawBar(205.f, 236.f, 225.f, 12.f, StamPct,
+			Player->bIsSprinting ? FLinearColor(0.35f, 0.88f, 1.f, 1.f) : FLinearColor(0.28f, 0.68f, 0.82f, 0.95f),
+			FLinearColor(0.12f, 0.16f, 0.16f, 0.9f));
+	}
+
+	// Bottom-Left Pinned Shift Anomaly Rulebook (visual tell -> counter product)
+	{
+		const float RuleY = H - 146.f;
+		DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.84f), 24.f, RuleY, 440.f, 122.f);
+		DrawLocalizedText(TEXT("SHIFT RULES — Observe Customer Before Handing:"), FLinearColor(1.f, 0.82f, 0.36f), 34.f, RuleY + 8.f, Font, 0.86f, 420.f);
+		DrawLocalizedText(TEXT("1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]"), FLinearColor(0.86f, 0.93f, 0.90f), 34.f, RuleY + 37.f, Font, 0.82f, 420.f);
+		DrawLocalizedText(TEXT("2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]"), FLinearColor(0.86f, 0.93f, 0.90f), 34.f, RuleY + 65.f, Font, 0.82f, 420.f);
+		DrawLocalizedText(TEXT("3. Feet floating off floor -> Hand [MORNING Bread]"), FLinearColor(0.86f, 0.93f, 0.90f), 34.f, RuleY + 93.f, Font, 0.82f, 420.f);
+	}
+
+	// Proximity heartbeat / jumpscare red edge pulse
+	if (GM->HeartbeatPulseAlpha > 0.02f)
+	{
+		const float A = FMath::Clamp(GM->HeartbeatPulseAlpha * 0.32f, 0.f, 0.36f);
+		const FLinearColor PulseCol(0.75f, 0.04f, 0.03f, A);
+		DrawRect(PulseCol, 0.f, 0.f, W, 18.f);
+		DrawRect(PulseCol, 0.f, H - 18.f, W, 18.f);
+		DrawRect(PulseCol, 0.f, 18.f, 18.f, H - 36.f);
+		DrawRect(PulseCol, W - 18.f, 18.f, 18.f, H - 36.f);
 	}
 
 	const float ChecklistHeight = DrawObjectivePanel(GM, Player);
@@ -386,10 +412,7 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 		{
 			Add(ShiftLoc::Format(TEXT("* Customer Help: Bring [%s]"), {ShiftData::ProductLabel(C->Spec.WantedSku)}), Accent);
 			Add(TEXT("Take the product from a shelf, then press [E] on the customer."), Normal);
-			if (C->Spec.bMonster && !C->Spec.AnomalyHint.IsEmpty())
-			{
-				Add(TEXT("Suspect disguise? Hand their whispered true item to ward off!"), FLinearColor(1.f, 0.62f, 0.35f), 0.88f);
-			}
+			Add(TEXT("Check SHIFT RULES (Bottom-Left): Observe posture before handing!"), FLinearColor(1.f, 0.72f, 0.38f), 0.88f);
 		}
 		else if (C->State == ECustomerState::WaitingAtCheckout) { Add(TEXT("* Customer waiting at Checkout Register [E]"), Accent); }
 		else if (C->State == ECustomerState::Leaving) { Add(TEXT("Customer is leaving. Keep the doorway clear."), Normal); }

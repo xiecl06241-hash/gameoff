@@ -49,7 +49,10 @@ public:
 	void TriggerMicroShift();
 	bool HasActiveAnomaly() const;
 	bool HasBlockingChore() const;
+	bool IsAutomatedSession() const { return bAutomatedSession; }
 	void PlayPositionalAnomalyPulse(const FVector& Location);
+	void PlayHeartbeatCue(float Tension);
+	void BuildNightCustomerRoster();
 
 	void OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Customer);
 	void OnItemBroken(AShiftItem* Item, bool bUsedOnMonster);
@@ -77,6 +80,9 @@ public:
 	int32 NightIndex = 0;
 	int32 NextCustomerIdx = 0;
 	int32 CustomersServed = 0;
+	TArray<FShiftCustomerSpec> ActiveNightCustomers;
+	float HeartbeatPulseAlpha = 0.f;
+	float HeartbeatTimer = 0.f;
 
 	float Sanity = ShiftData::MaxSanity;
 	float Income = 0.f;

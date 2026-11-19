@@ -54,6 +54,7 @@
     "monster_reveal": true,
     "shift_actual_transform": true,
     "shifted_shelf_sku_swap": true,
+    "shift_rulebook_tell_counter_mapping": true,
     "breaker_override_works_during_shift": true,
     "restore_actual_transform": true,
     "demand_item_removed": true,
@@ -66,7 +67,7 @@
     "formal_save_unchanged": true,
     "test_slot_cleaned": true
   },
-  "test_save_slot": "ShiftStoreSelfTest_0B99D1E94DBD3367E7E5C08B224E0465",
+  "test_save_slot": "ShiftStoreSelfTest_1BC5A2484AA6E48A38F03CBA82A5FA47",
   "failure": "",
   "elapsed_world_seconds": 16.399921417236328,
   "normal_customer_exit_seconds": 3.849997043609619,

@@ -198,5 +198,12 @@
   "Shelves swapped stock! Corridor Breaker [E] restores light 10s.": "Shelves swapped stock! Corridor Breaker [E] restores light 10s.",
   "Suspect disguise? Hand their whispered true item to ward off!": "Suspect disguise? Hand their whispered true item to ward off!",
   "! ANOMALY: %s (%ds)": "! ANOMALY: {0} ({1}s)",
-  "Follow the yellow marker; HOLD [E] to reset the store anomaly.": "Follow the yellow marker; HOLD [E] to reset the store anomaly."
+  "Follow the yellow marker; HOLD [E] to reset the store anomaly.": "Follow the yellow marker; HOLD [E] to reset the store anomaly.",
+  "Excuse me... could you grab me a bag of potato chips?": "Excuse me... could you grab me a bag of potato chips?",
+  "SPRINT [Shift]": "SPRINT [Shift]",
+  "SHIFT RULES — Observe Customer Before Handing:": "SHIFT RULES — Observe Customer Before Handing:",
+  "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]": "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]",
+  "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]": "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]",
+  "3. Feet floating off floor -> Hand [MORNING Bread]": "3. Feet floating off floor -> Hand [MORNING Bread]",
+  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "Check SHIFT RULES (Bottom-Left): Observe posture before handing!"
 }

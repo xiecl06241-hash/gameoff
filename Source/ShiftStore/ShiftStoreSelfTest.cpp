@@ -426,6 +426,9 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			const bool bValid = Director->ValidateState(true, Failure);
 			if (!CheckSelfTest(TEXT("shift_actual_transform"), bValid, Failure)) { return; }
 			if (!CheckSelfTest(TEXT("shifted_shelf_sku_swap"), Director->IsEffectiveShifted() && ShiftData::ShiftedSku(TEXT("Water")) == TEXT("Can") && ShiftData::ShiftedSku(TEXT("Can")) == TEXT("Water"))) { return; }
+			if (!CheckSelfTest(TEXT("shift_rulebook_tell_counter_mapping"), ShiftData::CounterSkuForTell(EDisguiseTell::HeadTilt) == TEXT("Can")
+				&& ShiftData::CounterSkuForTell(EDisguiseTell::RedGlare) == TEXT("Milk")
+				&& ShiftData::CounterSkuForTell(EDisguiseTell::Floating) == TEXT("Bread"))) { return; }
 			ActivateBreakerBox();
 			if (!CheckSelfTest(TEXT("breaker_override_works_during_shift"), Director->IsBreakerOverridden() && !Director->IsEffectiveShifted())) { return; }
 			OnMonsterDemandDelivered(ActiveCustomer.Get());
