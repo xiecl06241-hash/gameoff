@@ -914,12 +914,14 @@ void AShiftStoreGameMode::OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Cu
 	if (!Item || !Customer) { return; }
 	const FShiftProduct* Prod = ShiftData::FindProduct(Item->Sku);
 	const float StunSec = Prod ? Prod->StunSeconds : 2.0f;
+	const bool bBreaksProduct = Item->Kind == EShiftItemKind::Product && !Item->bLostItem;
 	if (Customer->IsMonsterActive())
 	{
 		Customer->Stun(StunSec);
-		SetStatusBanner(ShiftLoc::Format(TEXT("Direct hit! Entity stunned for %.1fs (-$%.2f cost loss)"), {FString::Printf(TEXT("%.1f"), StunSec), FString::Printf(TEXT("%.2f"), Prod ? Prod->Cost : 2.f)}), 3.f);
+		const float Cost = bBreaksProduct ? (Prod ? Prod->Cost : 2.5f) : 0.f;
+		SetStatusBanner(ShiftLoc::Format(TEXT("Direct hit! Entity stunned for %.1fs (-$%.2f cost loss)"), {FString::Printf(TEXT("%.1f"), StunSec), FString::Printf(TEXT("%.2f"), Cost)}), 3.f);
 	}
-	if (!Item->bLostItem)
+	if (bBreaksProduct)
 	{
 		OnItemBroken(Item, true);
 		Item->Destroy();

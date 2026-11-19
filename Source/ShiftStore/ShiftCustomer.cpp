@@ -689,7 +689,7 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 		}
 		MoveToward(TargetPos, HuntSpeed, DeltaSeconds);
 
-		if (FVector::Dist2D(GetActorLocation(), Player->GetActorLocation()) < 92.f)
+		if (bSees && FVector::Dist2D(GetActorLocation(), Player->GetActorLocation()) < 92.f)
 		{
 			const bool bUnseenAmbush = (State == ECustomerState::MonsterStalking);
 			State = ECustomerState::MonsterGrabbing;

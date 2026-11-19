@@ -378,6 +378,59 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 		Customer->SetActorLocation(FVector(800.f, 310.f, 100.f));
 		Customer->State = ECustomerState::MonsterHunting;
 
+		AShiftPlayerCharacter* Player = CastChecked<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+		const float LossesBeforeTools = Losses;
+		bool bToolsRecovered = true;
+		for (int32 Index = 0; Index < 2; ++Index)
+		{
+			AShiftItem* Tool = GetWorld()->SpawnActor<AShiftItem>();
+			Tool->InitKind(EShiftItemKind::Mop);
+			Customer->State = Index == 0 ? ECustomerState::WaitingAtCheckout : ECustomerState::MonsterHunting;
+			OnItemHitCustomer(Tool, Customer);
+			if (!CheckSelfTest(Index == 0 ? TEXT("cleaning_tool_survives_customer_hit") : TEXT("cleaning_tool_survives_monster_hit"),
+				IsValid(Tool) && !Tool->IsActorBeingDestroyed())) { return; }
+			Player->PickupItem(Tool);
+			bToolsRecovered &= Player->HeldItem.Get() == Tool;
+			Player->DropHeldItem();
+			bToolsRecovered &= IsValid(Tool) && Tool->CanSimulate();
+			Tool->Destroy();
+		}
+		if (!CheckSelfTest(TEXT("hit_cleaning_tools_remain_recoverable"), bToolsRecovered)) { return; }
+		if (!CheckSelfTest(TEXT("cleaning_tool_hits_do_not_charge_store_losses"), Losses == LossesBeforeTools)) { return; }
+		if (!CheckSelfTest(TEXT("cleaning_tool_still_stuns_monster"), Customer->State == ECustomerState::MonsterStunned)) { return; }
+
+		const FVector PreviousPosition = Player->GetActorLocation();
+		const float PreviousSanity = Sanity;
+		AActor* Barrier = GetWorld()->SpawnActor<AActor>();
+		UBoxComponent* Wall = NewObject<UBoxComponent>(Barrier);
+		Barrier->SetRootComponent(Wall);
+		Wall->SetBoxExtent(FVector(6.f, 100.f, 100.f));
+		Wall->SetCollisionProfileName(TEXT("BlockAll"));
+		Wall->RegisterComponent();
+		Barrier->SetActorLocation(FVector(840.f, 300.f, 100.f));
+		Player->SetActorLocation(FVector(800.f, 300.f, 100.f));
+		Customer->SetActorLocation(FVector(880.f, 300.f, 100.f));
+		Customer->State = ECustomerState::MonsterHunting;
+		if (!CheckSelfTest(TEXT("grab_fixture_wall_blocks_sight"), !Customer->CanSeePlayer(Player))) { return; }
+		static_cast<AActor*>(Customer)->Tick(1.f / 60.f);
+		if (!CheckSelfTest(TEXT("monster_cannot_grab_through_wall"), !Player->IsGrabbed())) { return; }
+		Wall->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		for (const ECustomerState ChaseState : {ECustomerState::MonsterHunting, ECustomerState::MonsterStalking})
+		{
+			Customer->State = ChaseState;
+			static_cast<AActor*>(Customer)->Tick(1.f / 60.f);
+			if (!CheckSelfTest(ChaseState == ECustomerState::MonsterHunting ? TEXT("nearby_visible_monster_can_grab") : TEXT("nearby_stalking_monster_can_ambush"),
+				Player->IsGrabbed())) { return; }
+			Player->ReleaseFromGrab(false);
+		}
+		Barrier->Destroy();
+		Sanity = PreviousSanity;
+		Player->SetActorLocation(PreviousPosition);
+		Player->ConsumeMovementInputVector();
+		Customer->ConsumeMovementInputVector();
+		Customer->SetActorLocation(FVector(800.f, 310.f, 100.f));
+		Customer->State = ECustomerState::MonsterHunting;
+
 		AShiftItem* Projectile = GetWorld()->SpawnActor<AShiftItem>(FVector(800.f, 180.f, 145.f), FRotator::ZeroRotator);
 		if (!CheckSelfTest(TEXT("projectile_spawned"), IsValid(Projectile))) { return; }
 		SelfTestProjectile = Projectile;
