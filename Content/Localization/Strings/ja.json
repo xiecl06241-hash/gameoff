@@ -205,5 +205,11 @@
   "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]": "① 首傾げ・壁凝視 → 要求品ではなく【トマトスープ缶】",
   "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]": "② 赤い眼光・照明点滅 → 要求品ではなく【毎日牛乳】",
   "3. Feet floating off floor -> Hand [MORNING Bread]": "③ 足が床から浮遊 → 要求品ではなく【朝食パン】",
-  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "左下の『夜勤異変則』を確認：姿勢を観察してから渡せ！"
+  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "左下の『夜勤異変則』を確認：姿勢を観察してから渡せ！",
+  "TRUE ENDING — MASTER OF THE NIGHT SHIFT": "真エンド —— 夜勤の達人",
+  "SURVIVOR ENDING — 06:00 AM HANDOVER": "生還エンド —— 午前6時の引き継ぎ",
+  "You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\"": "店が完全に変わる前に、すべての偽装を見破った。\n日勤の店員がレジにメモを残した。\n「もう規則はわかったね。この店は君のものだ。」",
+  "Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.": "棚の移動と停電に悩まされた三晩が終わった。\n朝日が窓を照らす。エプロンをカウンターに置き、\n朝のチャイムが鳴る前に店を出た。",
+  "Disguises Warded Off: %d   |   Store Shifts Survived: %d": "偽装を見破った回数：{0}   |   店の異変回数：{1}",
+  "[! SIGNAL CORRUPTED — FIX ANOMALY !]": "[！信号異常 —— 異変を直せ！]"
 }

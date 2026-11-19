@@ -100,6 +100,12 @@ void AShiftPlayerCharacter::ResetGrabCamera()
 {
 	bGrabCameraActive = false;
 	GrabCameraTime = 0.f;
+	if (AController* C = GetController())
+	{
+		FRotator Rotation = C->GetControlRotation();
+		Rotation.Roll = 0.f;
+		C->SetControlRotation(Rotation);
+	}
 	FirstPersonCamera->SetFieldOfView(85.f);
 }
 
@@ -117,7 +123,13 @@ void AShiftPlayerCharacter::UpdateGrabCamera(float DeltaSeconds)
 	FirstPersonCamera->SetFieldOfView(FMath::Lerp(85.f, 70.f, Alpha));
 	if (AController* C = GetController())
 	{
-		const FRotator LookAt = (Monster->GrabFocusLocation() - FirstPersonCamera->GetComponentLocation()).Rotation();
+		FRotator LookAt = (Monster->GrabFocusLocation() - FirstPersonCamera->GetComponentLocation()).Rotation();
+		if (!GM->IsAutomatedSession())
+		{
+			LookAt.Pitch += FMath::Sin(GrabCameraTime * 38.f) * 1.8f;
+			LookAt.Yaw += FMath::Cos(GrabCameraTime * 44.f) * 2.2f;
+			LookAt.Roll = FMath::Sin(GrabCameraTime * 27.f) * 4.5f;
+		}
 		C->SetControlRotation(FMath::Lerp(GrabStartRotation.Quaternion(), LookAt.Quaternion(), Alpha).Rotator());
 	}
 }

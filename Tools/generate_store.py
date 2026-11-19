@@ -46,6 +46,8 @@ def material(name, color, rough=.6, metal=0, emissive=0, style='plain', opacity=
     mat = asset('M_' + name, 'Materials', u.Material, u.MaterialFactoryNew())
     u.MaterialEditingLibrary.delete_all_material_expressions(mat)
     mat.set_editor_property('used_with_instanced_static_meshes',True)
+    if name == 'Charcoal':
+        mat.set_editor_property('used_with_skeletal_mesh', True)
     mat.set_editor_property('two_sided', False)
     if style != 'plain':
         world = node(mat, u.MaterialExpressionWorldPosition)

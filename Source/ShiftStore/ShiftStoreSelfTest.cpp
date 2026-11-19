@@ -18,6 +18,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "HAL/FileManager.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "UObject/GarbageCollection.h"
@@ -472,9 +473,31 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 				Disguised->Destroy();
 				if (!CheckSelfTest(TEXT("disguised_monster_warded_off_before_shift"), bWarded)) { return; }
 			}
+			bool bAudioSafe = !PlayExternalOrSynthesizedCue(TEXT("nonexistent_test.wav"), 440.f, 0.05f, 0.1f);
+			const FString AudioName = TEXT("SelfTest_") + FGuid::NewGuid().ToString(EGuidFormats::Digits) + TEXT(".wav");
+			const FString AudioPath = FPaths::ProjectContentDir() / TEXT("Localization/Audio") / AudioName;
+			IFileManager::Get().MakeDirectory(*FPaths::GetPath(AudioPath), true);
+			// Minimal mono PCM with one silent sample. Exercise the decoder in the packaged game.
+			TArray<uint8> AudioBytes = { 'R','I','F','F',38,0,0,0,'W','A','V','E',
+				'f','m','t',' ',16,0,0,0,1,0,1,0,0x22,0x56,0,0,0x44,0xac,0,0,2,0,16,0,
+				'd','a','t','a',2,0,0,0,0,0 };
+			bAudioSafe &= FFileHelper::SaveArrayToFile(AudioBytes, *AudioPath);
+			bAudioSafe &= PlayExternalOrSynthesizedCue(AudioName, 440.f, 0.05f, 0.1f);
+			AudioBytes.SetNum(43); // Declared RIFF data extends past EOF.
+			bAudioSafe &= FFileHelper::SaveArrayToFile(AudioBytes, *AudioPath);
+			bAudioSafe &= !PlayExternalOrSynthesizedCue(AudioName, 440.f, 0.05f, 0.1f);
+			bAudioSafe &= IFileManager::Get().Delete(*AudioPath);
+			if (!CheckSelfTest(TEXT("audio_fallback_safe_when_wav_missing"), bAudioSafe)) { return; }
+			const int32 ShiftsBeforeEndingTest = TotalShiftsTriggered;
+			TotalShiftsTriggered = 0;
+			const bool bTrueEnding = TotalMonstersWarded > 0 && IsTrueEnding();
+			TotalShiftsTriggered = 1;
+			const bool bSurvivorEnding = !IsTrueEnding();
+			TotalShiftsTriggered = ShiftsBeforeEndingTest;
+			if (!CheckSelfTest(TEXT("true_ending_condition_tracks_ward_offs"), bTrueEnding && bSurvivorEnding)) { return; }
 			if (!CheckSelfTest(TEXT("isolated_save_written"), SaveProgress())) { return; }
 			const UShiftSaveGame* Saved = Cast<UShiftSaveGame>(UGameplayStatics::LoadGameFromSlot(ProgressSlotName(), 0));
-			if (!CheckSelfTest(TEXT("isolated_save_roundtrip"), Saved && Saved->SavedNightIndex == NightIndex && Saved->CumulativeIncome == Income && Saved->CumulativeLosses == Losses)) { return; }
+			if (!CheckSelfTest(TEXT("isolated_save_roundtrip"), Saved && Saved->SavedNightIndex == NightIndex && Saved->CumulativeIncome == Income && Saved->CumulativeLosses == Losses && Saved->TotalMonstersWarded == TotalMonstersWarded && Saved->TotalShiftsTriggered == TotalShiftsTriggered)) { return; }
 			FinishSelfTest(true);
 		}
 		break;

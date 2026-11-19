@@ -1,6 +1,6 @@
 # SHIFT / 24 开发交接
 
-更新于 2026-11-19。当前位于独立开发分支 `feat/shift-gameplay`（`main` 分支保持在 `2a01629`）。本文件记录了紧扣 **SHIFT** 主题的“去公式化 & 去无聊化”全套玩法升级、商品放回与散落清理规则、怪物追逐寻路修复及全套验证结果。
+更新于 2026-11-19。当前位于独立开发分支 `feat/shift-gameplay`（`main` 为 v0.4 发布提交 `5b54aa8`）。本文件记录了紧扣 **SHIFT** 主题的“去公式化 & 去无聊化”全套玩法升级、商品放回与散落清理规则、怪物追逐寻路修复及全套验证结果。
 
 ## 工程与启动
 
@@ -37,22 +37,38 @@ Windows 第一人称 3D 三晚原型，支持英语、日语、繁体中文和�
 6. **商品放回与夜末散落清理**：
    - 手持商品对准任意货架、冷柜按 `E` 可放回；满手时防误拿；夜末需将散落商品全部放回货架方可天亮。
 
+## 阶段一演出、追逐、音频和结局
+
+- 第一晚首次营业异变倒计时为 9 秒，后续夜晚为 14 秒。每晚开局重置局部异变轮次，第一晚首先出现迎宾牌篡改。该计时从第一位顾客进店后累计，玩家开店任务耗时会影响实际遭遇时刻。
+- 顾客服装使用现有人物材质的 Paint Tint 参数形成五种色调。显形时显示不对称发光眼部，用同一骨骼的姿态副本制作反向躯干与 180 度扭头。原骨骼持续更新动画并提供碰撞；炭黑材质已启用骨骼网格用途，资产生成脚本同步记录此设置。
+- 被抓时叠加 Pitch／Yaw／Roll 微震动，释放、死亡、返回标题或怪物销毁时清除镜头 Roll。固定镜头自动用例沿用原始镜头参数。
+- 悬浮怪被注视时速度 55，背身时速度 335。歪头怪能听到冲刺并以 310 追击，慢走且远离时速度 185、视距 700。红眼怪追逐时每 5 秒闪灯，速度由 245 随时间增加至 290。六类自动测试参数会隔离这些额外追逐行为，正常游玩手感等待玩家实测。
+- 五个关键音效入口支持标准 16-bit PCM WAV，缺失或格式错误时回退合成音。未附带录制音频。文件名、格式及 Windows 包的放置目录见 Content/Localization/Audio/README.txt。仅加入尚未打包的 WAV 可以直接放入包内 Content 目录，替换已经放进 PAK 的同名音效需重新打包。
+- 第三晚局部异变或全店 Shift 时，左下守则边框闪红并显示信号故障警示。结局展示识破数和全店异变数，零次全店异变且至少一次识破可进入真结局，否则为幸存结局。
+- 新游戏重置结局统计，跨夜保存统计，当晚重开恢复当晚起始统计。旧存档缺少历史统计时继续保留进度；从后续夜晚导入的旧存档按历史不完整处理，结局使用幸存分支，显示计数从导入点开始累计。
+
 ## 验证结果与范围
 
-| 项目 | 本次结果 | 证据 |
+| 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| 编辑器及 Windows Development 构建 | 成功 | `Saved/QA/EditorBuild.log`、`WindowsPackage.log` |
-| 核心玩法回归（含 SHIFT 主题与守则映射断言） | **64 项通过**，正式存档哈希一致 | `Verification/gameplay_selftest.json` |
-| 故意失败检查 | **65 项**中只有强制失败项失败，退出码 1 | `Verification/gameplay_selftest_failure.json` |
-| 简体中文 720p 试玩反馈专项 | 84 项通过，其中挡路相关 40 项 | `Verification/feedback_zh-Hans_1280.json` |
-| 三晚自动流程与性能走测 | 13 项通过，走到第三晚结局，平均 **59.22 FPS** | `Verification/playthrough_1920.json` |
-| 四语言词条与字体覆盖检查 | 各 **207 条**，简繁日字形覆盖通过 | `Verification/localization_catalogues.json` |
-| 静态仓库检查 | 33 个 Python 脚本、40 个 JSON、476 个 LFS 资产通过 | `.github/scripts/check_repository.py` |
+| 编辑器与 Windows Development 构建 | 成功，烘焙使用文件缓存配置 | Saved/QA/EditorBuild.log、WindowsPackage.log |
+| 核心玩法 | 66 项通过，正式存档一致 | Verification/gameplay_selftest.json |
+| 故意失败路径 | 67 项中仅 forced_failure 失败，退出码 1 | Verification/gameplay_selftest_failure.json |
+| 简中 720p 试玩反馈 | 84 项通过 | Verification/feedback_zh-Hans_1280.json |
+| 三晚自动流程 | 13 项通过 | Verification/playthrough_1920.json |
+| 四语言 1080p 界面 | 每种 24 项通过，包含重启语言读取 | Verification/localization_runtime_*_1920.json |
+| 四语言暂停与灵敏度 | 每种分别 19／20 项通过 | Verification/pause_menu_*_1280.json、sensitivity_*_1280.json |
+| 四语言文本与字体 | 各 213 条，字形覆盖通过 | Verification/localization_catalogues.json |
+
+固定路线为第二晚首次显形时从收银区到仓库。1080p High，平均 60.00 FPS，P95 17.01 ms，最慢帧 21.31 ms。走测关闭随机局部异变和差异追逐，并会临时眩晕贴近的怪物。本轮自动结果不能代表正常追逐的难度或持续帧率。
+
+音频新增断言同时检查缺失文件合成兜底、有效 PCM 读取、截断数据回退以及临时文件清理。结局断言检查完美与幸存分支，存档往返同时检查新增计数。
 
 ## 构建与复现
 
+在 Git Bash 中设置 UTF-8 和引擎路径后运行。
+
 ```bash
-cd '/d/Game Jam/Game Off 2026/ShiftStore'
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 export UE_ROOT='D:/UE/UE_5.8'
 python Tools/author_localization.py
@@ -62,4 +78,13 @@ python .github/scripts/build_windows.py
 python Tools/check_gameplay.py
 python Tools/check_feedback.py --languages zh-Hans
 python Tools/check_feedback.py --playthrough
+python Tools/test_localization_runtime.py
+python Tools/check_pause_menu.py
+python Tools/check_sensitivity.py
 ```
+
+本机 Zen 服务有 IPv6 连接异常时，使用引擎内置的 -ddc=InstalledNoZenLocalFallback 附加烘焙参数。本轮构建通过本地临时包装脚本传参，标准构建脚本仍可用于正常缓存环境。
+
+## 本轮交付与人工验收
+
+修改和提交全部留在 feat/shift-gameplay。收到用户实测确认后再合并 main。本机试玩使用 Builds/Windows/ShiftStore.exe。优先实测首位顾客后的迎宾牌异变、三种怪客的注视／冲刺／闪灯应对、E 与商品挣脱后的镜头恢复、完整零显形通关及跨晚续档，再试听接入的真实 WAV。测试并发启动会影响声音和帧率，应逐项运行。

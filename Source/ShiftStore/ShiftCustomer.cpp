@@ -1,4 +1,4 @@
-﻿#include "ShiftCustomer.h"
+#include "ShiftCustomer.h"
 #include "ShiftLocalization.h"
 #include "ShiftGuidance.h"
 #include "ShiftStoreGameMode.h"
@@ -9,6 +9,9 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/PoseableMeshComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/PointLightComponent.h"
@@ -49,6 +52,24 @@ AShiftCustomer::AShiftCustomer()
 		Skel->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
 	}
 
+	MonsterPose = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("MonsterPose"));
+	MonsterPose->SetupAttachment(GetMesh());
+	MonsterPose->SetRelativeRotation(FRotator(0.f, 180.f, 0.f));
+	MonsterPose->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MonsterPose->SetVisibility(false);
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> EyeSphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> EyeMaterial(TEXT("/Game/ShiftStore/Materials/M_ColdLight.M_ColdLight"));
+	AnomalyMaskLeftEye = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AnomalyMaskLeftEye"));
+	AnomalyMaskRightEye = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AnomalyMaskRightEye"));
+	for (UStaticMeshComponent* Eye : { AnomalyMaskLeftEye.Get(), AnomalyMaskRightEye.Get() })
+	{
+		Eye->SetupAttachment(GetMesh(), TEXT("head"));
+		Eye->SetStaticMesh(EyeSphere.Object);
+		Eye->SetMaterial(0, EyeMaterial.Object);
+		Eye->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Eye->SetVisibility(false);
+		Eye->SetRelativeScale3D(FVector(0.06f, 0.04f, 0.09f));
+	}
 	Speech = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Speech"));
 	Speech->SetupAttachment(RootComponent);
 	Speech->SetRelativeLocation(FVector(0.f, 0.f, 108.f));
@@ -102,11 +123,36 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 		Skel->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
 		Skel->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 	}
+	AnomalyMaskLeftEye->SetVisibility(false);
+	AnomalyMaskRightEye->SetVisibility(false);
+	MonsterPose->SetVisibility(false);
+	GetMesh()->SetVisibility(true);
 	EyeLight->SetIntensity(0.f);
-	const bool bAutomatedTest = FParse::Param(FCommandLine::Get(), TEXT("ShiftSelfTest"))
+	bAutomatedTest = FParse::Param(FCommandLine::Get(), TEXT("ShiftSelfTest"))
 		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftPlaythroughTest"))
-		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftFeedbackTest"));
+		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftFeedbackTest"))
+		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftLocalizationTest"))
+		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftPauseTest"))
+		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftSensitivityTest"));
 	RevealThreshold = bAutomatedTest ? 4.2f : FMath::FRandRange(13.0f, 17.0f);
+	const FLinearColor Colors[] = {
+		{ 0.18f, 0.25f, 0.38f },
+		{ 0.16f, 0.32f, 0.24f },
+		{ 0.38f, 0.26f, 0.18f },
+		{ 0.34f, 0.16f, 0.22f },
+		{ 0.28f, 0.30f, 0.32f }
+	};
+	const FLinearColor Tint = Colors[bAutomatedTest ? 0 : FMath::RandRange(0, 4)];
+	for (int32 Slot = 0; Slot < GetMesh()->GetNumMaterials(); ++Slot)
+	{
+		if (UMaterialInstanceDynamic* Material = GetMesh()->CreateDynamicMaterialInstance(Slot))
+		{
+			for (const FName Param : { FName(TEXT("Tint")), FName(TEXT("BaseColor")), FName(TEXT("Color")), FName(TEXT("BodyColor")), FName(TEXT("Paint Tint")) })
+			{
+				Material->SetVectorParameterValue(Param, Tint);
+			}
+		}
+	}
 }
 
 bool AShiftCustomer::CanSeePlayer(APawn* Player, float MaxDist, float CosHalfFOV) const
@@ -361,11 +407,31 @@ void AShiftCustomer::ApplyMonsterVisuals()
 			}
 		}
 	}
+	MonsterPose->SetSkeletalMesh(GetMesh()->GetSkeletalMeshAsset());
+	MonsterPose->CopyPoseFromSkeletalComponent(GetMesh());
+	for (int32 Slot = 0; Slot < GetMesh()->GetNumMaterials(); ++Slot)
+	{
+		MonsterPose->SetMaterial(Slot, GetMesh()->GetMaterial(Slot));
+	}
+	MonsterPose->SetVisibility(true);
+	GetMesh()->SetVisibility(false);
+	for (UStaticMeshComponent* Eye : { AnomalyMaskLeftEye.Get(), AnomalyMaskRightEye.Get() })
+	{
+		const bool bLeft = Eye == AnomalyMaskLeftEye.Get();
+		const bool bHead = GetMesh()->DoesSocketExist(TEXT("head"));
+		Eye->AttachToComponent(MonsterPose, FAttachmentTransformRules::SnapToTargetNotIncludingScale, bHead ? FName(TEXT("head")) : NAME_None);
+		Eye->SetRelativeLocation(bHead ? FVector(bLeft ? 4.f : 7.f, 12.f, bLeft ? -5.f : 5.f) : FVector(14.f, bLeft ? -6.f : 7.f, bLeft ? 162.f : 165.f));
+		Eye->SetRelativeScale3D(FVector(0.06f, 0.04f, 0.09f));
+		Eye->SetVisibility(true);
+	}
 	EyeLight->SetIntensity(95.f);
 }
 
 void AShiftCustomer::RevealMonster(APawn* Player)
 {
+	if (IsMonsterActive() || State == ECustomerState::Leaving) { return; }
+	ChaseElapsedSeconds = 0.f;
+	ChaseFlickerTime = 0.f;
 	bWitnessedReveal = PlayerSeesMe(Player);
 	ApplyMonsterVisuals();
 	CourtesyTime = 0.f;
@@ -442,6 +508,13 @@ void AShiftCustomer::AttractToNoise(const FVector& NoiseLocation)
 void AShiftCustomer::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (MonsterPose->IsVisible())
+	{
+		MonsterPose->CopyPoseFromSkeletalComponent(GetMesh());
+		const FQuat HeadRotation = MonsterPose->GetBoneRotationByName(TEXT("head"), EBoneSpaces::ComponentSpace).Quaternion();
+		const FQuat TwistedHead = FQuat(FVector::UpVector, PI) * HeadRotation;
+		MonsterPose->SetBoneRotationByName(TEXT("head"), TwistedHead.Rotator(), EBoneSpaces::ComponentSpace);
+	}
 	bSeeingPlayer = false;
 
 	if (APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0))
@@ -574,9 +647,13 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 	case ECustomerState::MonsterHunting:
 	{
 		if (!Player) { break; }
-		const bool bSees = CanSeePlayer(Player, State == ECustomerState::MonsterStalking ? 1300.f : 1100.f, 0.2f);
+		ChaseElapsedSeconds += DeltaSeconds;
+		const bool bHearing = !bAutomatedTest && Spec.Tell == EDisguiseTell::HeadTilt;
+		const bool bHeardSprint = bHearing && Player->bIsSprinting;
+		const float SightRange = bHearing && !Player->bIsSprinting ? 700.f : (State == ECustomerState::MonsterStalking ? 1300.f : 1100.f);
+		const bool bSees = CanSeePlayer(Player, SightRange, 0.2f);
 		bSeeingPlayer = bSees;
-		if (bSees)
+		if (bSees || bHeardSprint)
 		{
 			TargetPos = Player->GetActorLocation();
 			RepathTimer = 0.f;
@@ -590,7 +667,26 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 				PickSearchPoint();
 			}
 		}
-		const float HuntSpeed = bSees ? 248.f : 195.f; // Slightly slower than player (260) so looping shelves works
+		float HuntSpeed = bSees ? 248.f : 195.f;
+		if (!bAutomatedTest)
+		{
+			if (Spec.Tell == EDisguiseTell::Floating) { HuntSpeed = PlayerSeesMe(Player) ? 55.f : 335.f; }
+			else if (Spec.Tell == EDisguiseTell::HeadTilt)
+			{
+				if (bHeardSprint) { HuntSpeed = 310.f; }
+				else if (FVector::Dist2D(GetActorLocation(), Player->GetActorLocation()) > 380.f) { HuntSpeed = 185.f; }
+			}
+			else if (Spec.Tell == EDisguiseTell::RedGlare)
+			{
+				HuntSpeed = 245.f + FMath::Clamp(ChaseElapsedSeconds * 2.2f, 0.f, 45.f);
+				ChaseFlickerTime += DeltaSeconds;
+				if (ChaseFlickerTime >= 5.f)
+				{
+					ChaseFlickerTime -= 5.f;
+					if (GM && GM->Director) { GM->Director->Flicker(0.45f); }
+				}
+			}
+		}
 		MoveToward(TargetPos, HuntSpeed, DeltaSeconds);
 
 		if (FVector::Dist2D(GetActorLocation(), Player->GetActorLocation()) < 92.f)

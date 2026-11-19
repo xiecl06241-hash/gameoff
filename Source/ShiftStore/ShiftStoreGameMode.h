@@ -52,6 +52,11 @@ public:
 	bool IsAutomatedSession() const { return bAutomatedSession; }
 	void PlayPositionalAnomalyPulse(const FVector& Location);
 	void PlayHeartbeatCue(float Tension);
+	bool PlayExternalOrSynthesizedCue(const FString& WavFileName, float FallbackFreqHz, float FallbackDurationSec, float Volume = 0.28f, bool bFallbackNoise = false, const FVector* OptionalWorldLocation = nullptr);
+	int32 TotalMonstersWarded = 0;
+	int32 TotalShiftsTriggered = 0;
+	bool bEndingStatsComplete = true;
+	bool IsTrueEnding() const { return bEndingStatsComplete && TotalShiftsTriggered == 0 && TotalMonstersWarded > 0; }
 	void BuildNightCustomerRoster();
 
 	void OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Customer);
@@ -121,6 +126,8 @@ private:
 	const FString& ProgressSlotName() const;
 	static const FString PlayerSaveSlotName;
 	int32 CheckpointNight = 0;
+	int32 CheckpointWarded = 0;
+	int32 CheckpointShifts = 0;
 	float CheckpointIncome = 0.f;
 	float CheckpointLosses = 0.f;
 	bool bHasNightCheckpoint = false;

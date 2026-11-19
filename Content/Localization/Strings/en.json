@@ -205,5 +205,11 @@
   "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]": "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]",
   "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]": "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]",
   "3. Feet floating off floor -> Hand [MORNING Bread]": "3. Feet floating off floor -> Hand [MORNING Bread]",
-  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "Check SHIFT RULES (Bottom-Left): Observe posture before handing!"
+  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "Check SHIFT RULES (Bottom-Left): Observe posture before handing!",
+  "TRUE ENDING — MASTER OF THE NIGHT SHIFT": "TRUE ENDING — MASTER OF THE NIGHT SHIFT",
+  "SURVIVOR ENDING — 06:00 AM HANDOVER": "SURVIVOR ENDING — 06:00 AM HANDOVER",
+  "You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\"": "You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\"",
+  "Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.": "Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.",
+  "Disguises Warded Off: %d   |   Store Shifts Survived: %d": "Disguises Warded Off: {0}   |   Store Shifts Survived: {1}",
+  "[! SIGNAL CORRUPTED — FIX ANOMALY !]": "[! SIGNAL CORRUPTED — FIX ANOMALY !]"
 }

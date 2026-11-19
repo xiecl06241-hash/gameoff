@@ -19,9 +19,73 @@
 #include "Sound/SoundWaveProcedural.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "HAL/FileManager.h"
 #include "GameFramework/PlayerController.h"
 
 const FString AShiftStoreGameMode::PlayerSaveSlotName(TEXT("ShiftStoreSlot"));
+
+namespace
+{
+USoundWaveProcedural* LoadPcmCue(UObject* Outer, const FString& FileName)
+{
+	if (FPaths::GetCleanFilename(FileName) != FileName || !FileName.EndsWith(TEXT(".wav"))) { return nullptr; }
+	TArray<uint8> Bytes;
+	const FString Path = FPaths::ProjectContentDir() / TEXT("Localization/Audio") / FileName;
+	const int64 FileSize = IFileManager::Get().FileSize(*Path);
+	if (FileSize < 12 || FileSize > 64 * 1024 * 1024) { return nullptr; }
+	if (!FFileHelper::LoadFileToArray(Bytes, *Path) || Bytes.Num() < 12 || Bytes.Num() > 64 * 1024 * 1024) { return nullptr; }
+	const auto Read16 = [&Bytes](int32 At) { return uint16(Bytes[At]) | (uint16(Bytes[At + 1]) << 8); };
+	const auto Read32 = [&Bytes](int32 At) { return uint32(Bytes[At]) | (uint32(Bytes[At + 1]) << 8) | (uint32(Bytes[At + 2]) << 16) | (uint32(Bytes[At + 3]) << 24); };
+	if (FMemory::Memcmp(Bytes.GetData(), "RIFF", 4) || FMemory::Memcmp(Bytes.GetData() + 8, "WAVE", 4)) { return nullptr; }
+	const int64 End = int64(Read32(4)) + 8;
+	if (End < 12 || End > Bytes.Num()) { return nullptr; }
+	int32 Channels = 0, Rate = 0, BlockAlign = 0;
+	int32 DataOffset = 0, DataSize = 0;
+	for (int64 Cursor = 12; Cursor < End;)
+	{
+		if (Cursor + 8 > End) { return nullptr; }
+		const int32 At = static_cast<int32>(Cursor);
+		const uint32 Size = Read32(At + 4);
+		const int64 Next = Cursor + 8 + Size;
+		if (Next + (Size & 1) > End) { return nullptr; }
+		if (!FMemory::Memcmp(Bytes.GetData() + At, "fmt ", 4))
+		{
+			if (Size < 16 || Read16(At + 8) != 1 || Read16(At + 22) != 16) { return nullptr; }
+			Channels = Read16(At + 10);
+			const uint32 SampleRate = Read32(At + 12);
+			if ((Channels != 1 && Channels != 2) || SampleRate < 8000 || SampleRate > 192000) { return nullptr; }
+			Rate = static_cast<int32>(SampleRate);
+			BlockAlign = Read16(At + 20);
+			if (BlockAlign != Channels * 2 || Read32(At + 16) != uint32(Rate * BlockAlign)) { return nullptr; }
+		}
+		else if (!FMemory::Memcmp(Bytes.GetData() + At, "data", 4))
+		{
+			DataOffset = At + 8;
+			DataSize = static_cast<int32>(Size);
+		}
+		Cursor = Next + (Size & 1);
+	}
+	if (!Rate || !DataSize || DataSize % BlockAlign) { return nullptr; }
+	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(Outer);
+	Wave->SetSampleRate(Rate);
+	Wave->NumChannels = Channels;
+	Wave->Duration = float(DataSize) / (Rate * BlockAlign);
+	Wave->QueueAudio(Bytes.GetData() + DataOffset, DataSize);
+	return Wave;
+}
+}
+
+bool AShiftStoreGameMode::PlayExternalOrSynthesizedCue(const FString& WavFileName, float FallbackFreqHz, float FallbackDurationSec, float Volume, bool bFallbackNoise, const FVector* OptionalWorldLocation)
+{
+	if (USoundWaveProcedural* Wave = LoadPcmCue(this, WavFileName))
+	{
+		if (OptionalWorldLocation) { UGameplayStatics::PlaySoundAtLocation(this, Wave, *OptionalWorldLocation, Volume); }
+		else { UGameplayStatics::PlaySound2D(this, Wave, Volume); }
+		return true;
+	}
+	PlaySynthesizedCue(FallbackFreqHz, FallbackDurationSec, Volume, bFallbackNoise);
+	return false;
+}
 
 AShiftStoreGameMode::AShiftStoreGameMode()
 {
@@ -319,6 +383,8 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	ClearNightActors();
 	NightIndex = FMath::Clamp(InNightIndex, 0, ShiftData::Nights().Num() - 1);
 	CheckpointNight = NightIndex;
+	CheckpointWarded = TotalMonstersWarded;
+	CheckpointShifts = TotalShiftsTriggered;
 	CheckpointIncome = Income;
 	CheckpointLosses = Losses;
 	bHasNightCheckpoint = true;
@@ -330,7 +396,8 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	Sanity = ShiftData::MaxSanity;
 	CustomerSpawnCooldown = 1.5f;
 	EerieFlickerTimer = 12.f;
-	MicroShiftTimer = FMath::Max(18.f, 30.f - NightIndex * 4.f);
+	MicroShiftTimer = NightIndex == 0 ? 9.f : 14.f;
+	MicroShiftRotation = 0;
 	HeartbeatPulseAlpha = 0.f;
 	HeartbeatTimer = 0.f;
 	BuildNightCustomerRoster();
@@ -372,6 +439,8 @@ void AShiftStoreGameMode::RestartCurrentNight()
 	if (bHasNightCheckpoint)
 	{
 		NightIndex = CheckpointNight;
+		TotalMonstersWarded = CheckpointWarded;
+		TotalShiftsTriggered = CheckpointShifts;
 		Income = CheckpointIncome;
 		Losses = CheckpointLosses;
 	}
@@ -390,6 +459,9 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 		// The primary title action always starts a new run. Resume is explicit [C].
 		Income = 0.f;
 		Losses = 0.f;
+		TotalMonstersWarded = 0;
+		TotalShiftsTriggered = 0;
+		bEndingStatsComplete = true;
 		StartNight(0);
 	}
 	else if (Phase == EShiftPhase::NightIntro)
@@ -418,6 +490,9 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 		NightIndex = 0;
 		Income = 0.f;
 		Losses = 0.f;
+		TotalMonstersWarded = 0;
+		TotalShiftsTriggered = 0;
+		bEndingStatsComplete = true;
 		SaveProgress();
 		StartNight(0);
 	}
@@ -616,7 +691,8 @@ void AShiftStoreGameMode::TriggerMicroShift()
 	if (Phase != EShiftPhase::Working || HasActiveAnomaly() || (Director && Director->IsShifted())) { return; }
 	const TArray<FShiftTaskSpot>& Spots = ShiftData::AnomalySpots();
 	if (Spots.IsEmpty()) { return; }
-	const int32 AnomalyIdx = (NightIndex + MicroShiftRotation++) % Spots.Num();
+	const int32 AnomalyIdx = NightIndex == 0 && MicroShiftRotation == 0 ? 0 : (NightIndex + MicroShiftRotation) % Spots.Num();
+	++MicroShiftRotation;
 	const FShiftTaskSpot& S = Spots[AnomalyIdx];
 	if (AShiftTaskTarget* T = GetWorld()->SpawnActor<AShiftTaskTarget>(S.Location, FRotator::ZeroRotator))
 	{
@@ -637,14 +713,14 @@ void AShiftStoreGameMode::TriggerMicroShift()
 			Knocked->SetHeld(false);
 		}
 	}
-	PlaySynthesizedCue(140.f, 0.32f, 0.30f, true);
+	PlayExternalOrSynthesizedCue(TEXT("light_flicker.wav"), 140.f, 0.32f, 0.30f, true);
 	SetStatusBanner(ShiftLoc::Format(TEXT("MICRO-SHIFT ANOMALY: %s! Reset it with [Hold E]!"), {ShiftLoc::Text(S.Label)}), 4.f);
 }
 
 void AShiftStoreGameMode::ActivateBreakerBox()
 {
 	if (!Director || !Director->TriggerBreakerOverride(10.f)) { return; }
-	PlaySynthesizedCue(920.f, 0.25f, 0.38f, true);
+	PlayExternalOrSynthesizedCue(TEXT("light_flicker.wav"), 140.f, 0.32f, 0.30f, true);
 	if (AShiftCustomer* C = ActiveCustomer.Get(); C && C->IsMonsterActive())
 	{
 		C->AttractToNoise(ShiftData::BreakerLocation);
@@ -706,7 +782,7 @@ void AShiftStoreGameMode::TrySpawnNextCustomer()
 	{
 		Cust->Init(CSpec);
 		ActiveCustomer = Cust;
-		PlaySynthesizedCue(740.f, 0.22f, 0.25f); // Door chime
+		PlayExternalOrSynthesizedCue(TEXT("door_chime.wav"), 740.f, 0.22f, 0.25f); // Door chime
 		SetStatusBanner(TEXT("Door chime: A customer has entered the store. Prioritize customer service!"), 3.5f);
 	}
 }
@@ -731,14 +807,15 @@ void AShiftStoreGameMode::OnCustomerHelped(AShiftCustomer* Customer)
 
 void AShiftStoreGameMode::OnMonsterWardedOff(AShiftCustomer* Customer)
 {
-	if (!Customer) { return; }
+	if (!Customer || Customer->State == ECustomerState::Leaving) { return; }
+	++TotalMonstersWarded;
 	Income += 10.f;
 	ModifySanity(8.f);
 	Customer->EyeLight->SetIntensity(0.f);
 	Customer->Speech->SetTextRenderColor(FColor(180, 235, 210));
 	Customer->Speech->SetText(FText::FromString(ShiftLoc::Text(TEXT("...You knew what I truly wanted."))));
 	Customer->BeginLeaving();
-	PlaySynthesizedCue(760.f, 0.28f, 0.30f);
+	PlayExternalOrSynthesizedCue(TEXT("ward_off.wav"), 760.f, 0.28f, 0.30f);
 	SetStatusBanner(TEXT("Disguise seen through! Appeased before the Shift (+$10.00 bonus, +Sanity)."), 4.f);
 }
 
@@ -758,13 +835,14 @@ void AShiftStoreGameMode::OnCheckoutCompleted(AShiftCustomer* Customer)
 
 	Customer->Speech->SetText(FText::FromString(ShiftLoc::Format(TEXT("Paid +$%.2f"), {FString::Printf(TEXT("%.2f"), SalePrice)})));
 	Customer->BeginLeaving();
-	PlaySynthesizedCue(820.f, 0.18f, 0.28f);
+	PlayExternalOrSynthesizedCue(TEXT("scanner_beep.wav"), 820.f, 0.18f, 0.28f);
 	SetStatusBanner(ShiftLoc::Format(TEXT("Sale complete (+$%.2f). The customer is leaving."), {FString::Printf(TEXT("%.2f"), SalePrice)}), 3.f);
 }
 
 void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitnessed)
 {
 	if (!Monster) { return; }
+	++TotalShiftsTriggered;
 	if (Director) { Director->SetShifted(true); }
 
 	// Spawn the displaced item the monster demands at one of the backroom/corner spots
@@ -781,7 +859,7 @@ void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitne
 	}
 
 	HeartbeatPulseAlpha = 1.f;
-	PlaySynthesizedCue(110.f, 0.65f, 0.40f, true);
+	PlayExternalOrSynthesizedCue(TEXT("jumpscare_reveal.wav"), 110.f, 0.65f, 0.40f, true);
 	if (bWitnessed) { PlaySynthesizedCue(68.f, 0.42f, 0.42f, true); }
 	const FString ItemName = ShiftData::ProductLabel(Monster->Spec.MonsterSku);
 	if (bWitnessed)
@@ -908,6 +986,12 @@ bool AShiftStoreGameMode::SaveProgress()
 		SG->SavedNightIndex = FMath::Min(NightIndex + (Phase == EShiftPhase::Dawn ? 1 : 0), ShiftData::Nights().Num() - 1);
 		SG->CumulativeIncome = Income;
 		SG->CumulativeLosses = Losses;
+		SG->StatsVersion = 1;
+		SG->bEndingStatsComplete = bEndingStatsComplete;
+		SG->TotalMonstersWarded = TotalMonstersWarded;
+		SG->TotalShiftsTriggered = TotalShiftsTriggered;
+		SG->NightStartWarded = Phase == EShiftPhase::Dawn && NightIndex == ShiftData::Nights().Num() - 1 ? CheckpointWarded : TotalMonstersWarded;
+		SG->NightStartShifts = Phase == EShiftPhase::Dawn && NightIndex == ShiftData::Nights().Num() - 1 ? CheckpointShifts : TotalShiftsTriggered;
 		return UGameplayStatics::SaveGameToSlot(SG, ProgressSlotName(), 0);
 	}
 	return false;
@@ -918,6 +1002,9 @@ bool AShiftStoreGameMode::LoadProgress()
 	NightIndex = 0;
 	Income = 0.f;
 	Losses = 0.f;
+	TotalMonstersWarded = 0;
+	TotalShiftsTriggered = 0;
+	bEndingStatsComplete = true;
 	if (UGameplayStatics::DoesSaveGameExist(ProgressSlotName(), 0))
 	{
 		if (UShiftSaveGame* SG = Cast<UShiftSaveGame>(UGameplayStatics::LoadGameFromSlot(ProgressSlotName(), 0)))
@@ -925,6 +1012,9 @@ bool AShiftStoreGameMode::LoadProgress()
 			NightIndex = FMath::Clamp(SG->SavedNightIndex, 0, ShiftData::Nights().Num() - 1);
 			Income = SG->CumulativeIncome;
 			Losses = SG->CumulativeLosses;
+			TotalMonstersWarded = SG->StatsVersion > 0 ? SG->NightStartWarded : 0;
+			TotalShiftsTriggered = SG->StatsVersion > 0 ? SG->NightStartShifts : 0;
+			bEndingStatsComplete = SG->StatsVersion > 0 ? SG->bEndingStatsComplete : NightIndex == 0;
 			return true;
 		}
 	}

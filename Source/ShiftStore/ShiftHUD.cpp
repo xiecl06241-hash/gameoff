@@ -229,8 +229,15 @@ void AShiftHUD::DrawHUD()
 		}
 		else if (GM->Phase == EShiftPhase::Ending)
 		{
-			DrawCenteredText(TEXT("ALL NIGHT SHIFTS SURVIVED"), H * 0.27f, FLinearColor(0.82f, 0.95f, 0.90f), 2.2f);
-			DrawCenteredText(TEXT("The morning clerk unlocks the front door. The aisles are back where they belong."), H * 0.40f, FLinearColor(0.88f, 0.90f, 0.88f), 1.2f);
+			DrawCenteredText(GM->IsTrueEnding() ? TEXT("TRUE ENDING — MASTER OF THE NIGHT SHIFT") : TEXT("SURVIVOR ENDING — 06:00 AM HANDOVER"), H * 0.27f, FLinearColor(0.82f, 0.95f, 0.90f), 2.2f);
+			const FString EndingBody = GM->IsTrueEnding() ? ShiftLoc::Text(TEXT("You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\"")) : ShiftLoc::Text(TEXT("Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings."));
+			TArray<FString> EndingLines;
+			EndingBody.ParseIntoArrayLines(EndingLines);
+			for (int32 Line = 0; Line < EndingLines.Num(); ++Line)
+			{
+				DrawCenteredText(EndingLines[Line], H * (0.36f + Line * 0.05f), FLinearColor(0.88f, 0.90f, 0.88f), 1.15f);
+			}
+			DrawCenteredText(ShiftLoc::Format(TEXT("Disguises Warded Off: %d   |   Store Shifts Survived: %d"), {LexToString(GM->TotalMonstersWarded), LexToString(GM->TotalShiftsTriggered)}), H * 0.59f, FLinearColor(0.95f, 0.88f, 0.55f), 1.1f);
 			DrawCenteredText(ShiftLoc::Format(TEXT("Final Revenue: $%.2f   |   Total Losses: -$%.2f   |   Net: $%.2f"), {FString::Printf(TEXT("%.2f"), GM->Income), FString::Printf(TEXT("%.2f"), GM->Losses), FString::Printf(TEXT("%.2f"), GM->Income - GM->Losses)}), H * 0.50f, FLinearColor(0.95f, 0.88f, 0.55f), 1.3f);
 			DrawCenteredText(TEXT("Thank you for playing SHIFT / 24! Press [SPACE] to Play Again."), H * 0.72f, FLinearColor(1.f, 0.90f, 0.45f), 1.35f);
 		}
@@ -276,6 +283,16 @@ void AShiftHUD::DrawHUD()
 	{
 		const float RuleY = H - 146.f;
 		DrawRect(FLinearColor(0.02f, 0.04f, 0.04f, 0.84f), 24.f, RuleY, 440.f, 122.f);
+		const bool bCorrupted = GM->NightIndex >= 2 && (GM->HasActiveAnomaly() || bShifted);
+		if (bCorrupted)
+		{
+			const FLinearColor Border(0.45f + 0.15f * FMath::Sin(GetWorld()->GetTimeSeconds() * 13.f), 0.025f, 0.025f, 0.9f);
+			DrawRect(Border, 24.f, RuleY, 440.f, 3.f);
+			DrawRect(Border, 24.f, RuleY + 119.f, 440.f, 3.f);
+			DrawRect(Border, 24.f, RuleY, 3.f, 122.f);
+			DrawRect(Border, 461.f, RuleY, 3.f, 122.f);
+			DrawLocalizedText(TEXT("[! SIGNAL CORRUPTED — FIX ANOMALY !]"), Border, 34.f, RuleY - 22.f, Font, 0.8f, 420.f);
+		}
 		DrawLocalizedText(TEXT("SHIFT RULES — Observe Customer Before Handing:"), FLinearColor(1.f, 0.82f, 0.36f), 34.f, RuleY + 8.f, Font, 0.86f, 420.f);
 		DrawLocalizedText(TEXT("1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]"), FLinearColor(0.86f, 0.93f, 0.90f), 34.f, RuleY + 37.f, Font, 0.82f, 420.f);
 		DrawLocalizedText(TEXT("2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]"), FLinearColor(0.86f, 0.93f, 0.90f), 34.f, RuleY + 65.f, Font, 0.82f, 420.f);

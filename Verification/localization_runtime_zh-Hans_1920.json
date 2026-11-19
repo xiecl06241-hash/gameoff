@@ -23,11 +23,14 @@
     "localized_customer_dialogue": true,
     "customer_subtitle_visible": true,
     "restock_take_step": true,
-    "restock_return_step": true
+    "restock_return_step": true,
+    "normal_customer_exits_after_payment": true,
+    "service_creates_one_tidy_task": true,
+    "service_creates_one_oden_task": true
   },
   "process_exit_code": 0,
   "player_saves_unchanged": true,
-  "screenshot_count": 11,
+  "screenshot_count": 14,
   "resolution": [
     1920,
     1080

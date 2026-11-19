@@ -226,6 +226,15 @@ ENTRIES += [
     ("Check SHIFT RULES (Bottom-Left): Observe posture before handing!", "核对左下角《夜班异常守则》：先观察顾客体态再递交！", "左下の『夜勤異変則』を確認：姿勢を観察してから渡せ！", "核對左下角《夜班異常守則》：先觀察顧客體態再遞交！"),
 ]
 
+ENTRIES += [
+    ('TRUE ENDING — MASTER OF THE NIGHT SHIFT', '真结局 —— 完美守夜人', '真エンド —— 夜勤の達人', '真結局 —— 完美守夜人'),
+    ('SURVIVOR ENDING — 06:00 AM HANDOVER', '幸存结局 —— 早上六点交班', '生還エンド —— 午前6時の引き継ぎ', '倖存結局 —— 早上六點交班'),
+    ('You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n"You understand the rules now. The store is yours."', '你在店铺彻底异变前识破了每一个伪装。\n白班店员在收银台留了一张纸条：\n“你已经懂得守则了。这家店属于你。”', '店が完全に変わる前に、すべての偽装を見破った。\n日勤の店員がレジにメモを残した。\n「もう規則はわかったね。この店は君のものだ。」', '你在店鋪徹底異變前識破了每一個偽裝。\n白班店員在收銀台留了一張紙條：\n「你已經懂得守則了。這家店屬於你。」'),
+    ('Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.', '三晚的货架错位和停电终于结束。\n阳光照上前窗，你把围裙放在柜台上，\n赶在早晨的门铃响起之前离开。', '棚の移動と停電に悩まされた三晩が終わった。\n朝日が窓を照らす。エプロンをカウンターに置き、\n朝のチャイムが鳴る前に店を出た。', '三晚的貨架錯位和停電終於結束。\n陽光照上前窗，你把圍裙放在櫃台上，\n趕在早晨的門鈴響起之前離開。'),
+    ('Disguises Warded Off: %d   |   Store Shifts Survived: %d', '识破驱离：{0} 次   |   全店异变：{1} 次', '偽装を見破った回数：{0}   |   店の異変回数：{1}', '識破驅離：{0} 次   |   全店異變：{1} 次'),
+    ('[! SIGNAL CORRUPTED — FIX ANOMALY !]', '[！信号异常 —— 请复位异变！]', '[！信号異常 —— 異変を直せ！]', '[！訊號異常 —— 請復位異變！]'),
+]
+
 PRINTF = re.compile(r"%%|%[-+0 #]*\d*(?:\.\d+)?[sdf]")
 
 

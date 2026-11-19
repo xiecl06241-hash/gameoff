@@ -6,6 +6,8 @@
 #include "ShiftCustomer.generated.h"
 
 class UTextRenderComponent;
+class UStaticMeshComponent;
+class UPoseableMeshComponent;
 class UPointLightComponent;
 
 UENUM()
@@ -60,6 +62,13 @@ public:
 
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> Speech;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UPointLightComponent> EyeLight;
+
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> AnomalyMaskLeftEye;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> AnomalyMaskRightEye;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UPoseableMeshComponent> MonsterPose;
+	float ChaseElapsedSeconds = 0.f;
+	bool bAutomatedTest = false;
+	float ChaseFlickerTime = 0.f;
 
 	FShiftCustomerSpec Spec;
 	ECustomerState State = ECustomerState::Entering;

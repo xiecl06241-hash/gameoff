@@ -205,5 +205,11 @@
   "1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]": "① 歪頭死盯空牆 → 別給原商品，遞【番茄濃湯罐頭】",
   "2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]": "② 紅眼微光+頂燈閃爍 → 別給原商品，遞【每日全脂鮮奶】",
   "3. Feet floating off floor -> Hand [MORNING Bread]": "③ 腳不沾地懸空漂浮 → 別給原商品，遞【晨光切片麵包】",
-  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "核對左下角《夜班異常守則》：先觀察顧客體態再遞交！"
+  "Check SHIFT RULES (Bottom-Left): Observe posture before handing!": "核對左下角《夜班異常守則》：先觀察顧客體態再遞交！",
+  "TRUE ENDING — MASTER OF THE NIGHT SHIFT": "真結局 —— 完美守夜人",
+  "SURVIVOR ENDING — 06:00 AM HANDOVER": "倖存結局 —— 早上六點交班",
+  "You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\"": "你在店鋪徹底異變前識破了每一個偽裝。\n白班店員在收銀台留了一張紙條：\n「你已經懂得守則了。這家店屬於你。」",
+  "Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.": "三晚的貨架錯位和停電終於結束。\n陽光照上前窗，你把圍裙放在櫃台上，\n趕在早晨的門鈴響起之前離開。",
+  "Disguises Warded Off: %d   |   Store Shifts Survived: %d": "識破驅離：{0} 次   |   全店異變：{1} 次",
+  "[! SIGNAL CORRUPTED — FIX ANOMALY !]": "[！訊號異常 —— 請復位異變！]"
 }
