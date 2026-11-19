@@ -8,7 +8,7 @@
 
 ## 快速启动 / Quick Start
 
-**[下载 v0.3 Windows 免安装版](https://github.com/xiecl06241-hash/gameoff/releases/download/v0.3/ShiftStore-v0.3-Windows-x64.zip)** · [版本说明与已知问题](Docs/RELEASES/v0.3.md)
+**[下载 v0.4 Windows 免安装版](https://github.com/xiecl06241-hash/gameoff/releases/download/v0.4/ShiftStore-v0.4-Windows-x64.zip)** · [版本说明与已知问题](Docs/RELEASES/v0.4.md)
 
 **先确认你拿到的是打包版还是源码。** `Builds/` 被 Git 忽略，**克隆本仓库或下载 GitHub 的 Source code ZIP，都不会附带 `ShiftStore.exe`**。下面的启动文件在本机完成打包后，或拿到独立 Windows 打包版后才会存在。
 
