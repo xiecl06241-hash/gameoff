@@ -79,7 +79,7 @@
     "test_slot_cleaned": true,
     "forced_failure": false
   },
-  "test_save_slot": "ShiftStoreSelfTest_EED4FC4C485D6F18CF77BBB093575E47",
+  "test_save_slot": "ShiftStoreSelfTest_71215475454DD67EC5AC94A7B9006750",
   "failure": "forced_failure",
   "elapsed_world_seconds": 16.399921417236328,
   "normal_customer_exit_seconds": 3.849997043609619,

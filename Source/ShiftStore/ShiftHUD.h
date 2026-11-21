@@ -28,14 +28,12 @@ private:
 	void DrawSubtitle(class AShiftStoreGameMode* GM);
 	void DrawTaskGuidance(class AShiftStoreGameMode* GM, class AShiftPlayerCharacter* Player);
 
-	// Stylized Cyber-POS / CCTV HUD drawing helpers
-	void DrawStyledPanel(float X, float Y, float W, float H, FLinearColor Accent, FLinearColor Bg, bool bGlitch = false, float HeaderH = 0.f);
-	void DrawCornerBrackets(float X, float Y, float W, float H, float Len, float Thick, FLinearColor Color);
-	void DrawSegmentedBar(float X, float Y, float W, float H, float Pct, FLinearColor Fill, FLinearColor Back, int32 Segments = 18);
-	void DrawHazardStripe(float X, float Y, float W, float H, FLinearColor ColA, FLinearColor ColB, int32 Blocks = 16);
-	void DrawMenuBackdrop(float W, float H, bool bAlert = false);
-	void DrawStyledButton(const FBox2D& Box, bool bSelected, FLinearColor Accent);
-	void DrawWaveform(float X, float Y, float W, float H, float Time, float Agitation, FLinearColor Color);
+	// Minimalist Analog Psychological Horror UI helpers
+	void DrawHorrorScrim(float X, float Y, float W, float H, FLinearColor AccentLine, float BgAlpha = 0.56f, bool bLeftStripe = true);
+	void DrawMemoCard(float X, float Y, float W, float H, bool bCorrupted);
+	void DrawThinBar(float X, float Y, float W, float H, float Pct, FLinearColor Fill, FLinearColor Back);
+	void DrawHorrorBackdrop(float W, float H, bool bBloodTint = false);
+	void DrawHorrorMenuItem(const FBox2D& Box, bool bSelected, bool bDanger = false);
 
 	UPROPERTY() TObjectPtr<UFont> ChineseFont;
 	UPROPERTY() TObjectPtr<UFont> JapaneseFont;

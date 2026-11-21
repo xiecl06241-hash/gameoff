@@ -5,10 +5,12 @@
 #include "ShiftDirector.generated.h"
 
 class ULightComponent;
+class UPointLightComponent;
 class UInstancedStaticMeshComponent;
 class UTextRenderComponent;
 class UStaticMeshComponent;
 class APostProcessVolume;
+class UExponentialHeightFogComponent;
 
 /**
  * Runtime version of the Normal -> Shift store transformation that used to live in two maps.
@@ -50,7 +52,8 @@ protected:
 private:
 	struct FMovedActor { TWeakObjectPtr<AActor> Actor; FVector Base; FVector Offset; };
 	struct FMovedInstance { TWeakObjectPtr<UInstancedStaticMeshComponent> Comp; int32 Index; FTransform Base; FVector Offset; };
-	struct FLightState { TWeakObjectPtr<ULightComponent> Light; float Normal; float Shift; };
+	struct FLightState { TWeakObjectPtr<ULightComponent> Light; float Normal; float Shift; FLinearColor NormalColor; FLinearColor ShiftColor; };
+	struct FAccentLightState { TWeakObjectPtr<UPointLightComponent> Light; float Normal; float Shift; FLinearColor NormalColor; FLinearColor ShiftColor; };
 
 	void Collect();
 	void Apply(float A);
@@ -59,10 +62,12 @@ private:
 	TArray<FMovedActor> Moved;
 	TArray<FMovedInstance> MovedInstances;
 	TArray<FLightState> Lights;
+	TArray<FAccentLightState> AccentLights;
 	TArray<TWeakObjectPtr<UStaticMeshComponent>> Fixtures;
 	TArray<TWeakObjectPtr<UMaterialInterface>> FixtureNormalMats;
 	TWeakObjectPtr<UStaticMeshComponent> WelcomeSign;
 	TWeakObjectPtr<APostProcessVolume> PostProcess;
+	TWeakObjectPtr<UExponentialHeightFogComponent> HorrorFog;
 	UPROPERTY(Transient) TObjectPtr<UStaticMesh> WelcomeMesh;
 	UPROPERTY(Transient) TObjectPtr<UStaticMesh> NoticeMesh;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInterface> DarkLens;

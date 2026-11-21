@@ -4,10 +4,13 @@
 #include "Engine/TextRenderActor.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/PostProcessVolume.h"
+#include "Engine/ExponentialHeightFog.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/RectLightComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Materials/MaterialInterface.h"
 
 AShiftDirector::AShiftDirector()
@@ -82,7 +85,31 @@ void AShiftDirector::Collect()
 		{
 			const FVector P = L->GetComponentLocation();
 			const bool bMain = P.Y < 1050.f;          // sales floor main lights
-			Lights.Add({ L, L->Intensity, bMain ? 45.f : 140.f });
+			// Moody 2:30 AM convenience store: dimmer rear corners, sickly vintage fluorescent warmth
+			const float CornerDim = (bMain && (P.Y > 750.f || P.X < 450.f)) ? 0.56f : 0.72f;
+			const float NormalInt = bMain ? (L->Intensity * CornerDim) : (L->Intensity * 0.55f);
+			const float ShiftInt = bMain ? 22.f : 65.f;
+			const FLinearColor NormCol = bMain ? FLinearColor(0.92f, 0.86f, 0.72f, 1.f) : FLinearColor(0.76f, 0.80f, 0.70f, 1.f);
+			const FLinearColor ShiftCol = bMain ? FLinearColor(0.65f, 0.14f, 0.12f, 1.f) : FLinearColor(0.85f, 0.12f, 0.10f, 1.f);
+			Lights.Add({ L, NormalInt, ShiftInt, NormCol, ShiftCol });
+		}
+
+		TArray<UPointLightComponent*> Points;
+		A->GetComponents(Points);
+		for (UPointLightComponent* PL : Points)
+		{
+			if (A->IsA<APawn>() || A->ActorHasTag(TEXT("Shift.Item"))) { continue; }
+			const FString Name = A->GetName();
+			if (Name.Contains(TEXT("ColdLamp")) || Name.Contains(TEXT("DrinksLamp")))
+			{
+				// Stark clinical icy-blue refrigerators cutting against warm fluorescent aisles
+				AccentLights.Add({ PL, 185.f, 220.f, FLinearColor(0.32f, 0.72f, 0.96f, 1.f), FLinearColor(0.18f, 0.55f, 0.88f, 1.f) });
+			}
+			else if (Name.Contains(TEXT("Emergency")))
+			{
+				// Lonely warm amber counter/corridor glow in Normal -> deep blood-crimson horror glow in Shift
+				AccentLights.Add({ PL, 130.f, 420.f, FLinearColor(0.98f, 0.58f, 0.24f, 1.f), FLinearColor(0.95f, 0.08f, 0.06f, 1.f) });
+			}
 		}
 
 		if (Cast<AStaticMeshActor>(A) || Cast<ATextRenderActor>(A))
@@ -95,7 +122,23 @@ void AShiftDirector::Collect()
 			}
 		}
 	}
-	UE_LOG(LogTemp, Log, TEXT("ShiftDirector: %d actors, %d instances, %d rect lights, %d fixtures"), Moved.Num(), MovedInstances.Num(), Lights.Num(), Fixtures.Num());
+
+	// Spawn or reuse atmospheric height fog so the convenience store has genuine horror depth & dread
+	AExponentialHeightFog* FogActor = nullptr;
+	for (TActorIterator<AExponentialHeightFog> It(GetWorld()); It; ++It) { FogActor = *It; break; }
+	if (!FogActor)
+	{
+		FogActor = GetWorld()->SpawnActor<AExponentialHeightFog>(FVector(800.f, 800.f, 100.f), FRotator::ZeroRotator);
+	}
+	if (FogActor && FogActor->GetComponent())
+	{
+		HorrorFog = FogActor->GetComponent();
+		HorrorFog->SetFogHeightFalloff(0.15f);
+		HorrorFog->SetFogMaxOpacity(0.82f);
+	}
+
+	Apply(0.f);
+	UE_LOG(LogTemp, Log, TEXT("ShiftDirector: %d actors, %d instances, %d rect lights, %d accent lights, %d fixtures"), Moved.Num(), MovedInstances.Num(), Lights.Num(), AccentLights.Num(), Fixtures.Num());
 }
 
 void AShiftDirector::SetShifted(bool bInShift)
@@ -262,7 +305,22 @@ void AShiftDirector::Apply(float A)
 		if (ULightComponent* C = L.Light.Get())
 		{
 			C->SetIntensity(FMath::Lerp(L.Normal, L.Shift, Smooth) * Stutter);
+			C->SetLightColor(FMath::Lerp(L.NormalColor, L.ShiftColor, Smooth));
 		}
+	}
+	for (const FAccentLightState& AL : AccentLights)
+	{
+		if (UPointLightComponent* C = AL.Light.Get())
+		{
+			C->SetIntensity(FMath::Lerp(AL.Normal, AL.Shift, Smooth));
+			C->SetLightColor(FMath::Lerp(AL.NormalColor, AL.ShiftColor, Smooth));
+		}
+	}
+	if (UExponentialHeightFogComponent* Fog = HorrorFog.Get())
+	{
+		Fog->SetFogDensity(FMath::Lerp(0.014f, 0.052f, Smooth));
+		Fog->SetStartDistance(FMath::Lerp(260.f, 55.f, Smooth));
+		Fog->SetFogInscatteringColor(FMath::Lerp(FLinearColor(0.032f, 0.034f, 0.030f, 1.f), FLinearColor(0.055f, 0.008f, 0.008f, 1.f), Smooth));
 	}
 	const bool bDark = Smooth > 0.5f;
 	for (int32 i = 0; i < Fixtures.Num(); ++i)
@@ -277,11 +335,19 @@ void AShiftDirector::Apply(float A)
 	{
 		PPV->Settings.CameraISO = FMath::Lerp(100.f, 1600.f, Smooth);
 		PPV->Settings.CameraShutterSpeed = FMath::Lerp(60.f, 30.f, Smooth);
+		PPV->Settings.bOverride_ColorSaturation = true;
+		PPV->Settings.ColorSaturation = FMath::Lerp(FVector4(0.72f, 0.70f, 0.68f, 1.f), FVector4(0.62f, 0.44f, 0.44f, 1.f), Smooth);
+		PPV->Settings.bOverride_ColorContrast = true;
+		PPV->Settings.ColorContrast = FMath::Lerp(FVector4(1.16f, 1.15f, 1.18f, 1.f), FVector4(1.32f, 1.26f, 1.28f, 1.f), Smooth);
+		PPV->Settings.bOverride_ColorGamma = true;
+		PPV->Settings.ColorGamma = FMath::Lerp(FVector4(0.93f, 0.92f, 0.89f, 1.f), FVector4(0.86f, 0.81f, 0.81f, 1.f), Smooth);
+		PPV->Settings.bOverride_BloomIntensity = true;
+		PPV->Settings.BloomIntensity = FMath::Lerp(0.80f, 1.55f, Smooth);
 		PPV->Settings.bOverride_SceneFringeIntensity = true;
-		PPV->Settings.SceneFringeIntensity = 2.5f * Smooth;
+		PPV->Settings.SceneFringeIntensity = FMath::Lerp(0.35f, 3.0f, Smooth);
 		PPV->Settings.bOverride_FilmGrainIntensity = true;
-		PPV->Settings.FilmGrainIntensity = 0.35f * Smooth;
+		PPV->Settings.FilmGrainIntensity = FMath::Lerp(0.14f, 0.45f, Smooth);
 		PPV->Settings.bOverride_VignetteIntensity = true;
-		PPV->Settings.VignetteIntensity = FMath::Lerp(0.18f, 0.65f, Smooth);
+		PPV->Settings.VignetteIntensity = FMath::Lerp(0.45f, 0.82f, Smooth);
 	}
 }
