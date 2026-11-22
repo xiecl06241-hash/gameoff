@@ -46,6 +46,7 @@ public:
 	void OnMonsterWardedOff(AShiftCustomer* Customer);
 	void OnCustomerFinished(AShiftCustomer* Customer);
 	void ActivateBreakerBox();
+	bool TryPlayerPhaseShift();
 	void TriggerMicroShift();
 	bool HasActiveAnomaly() const;
 	bool HasBlockingChore() const;

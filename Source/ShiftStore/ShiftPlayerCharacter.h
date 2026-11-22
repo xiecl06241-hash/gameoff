@@ -41,6 +41,7 @@ public:
 	float Stamina = 100.f;         // 0..100 for [Shift] sprint
 	bool bIsSprinting = false;
 	float SprintRecoverDelay = 0.f;
+	float PhaseSnapFovKick = 0.f;  // 0..1 dimensional camera punch on [Q] Phase Shift
 
 protected:
 	virtual void BeginPlay() override;

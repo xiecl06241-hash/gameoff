@@ -144,12 +144,43 @@ void AShiftDirector::Collect()
 void AShiftDirector::SetShifted(bool bInShift)
 {
 	bShift = bInShift;
+	bPlayerPhaseShift = false;
+	bSnappyTransition = false;
+	PhaseBurstLeft = 0.f;
 	if (!bInShift)
 	{
 		BreakerOverrideLeft = 0.f;
 		BreakerCooldownLeft = 0.f;
+		PlayerPhaseCooldown = 0.f;
 	}
 	ClearMicroShifts();
+}
+
+void AShiftDirector::ClearPlayerPhaseShift()
+{
+	bPlayerPhaseShift = false;
+	PhaseBurstLeft = 0.f;
+	PlayerPhaseCooldown = 0.f;
+}
+
+bool AShiftDirector::TogglePlayerPhaseShift()
+{
+	if (PlayerPhaseCooldown > 0.f) { return false; }
+	if (bShift)
+	{
+		// During a monster-forced Shift, [Q] yanks the store back to Normal layout for 2.5s (slides gondolas!).
+		if (BreakerOverrideLeft > 0.f || PhaseBurstLeft > 0.f) { return false; }
+		PhaseBurstLeft = 2.5f;
+		PlayerPhaseCooldown = 7.0f;
+		bSnappyTransition = true;
+		Flicker(0.18f);
+		return true;
+	}
+	bPlayerPhaseShift = !bPlayerPhaseShift;
+	bSnappyTransition = true;
+	PlayerPhaseCooldown = 0.65f;
+	Flicker(0.12f);
+	return true;
 }
 
 bool AShiftDirector::TriggerBreakerOverride(float Duration)
@@ -188,13 +219,20 @@ void AShiftDirector::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	if (BreakerCooldownLeft > 0.f) { BreakerCooldownLeft = FMath::Max(0.f, BreakerCooldownLeft - DeltaSeconds); }
+	if (PlayerPhaseCooldown > 0.f) { PlayerPhaseCooldown = FMath::Max(0.f, PlayerPhaseCooldown - DeltaSeconds); }
 	if (BreakerOverrideLeft > 0.f)
 	{
 		BreakerOverrideLeft = FMath::Max(0.f, BreakerOverrideLeft - DeltaSeconds);
 		if (BreakerOverrideLeft == 0.f && bShift) { Flicker(0.45f); }
 	}
-	const float Target = (bShift && BreakerOverrideLeft <= 0.f) ? 1.f : 0.f;
-	CurrentAlpha = FMath::FInterpConstantTo(CurrentAlpha, Target, DeltaSeconds, Target > CurrentAlpha ? 0.8f : 0.65f);
+	if (PhaseBurstLeft > 0.f)
+	{
+		PhaseBurstLeft = FMath::Max(0.f, PhaseBurstLeft - DeltaSeconds);
+		if (PhaseBurstLeft == 0.f && bShift) { Flicker(0.22f); }
+	}
+	const float Target = IsEffectiveShifted() ? 1.f : 0.f;
+	const float Speed = (bSnappyTransition || PhaseBurstLeft > 0.f) ? 4.2f : (Target > CurrentAlpha ? 0.8f : 0.65f);
+	CurrentAlpha = FMath::FInterpConstantTo(CurrentAlpha, Target, DeltaSeconds, Speed);
 	const bool bWasFlickering = FlickerLeft > 0.f;
 	FlickerLeft = FMath::Max(0.f, FlickerLeft - DeltaSeconds);
 

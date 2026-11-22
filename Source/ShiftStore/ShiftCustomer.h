@@ -56,6 +56,7 @@ public:
 	void BeginLeaving();
 	void RevealMonster(APawn* Player);
 	void AttractToNoise(const FVector& NoiseLocation);
+	void SetOtherworldPreview(bool bShowTrueForm);
 	FVector GrabFocusLocation() const;
 	bool IsBlockedByPlayer() const { return bBlockedByPlayer; }
 	int32 CourtesyLineCount() const { return CourtesyCount; }
@@ -102,6 +103,8 @@ private:
 	float RepathTimer = 0.f;
 	float TellTimer = 3.2f;
 	float StareTriggerTime = 0.f;
+	float OtherworldPeekTime = 0.f;
+	bool bOtherworldPreviewActive = false;
 	float RevealThreshold = 13.5f;
 	TArray<FVector> StoreRoute;
 	FVector StoreRouteGoal = FVector::ZeroVector;

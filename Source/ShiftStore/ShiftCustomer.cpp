@@ -112,6 +112,8 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 	LastCourtesyTime = -100.;
 	TellTimer = 3.0f;
 	StareTriggerTime = 0.f;
+	OtherworldPeekTime = 0.f;
+	bOtherworldPreviewActive = false;
 	if (Spec.bMonster && Spec.Tell == EDisguiseTell::None)
 	{
 		if (Spec.MonsterSku == TEXT("Milk"))       { Spec.Tell = EDisguiseTell::RedGlare; }
@@ -122,6 +124,7 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 	{
 		Skel->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
 		Skel->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+		Skel->SetRelativeScale3D(FVector(1.f, 1.f, 1.f));
 	}
 	AnomalyMaskLeftEye->SetVisibility(false);
 	AnomalyMaskRightEye->SetVisibility(false);
@@ -505,6 +508,31 @@ void AShiftCustomer::AttractToNoise(const FVector& NoiseLocation)
 	StoreRoute.Empty();
 }
 
+void AShiftCustomer::SetOtherworldPreview(bool bShowTrueForm)
+{
+	if (!Spec.bMonster || IsMonsterActive() || State == ECustomerState::Leaving) { return; }
+	if (bOtherworldPreviewActive == bShowTrueForm) { return; }
+	bOtherworldPreviewActive = bShowTrueForm;
+	if (USkeletalMeshComponent* Skel = GetMesh())
+	{
+		Skel->SetRelativeScale3D(bShowTrueForm ? FVector(0.92f, 0.92f, 1.18f) : FVector(1.f, 1.f, 1.f));
+		for (UStaticMeshComponent* Eye : { AnomalyMaskLeftEye.Get(), AnomalyMaskRightEye.Get() })
+		{
+			if (!Eye) { continue; }
+			if (bShowTrueForm)
+			{
+				const bool bLeft = Eye == AnomalyMaskLeftEye.Get();
+				const bool bHead = Skel->DoesSocketExist(TEXT("head"));
+				Eye->AttachToComponent(Skel, FAttachmentTransformRules::SnapToTargetNotIncludingScale, bHead ? FName(TEXT("head")) : NAME_None);
+				Eye->SetRelativeLocation(bHead ? FVector(bLeft ? 4.f : 7.f, 12.f, bLeft ? -5.f : 5.f) : FVector(14.f, bLeft ? -6.f : 7.f, bLeft ? 162.f : 165.f));
+				Eye->SetRelativeScale3D(FVector(0.06f, 0.04f, 0.09f));
+			}
+			Eye->SetVisibility(bShowTrueForm);
+		}
+	}
+	EyeLight->SetIntensity(bShowTrueForm ? 80.f : 0.f);
+}
+
 void AShiftCustomer::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -540,6 +568,27 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 	const bool bMoving = State == ECustomerState::Entering || State == ECustomerState::Browsing
 		|| State == ECustomerState::WalkingToCheckout || State == ECustomerState::Leaving;
 	if (!bMoving) { StateTimer += DeltaSeconds; }
+
+	// Active [Q] Otherworld Flash-Peek: disguised entities reveal their terrifying true form in the Otherworld,
+	// and attack immediately if the player stares at their true form for more than 2.5 seconds!
+	if (Spec.bMonster && !IsMonsterActive() && State != ECustomerState::Leaving && GM && GM->Director)
+	{
+		const bool bPeekActive = GM->Director->IsPlayerPhaseShifted();
+		SetOtherworldPreview(bPeekActive);
+		if (bPeekActive && Player && PlayerSeesMe(Player))
+		{
+			OtherworldPeekTime += DeltaSeconds;
+			if (OtherworldPeekTime > 2.5f)
+			{
+				RevealMonster(Player);
+				return;
+			}
+		}
+		else
+		{
+			OtherworldPeekTime = FMath::Max(0.f, OtherworldPeekTime - DeltaSeconds * 0.6f);
+		}
+	}
 
 	switch (State)
 	{

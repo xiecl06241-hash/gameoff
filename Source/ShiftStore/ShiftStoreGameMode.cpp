@@ -264,13 +264,13 @@ void AShiftStoreGameMode::BuildNightCustomerRoster()
 	ActiveNightCustomers = CurrentNightSpec().Customers;
 	if (bAutomatedSession || ActiveNightCustomers.IsEmpty()) { return; }
 
-	// Night 1 gets an early disguised entity on customer #3 so the very first night has real stakes.
-	if (NightIndex == 0 && ActiveNightCustomers.Num() >= 3)
+	// Night 1 hooks judges within the first 45 seconds: customer #2 is already a disguised entity!
+	if (NightIndex == 0 && ActiveNightCustomers.Num() >= 2)
 	{
-		FShiftCustomerSpec& C3 = ActiveNightCustomers[2];
-		C3.bAsksHelp = true;
-		C3.bMonster = true;
-		C3.Line = TEXT("Excuse me... could you grab me a bag of potato chips?");
+		FShiftCustomerSpec& C2 = ActiveNightCustomers[1];
+		C2.bAsksHelp = true;
+		C2.bMonster = true;
+		C2.Line = TEXT("Excuse me... where are the noodle cups?");
 	}
 
 	// Shuffle the 3 visual tells and assign each disguised entity its matching rulebook counter-product.
@@ -289,10 +289,13 @@ void AShiftStoreGameMode::BuildNightCustomerRoster()
 		}
 	}
 
-	// Shuffle arrival order after the first customer so repeat runs cannot memorize who is a monster.
-	for (int32 i = ActiveNightCustomers.Num() - 1; i > 1; --i)
+	// Shuffle arrival order on Night 2+ so repeat runs cannot memorize who is a monster; keep Night 1's fast hook pacing.
+	if (NightIndex > 0)
 	{
-		ActiveNightCustomers.Swap(i, FMath::RandRange(1, i));
+		for (int32 i = ActiveNightCustomers.Num() - 1; i > 1; --i)
+		{
+			ActiveNightCustomers.Swap(i, FMath::RandRange(1, i));
+		}
 	}
 }
 
@@ -395,8 +398,8 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	CustomersServed = 0;
 	Sanity = ShiftData::MaxSanity;
 	CustomerSpawnCooldown = 1.5f;
-	EerieFlickerTimer = 12.f;
-	MicroShiftTimer = NightIndex == 0 ? 9.f : 14.f;
+	EerieFlickerTimer = (!bAutomatedSession && NightIndex == 0) ? 4.5f : 12.f;
+	MicroShiftTimer = (!bAutomatedSession && NightIndex == 0) ? 2.5f : 14.f;
 	MicroShiftRotation = 0;
 	HeartbeatPulseAlpha = 0.f;
 	HeartbeatTimer = 0.f;
@@ -425,9 +428,17 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	}
 
 	const FShiftNightSpec& Spec = CurrentNightSpec();
-	for (int32 SpotIdx : Spec.OpeningTasks)
+	if (!bAutomatedSession && NightIndex == 0)
 	{
-		SpawnTaskFromSpot(SpotIdx);
+		// Single quick chore right in front of the player so the first customer & anomaly arrive within 15 seconds.
+		SpawnTaskFromSpot(5);
+	}
+	else
+	{
+		for (int32 SpotIdx : Spec.OpeningTasks)
+		{
+			SpawnTaskFromSpot(SpotIdx);
+		}
 	}
 	Phase = EShiftPhase::NightIntro;
 	BannerText.Empty();
@@ -467,7 +478,14 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 	else if (Phase == EShiftPhase::NightIntro)
 	{
 		Phase = EShiftPhase::Working;
-		if (NightIndex == 0) { RequestDialogue(EShiftDialogueEvent::WorkStart); }
+		if (NightIndex == 0)
+		{
+			RequestDialogue(EShiftDialogueEvent::WorkStart);
+			if (!bAutomatedSession)
+			{
+				SetStatusBanner(TEXT("Press [Q] anytime to SHIFT between Normal & Otherworld — Peek at customers' true forms!"), 5.5f);
+			}
+		}
 		PlaySynthesizedCue(520.f, 0.18f, 0.25f);
 	}
 	else if (Phase == EShiftPhase::Dawn)
@@ -726,6 +744,32 @@ void AShiftStoreGameMode::ActivateBreakerBox()
 		C->AttractToNoise(ShiftData::BreakerLocation);
 	}
 	SetStatusBanner(TEXT("Emergency Breaker pulled! Normal lights & layout restored for 10s — The noise drew the entity toward the corridor!"), 4.5f);
+}
+
+bool AShiftStoreGameMode::TryPlayerPhaseShift()
+{
+	if (!Director || (Phase != EShiftPhase::Working && Phase != EShiftPhase::Cleanup)) { return false; }
+	if (!Director->TogglePlayerPhaseShift()) { return false; }
+	if (Director->IsPhaseBurstActive())
+	{
+		PlayExternalOrSynthesizedCue(TEXT("light_flicker.wav"), 240.f, 0.25f, 0.36f, true);
+		HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.65f);
+		if (AShiftCustomer* C = ActiveCustomer.Get(); C && C->IsMonsterActive() && C->State != ECustomerState::MonsterGrabbing)
+		{
+			C->Stun(0.75f);
+		}
+		SetStatusBanner(TEXT("PHASE SNAP! Aisles shifted back for 2.5s — Slip past the entity!"), 2.5f);
+	}
+	else if (Director->IsPlayerPhaseShifted())
+	{
+		PlaySynthesizedCue(78.f, 0.28f, 0.36f, true);
+		HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.52f);
+	}
+	else
+	{
+		PlaySynthesizedCue(520.f, 0.14f, 0.22f, false);
+	}
+	return true;
 }
 
 void AShiftStoreGameMode::OnTaskCompleted(AShiftTaskTarget* Task)
@@ -1079,8 +1123,19 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 		ModifySanity(-ShiftData::OverdueDrainPerSec * OverdueCount * DeltaSeconds);
 	}
 
-	// 2. Monster line-of-sight, grab sanity drain, and proximity heartbeat pulse
+	// 2. Monster line-of-sight, grab sanity drain, active [Q] Otherworld drain, and proximity heartbeat pulse
 	HeartbeatPulseAlpha = FMath::Max(0.f, HeartbeatPulseAlpha - DeltaSeconds * 2.2f);
+	if (Director && Director->IsPlayerPhaseShifted())
+	{
+		ModifySanity(-4.5f * DeltaSeconds);
+		HeartbeatTimer -= DeltaSeconds;
+		if (HeartbeatTimer <= 0.f)
+		{
+			HeartbeatTimer = 0.72f;
+			HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.38f);
+			if (!bAutomatedSession) { PlayHeartbeatCue(0.45f); }
+		}
+	}
 	if (AShiftCustomer* C = ActiveCustomer.Get())
 	{
 		if (C->State == ECustomerState::MonsterGrabbing)

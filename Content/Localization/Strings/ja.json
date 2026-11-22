@@ -211,5 +211,10 @@
   "You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\"": "店が完全に変わる前に、すべての偽装を見破った。\n日勤の店員がレジにメモを残した。\n「もう規則はわかったね。この店は君のものだ。」",
   "Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.": "棚の移動と停電に悩まされた三晩が終わった。\n朝日が窓を照らす。エプロンをカウンターに置き、\n朝のチャイムが鳴る前に店を出た。",
   "Disguises Warded Off: %d   |   Store Shifts Survived: %d": "偽装を見破った回数：{0}   |   店の異変回数：{1}",
-  "[! SIGNAL CORRUPTED — FIX ANOMALY !]": "[！信号異常 —— 異変を直せ！]"
+  "[! SIGNAL CORRUPTED — FIX ANOMALY !]": "[！信号異常 —— 異変を直せ！]",
+  "Press [Q] anytime to SHIFT between Normal & Otherworld — Peek at customers' true forms!": "いつでも [Q] で表・裏世界を切替 — 客の正体を覗き見ろ！",
+  "PHASE SNAP! Aisles shifted back for 2.5s — Slip past the entity!": "空間反転！2.5秒間通路が戻る — 怪異をすり抜けろ！",
+  "[Q] OTHERWORLD ACTIVE (-Sanity)": "[Q] 裏世界（正気度低下中）",
+  "[Q] Phase Shift (%ds)": "[Q] 世界切替（{0}秒）",
+  "[Q] Phase Shift": "[Q] 表・裏世界切替"
 }

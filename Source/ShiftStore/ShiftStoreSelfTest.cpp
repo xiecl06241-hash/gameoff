@@ -548,6 +548,10 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			const bool bSurvivorEnding = !IsTrueEnding();
 			TotalShiftsTriggered = ShiftsBeforeEndingTest;
 			if (!CheckSelfTest(TEXT("true_ending_condition_tracks_ward_offs"), bTrueEnding && bSurvivorEnding)) { return; }
+			const bool bPhaseEntered = TryPlayerPhaseShift() && Director->IsPlayerPhaseShifted() && Director->IsEffectiveShifted();
+			Director->ClearPlayerPhaseShift();
+			const bool bPhaseExited = !Director->IsPlayerPhaseShifted() && !Director->IsEffectiveShifted();
+			if (!CheckSelfTest(TEXT("player_phase_shift_toggle_and_clear"), bPhaseEntered && bPhaseExited)) { return; }
 			if (!CheckSelfTest(TEXT("isolated_save_written"), SaveProgress())) { return; }
 			const UShiftSaveGame* Saved = Cast<UShiftSaveGame>(UGameplayStatics::LoadGameFromSlot(ProgressSlotName(), 0));
 			if (!CheckSelfTest(TEXT("isolated_save_roundtrip"), Saved && Saved->SavedNightIndex == NightIndex && Saved->CumulativeIncome == Income && Saved->CumulativeLosses == Losses && Saved->TotalMonstersWarded == TotalMonstersWarded && Saved->TotalShiftsTriggered == TotalShiftsTriggered)) { return; }

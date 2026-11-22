@@ -351,7 +351,9 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? 435.f : BaseSpeed;
 		if (!bGrabCameraActive)
 		{
-			FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(FirstPersonCamera->FieldOfView, bIsSprinting ? 93.f : 85.f, DeltaSeconds, 10.f));
+			PhaseSnapFovKick = FMath::Max(0.f, PhaseSnapFovKick - DeltaSeconds * 4.5f);
+			const float TargetFov = (bIsSprinting ? 93.f : 85.f) + PhaseSnapFovKick * 11.f;
+			FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(FirstPersonCamera->FieldOfView, TargetFov, DeltaSeconds, 14.f));
 		}
 	}
 	else
@@ -359,11 +361,20 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		bIsSprinting = false;
 	}
 
+	// Active [Q] Dual-Reality Phase Shift
+	if (!IsGrabbed() && PC->WasInputKeyJustPressed(EKeys::Q))
+	{
+		if (GM->TryPlayerPhaseShift())
+		{
+			PhaseSnapFovKick = 1.f;
+		}
+	}
+
 	const bool bInteractDown = PC->IsInputKeyDown(EKeys::E) || PC->IsInputKeyDown(EKeys::LeftMouseButton);
 	const bool bInteractJust = bInteractDown && !bPrevInteractDown;
 	bPrevInteractDown = bInteractDown;
 
-	const bool bThrowDown = PC->IsInputKeyDown(EKeys::F) || PC->IsInputKeyDown(EKeys::RightMouseButton) || PC->IsInputKeyDown(EKeys::Q);
+	const bool bThrowDown = PC->IsInputKeyDown(EKeys::F) || PC->IsInputKeyDown(EKeys::RightMouseButton);
 	const bool bThrowJust = bThrowDown && !bPrevThrowDown;
 	bPrevThrowDown = bThrowDown;
 

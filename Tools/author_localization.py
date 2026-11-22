@@ -235,6 +235,14 @@ ENTRIES += [
     ('[! SIGNAL CORRUPTED — FIX ANOMALY !]', '[！信号异常 —— 请复位异变！]', '[！信号異常 —— 異変を直せ！]', '[！訊號異常 —— 請復位異變！]'),
 ]
 
+ENTRIES += [
+    ("Press [Q] anytime to SHIFT between Normal & Otherworld — Peek at customers' true forms!", "随时按 [Q] 切换表／里世界 —— 偷窥顾客原形，或挪动货架脱身！", "いつでも [Q] で表・裏世界を切替 — 客の正体を覗き見ろ！", "隨時按 [Q] 切換表／裡世界 —— 偷窺顧客原形，或挪動貨架脫身！"),
+    ("PHASE SNAP! Aisles shifted back for 2.5s — Slip past the entity!", "空间反切！通道恢复正常 2.5 秒 —— 趁机绕过怪物！", "空間反転！2.5秒間通路が戻る — 怪異をすり抜けろ！", "空間反切！通道恢復正常 2.5 秒 —— 趁機繞過怪物！"),
+    ("[Q] OTHERWORLD ACTIVE (-Sanity)", "[Q] 里世界生效中（理智持续流失）", "[Q] 裏世界（正気度低下中）", "[Q] 裡世界生效中（理智持續流失）"),
+    ("[Q] Phase Shift (%ds)", "[Q] 表／里切换（{0}秒）", "[Q] 世界切替（{0}秒）", "[Q] 表／裡切換（{0}秒）"),
+    ("[Q] Phase Shift", "[Q] 切换表／里世界", "[Q] 表・裏世界切替", "[Q] 切換表／裡世界"),
+]
+
 PRINTF = re.compile(r"%%|%[-+0 #]*\d*(?:\.\d+)?[sdf]")
 
 
