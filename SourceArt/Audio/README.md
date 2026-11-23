@@ -1,40 +1,53 @@
 # 音效候选素材
 
-本目录包含 Sound.zip 中的 25 个原始音频和已清理旧条目的来源清单。音频内容保持原样，解压后逐个核对音频 SHA-256 与压缩包内文件一致。
+本目录同步自提交者更新后的 Sound 文件夹，包含 24 个音频，供试听和游戏接入。音频逐一与本次提供的文件核对 SHA-256 一致，通过 Git LFS 存储。素材尚未接入 UE，未进行游戏内测试。
 
-这些素材供试听和审核，尚未接入 UE 工程，也未进行游戏内测试。WAV、MP3、M4A 使用 Git LFS 存储。
+## 本次审核修正
 
-## 授权说明
+- 已从分支最新版本实际删除 `盒子掉落（包含两次）.wav`，该文件对应 Freesound 366788。此前仅删除来源记录的处理不完整，本次同时修正文件和说明。
+- `盒子掉落可商用.wav` 对应 oscaraudiogeek 的 Boxes Fall on Wood Surface（762533），已核实详情页为 CC0 1.0。
+- `替换和弦可商用需署名Daniel_Brooks.mp3` 对应 Daniel_Brooks 的 Dark Horror Soundscape（876810），已核实详情页为 CC BY 4.0。
+- 本表为全部 24 个本地音频提供准确文件名、作者、来源和许可对应关系，依据提交者更新后的清单整理。
 
-- 提交者确认已移除来源编号 366788 和 680983 对应的旧音频，本次同步删除清单中遗留的两条来源记录。
-- 435289（zazz.sound.design，cloth-rustle-3.wav）已通过正确作者页面核实为 CC0 1.0。
-- CC BY 素材应按来源页面要求署名，发行时整理中文文件名与来源的对应关系。
+## 文件与来源对应表
 
-## 来源页面和许可证记录
+CC0 允许商业使用，无署名要求。CC BY 4.0 允许商业使用，需要保留作品名、作者、来源、许可证链接，并说明修改情况。下表中的对应关系由提交者清单提供，762533、876810 及 435289 的许可证另经详情页核实。
 
-以下记录于 2026-11-23，根据压缩包原始清单中的作者和素材编号构造稳定页面链接，并读取对应页面的许可证链接。表格用于审核，素材与本地文件的对应关系尚待确认。
-
-| Freesound 编号 | 作者 | 原始文件名 | 页面许可证 | 来源页面 |
+| 本地文件 | 作品名 | 作者 | 许可证 | 来源页面 |
 | --- | --- | --- | --- | --- |
-| 570725 | infinita08 | horror-texture5.mp3 | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/infinita08/sounds/570725/ |
-| 879917 | woodbetweenstudio | heartbeat-tense.wav | https://creativecommons.org/licenses/by/4.0/ | https://freesound.org/people/woodbetweenstudio/sounds/879917/ |
-| 865357 | valerie-vivegnis | 2607.wav | https://creativecommons.org/licenses/by/4.0/ | https://freesound.org/people/valerie-vivegnis/sounds/865357/ |
-| 877970 | qvantor | wind-howling-synthesized.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/qvantor/sounds/877970/ |
-| 878574 | artninja | creature_or_zombie_footstep_02_11032026.wav | https://creativecommons.org/licenses/by/4.0/ | https://freesound.org/people/artninja/sounds/878574/ |
-| 879541 | cat-fox_alex | horror-ui-interaction-1.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/cat-fox_alex/sounds/879541/ |
-| 879770 | enclosurex_studios | roboticscream.wav | https://creativecommons.org/licenses/by/4.0/ | https://freesound.org/people/enclosurex_studios/sounds/879770/ |
-| 879834 | jivynaylitse | the_pain_scream_woman.m4a | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/jivynaylitse/sounds/879834/ |
-| 840340 | imp_sounds | horror-scary-background-music.mp3 | https://creativecommons.org/licenses/by/4.0/ | https://freesound.org/people/imp_sounds/sounds/840340/ |
-| 817894 | daftrio | demonic-noise-succeded-by-tv-static.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/daftrio/sounds/817894/ |
-| 878310 | qvantor | 8-bit-item-pickup.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/qvantor/sounds/878310/ |
-| 879804 | qvantor | shop-door-chime.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/qvantor/sounds/879804/ |
-| 851596 | adamk201 | various-footsteps.mp3 | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/adamk201/sounds/851596/ |
-| 726273 | monosfera | zed_wipe_013.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/monosfera/sounds/726273/ |
-| 505835 | jedg | wipe-feet-on-doormat.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/jedg/sounds/505835/ |
-| 522299 | defelozedd94 | crickets-at-night-raw-sound.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/defelozedd94/sounds/522299/ |
-| 15419 | pagancow | dorm-door-opening.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/pagancow/sounds/15419/ |
-| 193818 | geoneo0 | four_voices_whispering_6_wecho.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/geoneo0/sounds/193818/ |
-| 683101 | florianreichelt | quick-woosh.mp3 | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/florianreichelt/sounds/683101/ |
-| 586423 | muy2149972 | boil-water.m4a | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/muy2149972/sounds/586423/ |
-| 521149 | maaaks | boilingandstiring.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/maaaks/sounds/521149/ |
-| 435289 | zazz.sound.design | cloth-rustle-3.wav | http://creativecommons.org/publicdomain/zero/1.0/ | https://freesound.org/people/zazz.sound.design/sounds/435289/ |
+| `一阵诡异音效.mp3` | Horror Texture5 | Infinita08 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/570725/ |
+| `心跳-需加强.wav` | Heartbeat Tense | Woodbetweenstudio | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/879917/ |
+| `轻轻的呻吟声加心跳声.wav` | Ghostly Vocal Pad + Heartbeat | Valerie-Vivegnis | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/865357/ |
+| `风呼啸声.wav` | Wind Howling Synthesized | Qvantor | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/877970/ |
+| `奇怪的脚步声.wav` | Creature or Zombie Footstep | Artninja | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/878574/ |
+| `突然的尖叫.wav` | Horror UI Interaction 1 | Cat-Fox_Alex | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/879541/ |
+| `鬼咆哮声.wav` | RoboticScream | EnclosureX_Studios | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/879770/ |
+| `女人尖叫声.m4a` | The Pain Scream Woman | JivyNaYlitse | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/879834/ |
+| `诡异背景音.mp3` | Horror Scary Background Music | Imp_sounds | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/840340/ |
+| `诡异音效_突然出现.wav` | Demonic Noise / TV Static | Daftrio | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/817894/ |
+| `物品获取.wav` | 8-bit Item Pickup | Qvantor | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/878310/ |
+| `门铃-顾客进入.wav` | Shop Door Chime | Qvantor | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/879804/ |
+| `脚步声.wav` | Various Footsteps | AdamK201 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/851596/ |
+| `盒子掉落可商用.wav` | Boxes Fall on Wood Surface | oscaraudiogeek | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/762533/ |
+| `擦拭.wav` | ZED Wipe 013 | monosfera | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/726273/ |
+| `拖地.wav` | Wipe Feet on Doormat | jedg | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/505835/ |
+| `夜间环境音.wav` | Crickets at Night | defelozedd94 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/522299/ |
+| `开门.wav` | Dorm Door Opening | pagancow | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/15419/ |
+| `诡异低语.wav` | Four Voices Whispering | geoneo0 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/193818/ |
+| `替换和弦可商用需署名Daniel_Brooks.mp3` | Dark Horror Soundscape | Daniel_Brooks | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/876810/ |
+| `丢东西.mp3` | Quick Woosh | florianreichelt | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/683101/ |
+| `烧水.m4a` | Boil Water | muy2149972 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/586423/ |
+| `咕噜噜沸腾.wav` | Boiling and Stirring | maaaks | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/521149/ |
+| `整理时布料沙沙作响.wav` | Cloth Rustle 3 | zazz.sound.design | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/435289/ |
+
+## 署名与修改说明
+
+本次未进行音频剪辑或处理，保留提供文件的字节内容。详细署名信息见同目录的 `音频许可list.txt`。
+
+Daniel_Brooks 素材可使用如下署名。
+
+> Dark Horror Soundscape — Daniel_Brooks. https://freesound.org/people/Daniel_Brooks/sounds/876810/ . Licensed under CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ . 本次提交未修改音频内容。
+
+840340 的额外来源署名按提交者清单保留为 Gustavo_Alivera（https://freesound.org/s/736609/）及 klankbeeld（https://freesound.org/s/239097/）。
+
+后续接入游戏时如有裁剪、变调或其他处理，请相应更新修改记录，并在发行版署名中保留 CC BY 信息。

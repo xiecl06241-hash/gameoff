@@ -1,3 +1,67 @@
+中文名称	原始名称	Freesound编号	作者	许可证	来源网址
+一阵诡异音效.mp3	Horror Texture5	570725	Infinita08	CC0	https://freesound.org/s/570725/
+心跳-需加强.wav	Heartbeat Tense	879917	Woodbetweenstudio	CC BY 4.0	https://freesound.org/s/879917/
+轻轻的呻吟声加心跳-需加强.wav	Ghostly Vocal Pad + Heartbeat	865357	Valerie-Vivegnis	CC BY 4.0	https://freesound.org/s/865357/
+风呼啸声.wav	Wind Howling Synthesized	877970	Qvantor	CC0	https://freesound.org/s/877970/
+奇怪的脚步声.wav	Creature or Zombie Footstep	878574	Artninja	CC BY 4.0	https://freesound.org/s/878574/
+突然的尖叫.wav	Horror UI Interaction 1	879541	Cat-Fox_Alex	CC0	https://freesound.org/s/879541/
+鬼咆哮声.wav	RoboticScream	879770	EnclosureX_Studios	CC BY 4.0	https://freesound.org/s/879770/
+女人尖叫声.m4a	The Pain Scream Woman	879834	JivyNaYlitse	CC0	https://freesound.org/s/879834/
+诡异背景音.mp3	Horror Scary Background Music	840340	Imp_sounds	CC BY 4.0	https://freesound.org/s/840340/
+诡异音效_突然出现.wav	Demonic Noise / TV Static	817894	Daftrio	CC0	https://freesound.org/s/817894/
+物品获取.wav	8-bit Item Pickup	878310	Qvantor	CC0	https://freesound.org/s/878310/
+门铃-顾客进入.wav	Shop Door Chime	879804	Qvantor	CC0	https://freesound.org/s/879804/
+脚步声.wav	Various Footsteps	851596	AdamK201	CC0	https://freesound.org/s/851596/
+盒子掉落可商用.wav	Boxes Fall on Wood Surface	762533	oscaraudiogeek	CC0	https://freesound.org/s/762533/
+擦拭.wav	ZED Wipe 013	726273	monosfera	CC0	https://freesound.org/s/726273/
+拖地.wav	Wipe Feet on Doormat	505835	jedg	CC0	https://freesound.org/s/505835/
+夜间环境音.wav	Crickets at Night	522299	defelozedd94	CC0	https://freesound.org/s/522299/
+开门.wav	Dorm Door Opening	15419	pagancow	CC0	https://freesound.org/s/15419/
+诡异低语.wav	Four Voices Whispering	193818	geoneo0	CC0	https://freesound.org/s/193818/
+替换和弦可商用需署名Daniel_Brooks.mp3	Dark Horror Soundscape	876810	Daniel_Brooks	CC BY 4.0	https://freesound.org/s/876810/
+丢东西.mp3	Quick Woosh	683101	florianreichelt	CC0	https://freesound.org/s/683101/
+烧水.m4a	Boil Water	586423	muy2149972	CC0	https://freesound.org/s/586423/
+咕噜噜沸腾.wav	Boiling and Stirring	521149	maaaks	CC0	https://freesound.org/s/521149/
+整理时布料沙沙作响.wav	Cloth Rustle 3	435289	zazz.sound.design	CC0	https://freesound.org/s/435289/
+
+
+
+需署名：
+
+Audio Credits
+
+The following sounds are licensed under CC BY 4.0:
+
+"Heartbeat Tense" by Woodbetweenstudio
+Source: https://freesound.org/s/879917/
+
+"Ghostly Vocal Pad + Heartbeat" by Valerie-Vivegnis
+Source: https://freesound.org/s/865357/
+
+"Creature or Zombie Footstep" by Artninja
+Source: https://freesound.org/s/878574/
+
+"RoboticScream" by EnclosureX_Studios
+Source: https://freesound.org/s/879770/
+
+"Horror Scary Background Music" by Imp_sounds
+Source: https://freesound.org/s/840340/
+
+"Dark Horror Soundscape" by Daniel_Brooks
+Source: https://freesound.org/s/876810/
+
+License: https://creativecommons.org/licenses/by/4.0/
+
+Additional credits for sound 840340:
+Gustavo_Alivera — https://freesound.org/s/736609/
+klankbeeld — https://freesound.org/s/239097/
+
+本次提交对音频的修改：保留提交者提供的音频字节，仅整理本地文件名与来源对应关系。本次未进行剪辑、变调或其他音频处理。
+
+
+
+
+
 https://cdn.freesound.org/sounds/570/570725.mp3?md5=zNQ0JrEWh8DzJMpS7eLcjQ&expires=1794829080&filename=570725__infinita08__horror-texture5.mp3
 
 https://cdn.freesound.org/sounds/879/879917.wav?md5=QBcVrteu_L3YCOAcb-al4g&expires=1794829043&filename=879917__woodbetweenstudio__heartbeat-tense.wav
@@ -31,7 +95,6 @@ https://cdn.freesound.org/sounds/879/879804.wav?md5=KAQnan-NQAb85yc7b2x-vw&expir
 https://cdn.freesound.org/sounds/851/851596.mp3?md5=j-53IXT604OkazzH-FyPPA&expires=1795232695&filename=851596__adamk201__various-footsteps.mp3
 
 
-
 https://cdn.freesound.org/sounds/726/726273.wav?md5=LmKbBe9cGTXKgWUEQrsj9A&expires=1795273205&filename=726273__monosfera__zed_wipe_013.wav
 
 https://cdn.freesound.org/sounds/505/505835.wav?md5=MN1E5Gxq67it9KR6ofPZAg&expires=1795273228&filename=505835__jedg__wipe-feet-on-doormat.wav
@@ -53,4 +116,13 @@ https://cdn.freesound.org/sounds/521/521149.wav?md5=Cp1x0j2WDl5dex9FJIYOHQ&expir
 
 https://cdn.freesound.org/sounds/435/435289.wav?md5=-CZKSzh-NBSPnwXoBksrcQ&expires=1795273685&filename=435289__zazzsounddesign__cloth-rustle-3.wav
 
-https://freesound.org/people/zazz.sound.design/sounds/435289/
+
+https://freesound.org/people/Daniel_Brooks/sounds/876810/
+
+https://freesound.org/people/oscaraudiogeek/sounds/762533/
+
+
+来源详情页与许可补充
+盒子掉落可商用.wav | oscaraudiogeek | CC0 1.0 | https://freesound.org/people/oscaraudiogeek/sounds/762533/ | https://creativecommons.org/publicdomain/zero/1.0/
+替换和弦可商用需署名Daniel_Brooks.mp3 | Daniel_Brooks | CC BY 4.0 | https://freesound.org/people/Daniel_Brooks/sounds/876810/ | https://creativecommons.org/licenses/by/4.0/
+整理时布料沙沙作响.wav | zazz.sound.design | CC0 1.0 | https://freesound.org/people/zazz.sound.design/sounds/435289/
