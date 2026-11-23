@@ -26,13 +26,31 @@ const FString AShiftStoreGameMode::PlayerSaveSlotName(TEXT("ShiftStoreSlot"));
 
 namespace
 {
+struct FCachedPcm
+{
+	int64 FileSize = 0;
+	int32 Rate = 0;
+	int32 Channels = 0;
+	TArray<uint8> Pcm;
+};
+
 USoundWaveProcedural* LoadPcmCue(UObject* Outer, const FString& FileName)
 {
 	if (FPaths::GetCleanFilename(FileName) != FileName || !FileName.EndsWith(TEXT(".wav"))) { return nullptr; }
-	TArray<uint8> Bytes;
 	const FString Path = FPaths::ProjectContentDir() / TEXT("Localization/Audio") / FileName;
 	const int64 FileSize = IFileManager::Get().FileSize(*Path);
 	if (FileSize < 12 || FileSize > 64 * 1024 * 1024) { return nullptr; }
+	static TMap<FString, FCachedPcm> Cache;
+	if (const FCachedPcm* Hit = Cache.Find(FileName); Hit && Hit->FileSize == FileSize)
+	{
+		USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(Outer);
+		Wave->SetSampleRate(Hit->Rate);
+		Wave->NumChannels = Hit->Channels;
+		Wave->Duration = float(Hit->Pcm.Num()) / (Hit->Rate * Hit->Channels * 2);
+		Wave->QueueAudio(Hit->Pcm.GetData(), Hit->Pcm.Num());
+		return Wave;
+	}
+	TArray<uint8> Bytes;
 	if (!FFileHelper::LoadFileToArray(Bytes, *Path) || Bytes.Num() < 12 || Bytes.Num() > 64 * 1024 * 1024) { return nullptr; }
 	const auto Read16 = [&Bytes](int32 At) { return uint16(Bytes[At]) | (uint16(Bytes[At + 1]) << 8); };
 	const auto Read32 = [&Bytes](int32 At) { return uint32(Bytes[At]) | (uint32(Bytes[At + 1]) << 8) | (uint32(Bytes[At + 2]) << 16) | (uint32(Bytes[At + 3]) << 24); };
@@ -66,11 +84,18 @@ USoundWaveProcedural* LoadPcmCue(UObject* Outer, const FString& FileName)
 		Cursor = Next + (Size & 1);
 	}
 	if (!Rate || !DataSize || DataSize % BlockAlign) { return nullptr; }
+	FCachedPcm Entry;
+	Entry.FileSize = FileSize;
+	Entry.Rate = Rate;
+	Entry.Channels = Channels;
+	Entry.Pcm.Append(Bytes.GetData() + DataOffset, DataSize);
+	Cache.Add(FileName, MoveTemp(Entry));
+	const FCachedPcm& Stored = Cache[FileName];
 	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(Outer);
-	Wave->SetSampleRate(Rate);
-	Wave->NumChannels = Channels;
-	Wave->Duration = float(DataSize) / (Rate * BlockAlign);
-	Wave->QueueAudio(Bytes.GetData() + DataOffset, DataSize);
+	Wave->SetSampleRate(Stored.Rate);
+	Wave->NumChannels = Stored.Channels;
+	Wave->Duration = float(Stored.Pcm.Num()) / (Stored.Rate * BlockAlign);
+	Wave->QueueAudio(Stored.Pcm.GetData(), Stored.Pcm.Num());
 	return Wave;
 }
 }
@@ -235,8 +260,27 @@ void AShiftStoreGameMode::SetupProceduralAudio()
 	FridgeHumComp = UGameplayStatics::SpawnSoundAtLocation(this, HumWave, FridgePos, FRotator::ZeroRotator, 0.45f, 1.f, 0.f);
 }
 
-void AShiftStoreGameMode::PlayHeartbeatCue(float Tension)
+void AShiftStoreGameMode::PlayFootstepCue(const FVector* OptionalWorldLocation, float Volume)
 {
+	if (bAutomatedSession) { return; }
+	const int32 Index = FMath::RandRange(1, 6);
+	const FString Name = FString::Printf(TEXT("footstep_%02d.wav"), Index);
+	if (USoundWaveProcedural* Wave = LoadPcmCue(this, Name))
+	{
+		if (OptionalWorldLocation) { UGameplayStatics::PlaySoundAtLocation(this, Wave, *OptionalWorldLocation, Volume); }
+		else { UGameplayStatics::PlaySound2D(this, Wave, Volume); }
+	}
+}
+
+void AShiftStoreGameMode::PlayHeartbeatCue(float Tension, bool bReverb)
+{
+	const float Vol = FMath::Lerp(0.24f, 0.58f, FMath::Clamp(Tension, 0.f, 1.f));
+	const FString Wav = bReverb ? TEXT("heartbeat_reverb.wav") : (Tension > 0.65f ? TEXT("heartbeat_fast.wav") : TEXT("heartbeat.wav"));
+	if (USoundWaveProcedural* Wave = LoadPcmCue(this, Wav))
+	{
+		UGameplayStatics::PlaySound2D(this, Wave, Vol);
+		return;
+	}
 	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(this);
 	Wave->SetSampleRate(22050);
 	Wave->NumChannels = 1;
@@ -244,7 +288,6 @@ void AShiftStoreGameMode::PlayHeartbeatCue(float Tension)
 	const int32 Samples = FMath::RoundToInt(22050.f * 0.28f);
 	TArray<int16> Pcm;
 	Pcm.SetNumUninitialized(Samples);
-	const float Vol = FMath::Lerp(0.18f, 0.46f, FMath::Clamp(Tension, 0.f, 1.f));
 	for (int32 i = 0; i < Samples; ++i)
 	{
 		const float T = static_cast<float>(i) / 22050.f;
@@ -786,7 +829,7 @@ void AShiftStoreGameMode::OnTaskCompleted(AShiftTaskTarget* Task)
 
 	// Sanity recovery: overdue tasks stop draining and partially recover; on-time tasks give a small boost
 	ModifySanity(bWasOverdue ? ShiftData::OverdueRecover : ShiftData::OnTimeRecover);
-	PlaySynthesizedCue(660.f, 0.14f, 0.22f);
+	PlayExternalOrSynthesizedCue(TEXT("cloth_rustle.wav"), 660.f, 0.14f, 0.30f);
 
 	if (Phase == EShiftPhase::Cleanup && ActiveTasks.Num() == 0)
 	{
@@ -826,7 +869,8 @@ void AShiftStoreGameMode::TrySpawnNextCustomer()
 	{
 		Cust->Init(CSpec);
 		ActiveCustomer = Cust;
-		PlayExternalOrSynthesizedCue(TEXT("door_chime.wav"), 740.f, 0.22f, 0.25f); // Door chime
+		PlayExternalOrSynthesizedCue(TEXT("door_chime.wav"), 740.f, 0.22f, 0.35f); // Door chime
+		PlayExternalOrSynthesizedCue(TEXT("door_open.wav"), 200.f, 0.12f, 0.32f, false, &ShiftData::InsideDoor);
 		SetStatusBanner(TEXT("Door chime: A customer has entered the store. Prioritize customer service!"), 3.5f);
 	}
 }
@@ -1131,9 +1175,9 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 		HeartbeatTimer -= DeltaSeconds;
 		if (HeartbeatTimer <= 0.f)
 		{
-			HeartbeatTimer = 0.72f;
-			HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.38f);
-			if (!bAutomatedSession) { PlayHeartbeatCue(0.45f); }
+			HeartbeatTimer = 1.75f;
+			HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.42f);
+			if (!bAutomatedSession) { PlayHeartbeatCue(0.45f, true); }
 		}
 	}
 	if (AShiftCustomer* C = ActiveCustomer.Get())
@@ -1157,9 +1201,9 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 				HeartbeatTimer -= DeltaSeconds;
 				if (HeartbeatTimer <= 0.f)
 				{
-					HeartbeatTimer = FMath::Lerp(0.92f, 0.36f, Tension);
+					HeartbeatTimer = Tension > 0.65f ? 1.15f : 1.75f;
 					HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, FMath::Lerp(0.25f, 0.85f, Tension));
-					if (!bAutomatedSession) { PlayHeartbeatCue(Tension); }
+					if (!bAutomatedSession) { PlayHeartbeatCue(Tension, false); }
 				}
 			}
 		}

@@ -147,6 +147,10 @@ void AShiftPlayerCharacter::PickupItem(AShiftItem* Item)
 	// The full-size stock carton must sit below the view so the clerk can still follow aisle markers.
 	Item->SetActorRelativeLocation(Item->Kind == EShiftItemKind::Carton ? FVector(38.f, 5.f, -45.f) : FVector::ZeroVector);
 	Item->SetActorRelativeRotation(FRotator(0.f, -20.f, 0.f));
+	if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>(); GM && !GM->IsAutomatedSession())
+	{
+		GM->PlayExternalOrSynthesizedCue(TEXT("cloth_rustle.wav"), 320.f, 0.08f, 0.30f);
+	}
 }
 
 FVector AShiftPlayerCharacter::ReleaseLocation(const AShiftItem& Item) const
@@ -177,6 +181,10 @@ void AShiftPlayerCharacter::DropHeldItem()
 		Item->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		Item->SetActorLocation(ReleaseLocation(*Item));
 		Item->SetHeld(false);
+		if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>(); GM && !GM->IsAutomatedSession())
+		{
+			GM->PlayExternalOrSynthesizedCue(TEXT("item_drop.wav"), 180.f, 0.09f, 0.40f);
+		}
 	}
 }
 
@@ -349,6 +357,19 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		}
 		const float BaseSpeed = GM->IsAutomatedSession() ? 260.f : 285.f;
 		GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? 435.f : BaseSpeed;
+		if (GetVelocity().Size2D() > 75.f)
+		{
+			FootstepTimer -= DeltaSeconds;
+			if (FootstepTimer <= 0.f)
+			{
+				FootstepTimer = bIsSprinting ? 0.30f : 0.46f;
+				GM->PlayFootstepCue(nullptr, bIsSprinting ? 0.36f : 0.20f);
+			}
+		}
+		else
+		{
+			FootstepTimer = FMath::Min(FootstepTimer, 0.12f);
+		}
 		if (!bGrabCameraActive)
 		{
 			PhaseSnapFovKick = FMath::Max(0.f, PhaseSnapFovKick - DeltaSeconds * 4.5f);

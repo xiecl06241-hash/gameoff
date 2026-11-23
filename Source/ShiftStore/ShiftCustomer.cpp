@@ -569,6 +569,23 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 		|| State == ECustomerState::WalkingToCheckout || State == ECustomerState::Leaving;
 	if (!bMoving) { StateTimer += DeltaSeconds; }
 
+	// 3D spatial footsteps for walking customers & stalking/hunting monsters (floating ghosts remain eerily silent!)
+	const bool bFloatingSilent = Spec.bMonster && Spec.Tell == EDisguiseTell::Floating && !IsMonsterActive();
+	if (GM && !bFloatingSilent && GetVelocity().Size2D() > 45.f)
+	{
+		FootstepTimer -= DeltaSeconds;
+		if (FootstepTimer <= 0.f)
+		{
+			FootstepTimer = IsMonsterActive() ? 0.32f : 0.48f;
+			const FVector FootLoc = GetActorLocation() - FVector(0.f, 0.f, 75.f);
+			GM->PlayFootstepCue(&FootLoc, IsMonsterActive() ? 0.80f : 0.34f);
+		}
+	}
+	else
+	{
+		FootstepTimer = FMath::Min(FootstepTimer, 0.12f);
+	}
+
 	// Active [Q] Otherworld Flash-Peek: disguised entities reveal their terrifying true form in the Otherworld,
 	// and attack immediately if the player stares at their true form for more than 2.5 seconds!
 	if (Spec.bMonster && !IsMonsterActive() && State != ECustomerState::Leaving && GM && GM->Director)

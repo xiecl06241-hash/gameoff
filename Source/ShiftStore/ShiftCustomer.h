@@ -102,6 +102,7 @@ private:
 	int32 PatrolIdx = 0;
 	float RepathTimer = 0.f;
 	float TellTimer = 3.2f;
+	float FootstepTimer = 0.f;
 	float StareTriggerTime = 0.f;
 	float OtherworldPeekTime = 0.f;
 	bool bOtherworldPreviewActive = false;

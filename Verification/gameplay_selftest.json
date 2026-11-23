@@ -72,6 +72,7 @@
     "micro_shift_reset_restores_scene": true,
     "disguised_monster_warded_off_before_shift": true,
     "audio_fallback_safe_when_wav_missing": true,
+    "bundled_wav_cue_loads_and_plays": true,
     "true_ending_condition_tracks_ward_offs": true,
     "player_phase_shift_toggle_and_clear": true,
     "isolated_save_written": true,
@@ -79,7 +80,7 @@
     "formal_save_unchanged": true,
     "test_slot_cleaned": true
   },
-  "test_save_slot": "ShiftStoreSelfTest_5C9EE6EA404817119FF9D19B5408E755",
+  "test_save_slot": "ShiftStoreSelfTest_E5289A4C4632984AB1C388BD73E13DCC",
   "failure": "",
   "elapsed_world_seconds": 16.399921417236328,
   "normal_customer_exit_seconds": 3.849997043609619,

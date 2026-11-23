@@ -42,6 +42,7 @@ public:
 	bool bIsSprinting = false;
 	float SprintRecoverDelay = 0.f;
 	float PhaseSnapFovKick = 0.f;  // 0..1 dimensional camera punch on [Q] Phase Shift
+	float FootstepTimer = 0.f;
 
 protected:
 	virtual void BeginPlay() override;

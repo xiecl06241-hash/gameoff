@@ -52,7 +52,8 @@ public:
 	bool HasBlockingChore() const;
 	bool IsAutomatedSession() const { return bAutomatedSession; }
 	void PlayPositionalAnomalyPulse(const FVector& Location);
-	void PlayHeartbeatCue(float Tension);
+	void PlayFootstepCue(const FVector* OptionalWorldLocation = nullptr, float Volume = 0.35f);
+	void PlayHeartbeatCue(float Tension, bool bReverb = false);
 	bool PlayExternalOrSynthesizedCue(const FString& WavFileName, float FallbackFreqHz, float FallbackDurationSec, float Volume = 0.28f, bool bFallbackNoise = false, const FVector* OptionalWorldLocation = nullptr);
 	int32 TotalMonstersWarded = 0;
 	int32 TotalShiftsTriggered = 0;

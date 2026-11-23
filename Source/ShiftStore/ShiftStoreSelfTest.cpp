@@ -541,6 +541,7 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			bAudioSafe &= !PlayExternalOrSynthesizedCue(AudioName, 440.f, 0.05f, 0.1f);
 			bAudioSafe &= IFileManager::Get().Delete(*AudioPath);
 			if (!CheckSelfTest(TEXT("audio_fallback_safe_when_wav_missing"), bAudioSafe)) { return; }
+			if (!CheckSelfTest(TEXT("bundled_wav_cue_loads_and_plays"), PlayExternalOrSynthesizedCue(TEXT("door_chime.wav"), 740.f, 0.22f, 0.05f))) { return; }
 			const int32 ShiftsBeforeEndingTest = TotalShiftsTriggered;
 			TotalShiftsTriggered = 0;
 			const bool bTrueEnding = TotalMonstersWarded > 0 && IsTrueEnding();
