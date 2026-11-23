@@ -11,11 +11,21 @@
 #include "Components/TextRenderComponent.h"
 #include "Components/RectLightComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/DecalComponent.h"
+#include "Engine/Texture2D.h"
 #include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "UObject/ConstructorHelpers.h"
 
 AShiftDirector::AShiftDirector()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> WallMat(TEXT("/Game/ShiftStore/Materials/M_OtherworldWall.M_OtherworldWall"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> FloorMat(TEXT("/Game/ShiftStore/Materials/M_OtherworldFloor.M_OtherworldFloor"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> CeilMat(TEXT("/Game/ShiftStore/Materials/M_OtherworldCeiling.M_OtherworldCeiling"));
+	if (WallMat.Succeeded()) { OtherworldWallMat = WallMat.Object; }
+	if (FloorMat.Succeeded()) { OtherworldFloorMat = FloorMat.Object; }
+	if (CeilMat.Succeeded()) { OtherworldCeilingMat = CeilMat.Object; }
 }
 
 FVector AShiftDirector::OffsetFor(const FVector& P)
@@ -44,11 +54,13 @@ void AShiftDirector::Collect()
 		AActor* A = *It;
 		if (A == this || A->ActorHasTag(TEXT("Shift.Item"))) { continue; }
 
-		// Repeated display stock: move individual instances that sit on a moving gondola.
+		// Repeated display stock: move individual instances that sit on a moving gondola,
+		// and hide modern store merchandise when shifting into the ancient Chinese ancestral hall Otherworld.
 		TArray<UInstancedStaticMeshComponent*> Instanced;
 		A->GetComponents(Instanced);
 		for (UInstancedStaticMeshComponent* ISM : Instanced)
 		{
+			NormalOnlyISMs.Add(ISM);
 			bool bMadeMovable = false;
 			for (int32 i = 0; i < ISM->GetInstanceCount(); ++i)
 			{
@@ -76,6 +88,38 @@ void AShiftDirector::Collect()
 				C->SetMobility(EComponentMobility::Movable);
 				WelcomeSign = C;
 			}
+			// Collect architectural shell for material swap vs modern convenience-store fixtures to hide in Otherworld!
+			const FString AName = A->GetName();
+			const bool bIsModernFixture =
+				AName.Contains(TEXT("Gondola_")) || AName.Contains(TEXT("WallShelf"))
+				|| AName.Contains(TEXT("FloorBrand")) || AName.Contains(TEXT("FloorCarton"))
+				|| AName.Contains(TEXT("Fridge")) || AName.Contains(TEXT("Drinks"))
+				|| AName.Contains(TEXT("Counter")) || AName.Contains(TEXT("Register"))
+				|| AName.Contains(TEXT("Scanner")) || AName.Contains(TEXT("Oden"))
+				|| AName.Contains(TEXT("Checkout")) || AName.Contains(TEXT("Coffee"))
+				|| AName.Contains(TEXT("HotCase")) || AName.Contains(TEXT("Display"))
+				|| AName.Contains(TEXT("Aisle")) || AName.Contains(TEXT("PriceTag"))
+				|| AName.Contains(TEXT("Shelf")) || AName.Contains(TEXT("Bin"))
+				|| AName.Contains(TEXT("Poster")) || AName.Contains(TEXT("Banner"));
+
+			if (bIsModernFixture && (!SM || SM != WelcomeMesh) && (!SM || SM != FixtureMesh))
+			{
+				NormalOnlyActors.Add(A);
+			}
+			else if (C)
+			{
+				UMaterialInterface* ShiftMat = nullptr;
+				if (AName.Contains(TEXT("Floor_")) && OtherworldFloorMat) { ShiftMat = OtherworldFloorMat; }
+				else if ((AName.Contains(TEXT("Ceiling_")) || AName.Contains(TEXT("CeilingRail"))) && OtherworldCeilingMat) { ShiftMat = OtherworldCeilingMat; }
+				else if ((AName.Contains(TEXT("SideWall")) || AName.Contains(TEXT("RearWall")) || AName.Contains(TEXT("WindowMullion"))) && OtherworldWallMat) { ShiftMat = OtherworldWallMat; }
+				if (ShiftMat)
+				{
+					for (int32 Slot = 0; Slot < C->GetNumMaterials(); ++Slot)
+					{
+						SwappedSurfaces.Add({ C, Slot, C->GetMaterial(Slot), ShiftMat });
+					}
+				}
+			}
 		}
 		if (APostProcessVolume* PPV = Cast<APostProcessVolume>(A)) { PostProcess = PPV; }
 
@@ -85,12 +129,11 @@ void AShiftDirector::Collect()
 		{
 			const FVector P = L->GetComponentLocation();
 			const bool bMain = P.Y < 1050.f;          // sales floor main lights
-			// Moody 2:30 AM convenience store: dimmer rear corners, sickly vintage fluorescent warmth
-			const float CornerDim = (bMain && (P.Y > 750.f || P.X < 450.f)) ? 0.56f : 0.72f;
-			const float NormalInt = bMain ? (L->Intensity * CornerDim) : (L->Intensity * 0.55f);
-			const float ShiftInt = bMain ? 22.f : 65.f;
-			const FLinearColor NormCol = bMain ? FLinearColor(0.92f, 0.86f, 0.72f, 1.f) : FLinearColor(0.76f, 0.80f, 0.70f, 1.f);
-			const FLinearColor ShiftCol = bMain ? FLinearColor(0.65f, 0.14f, 0.12f, 1.f) : FLinearColor(0.85f, 0.12f, 0.10f, 1.f);
+			// Crisp, bright, clean modern 24h convenience store in Normal -> eerie ghostly cyan-green dim light in Otherworld!
+			const float NormalInt = bMain ? (L->Intensity * 0.96f) : (L->Intensity * 0.72f);
+			const float ShiftInt = bMain ? 72.f : 88.f;
+			const FLinearColor NormCol = bMain ? FLinearColor(0.96f, 0.97f, 0.99f, 1.f) : FLinearColor(0.90f, 0.92f, 0.88f, 1.f);
+			const FLinearColor ShiftCol = bMain ? FLinearColor(0.12f, 0.72f, 0.44f, 1.f) : FLinearColor(0.55f, 0.52f, 0.12f, 1.f);
 			Lights.Add({ L, NormalInt, ShiftInt, NormCol, ShiftCol });
 		}
 
@@ -137,8 +180,303 @@ void AShiftDirector::Collect()
 		HorrorFog->SetFogMaxOpacity(0.82f);
 	}
 
+	SpawnChineseHorrorCrimeScene();
 	Apply(0.f);
-	UE_LOG(LogTemp, Log, TEXT("ShiftDirector: %d actors, %d instances, %d rect lights, %d accent lights, %d fixtures"), Moved.Num(), MovedInstances.Num(), Lights.Num(), AccentLights.Num(), Fixtures.Num());
+	UE_LOG(LogTemp, Log, TEXT("ShiftDirector: %d actors, %d instances, %d rect lights, %d accent lights, %d fixtures, %d crime props"),
+		Moved.Num(), MovedInstances.Num(), Lights.Num(), AccentLights.Num(), Fixtures.Num(), CrimeSceneActors.Num());
+}
+
+void AShiftDirector::SpawnChineseHorrorCrimeScene()
+{
+	UWorld* W = GetWorld();
+	if (!W) { return; }
+
+	UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+	UStaticMesh* SphereMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+	UStaticMesh* CylinderMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	UMaterialInterface* SpillBaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ShiftStore/Materials/M_FloorSpill.M_FloorSpill"));
+	UTexture2D* IchorD = LoadObject<UTexture2D>(nullptr, TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Ichor_D.T_Spill_Ichor_D"));
+	UTexture2D* IchorN = LoadObject<UTexture2D>(nullptr, TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Ichor_N.T_Spill_Ichor_N"));
+	UTexture2D* IchorM = LoadObject<UTexture2D>(nullptr, TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Ichor_M.T_Spill_Ichor_M"));
+	UMaterialInterface* LitBaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+
+	auto SpawnColoredProp = [&](const FVector& Loc, const FRotator& Rot, const FVector& Scale, UStaticMesh* Mesh, const FLinearColor& Color, float EmissiveBoost = 0.f) -> AActor*
+	{
+		if (!Mesh) { return nullptr; }
+		AStaticMeshActor* Prop = W->SpawnActor<AStaticMeshActor>(Loc, Rot);
+		if (!Prop) { return nullptr; }
+		UStaticMeshComponent* Comp = Prop->GetStaticMeshComponent();
+		Comp->SetMobility(EComponentMobility::Movable);
+		Comp->SetStaticMesh(Mesh);
+		Comp->SetWorldScale3D(Scale);
+		Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Comp->SetCastShadow(false);
+		if (LitBaseMat)
+		{
+			if (UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(LitBaseMat, Prop))
+			{
+				MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(Color.R * (1.f + EmissiveBoost), Color.G * (1.f + EmissiveBoost), Color.B * (1.f + EmissiveBoost), 1.f));
+				Comp->SetMaterial(0, MID);
+			}
+		}
+		Prop->SetActorHiddenInGame(true);
+		CrimeSceneActors.Add(Prop);
+		return Prop;
+	};
+
+	// 1. Floor PBR bloodstain & drag-trail decals (suggests an old murder scene without spelling out details)
+	if (SpillBaseMat && IchorD && IchorN && IchorM)
+	{
+		struct FStainSpec { FVector Pos; float SizeX; float SizeY; float Yaw; FLinearColor Tint; };
+		const FStainSpec Stains[] = {
+			{ FVector(800.f, 560.f, 4.f),  135.f, 115.f,  25.f, FLinearColor(0.55f, 0.04f, 0.04f, 1.f) }, // Main aisle incident pool
+			{ FVector(805.f, 710.f, 4.f),   95.f,  55.f,  92.f, FLinearColor(0.48f, 0.03f, 0.03f, 1.f) }, // Drag trail #1
+			{ FVector(795.f, 845.f, 4.f),   88.f,  48.f,  86.f, FLinearColor(0.45f, 0.03f, 0.03f, 1.f) }, // Drag trail #2 toward backroom
+			{ FVector(1265.f, 220.f, 4.f),  82.f,  74.f, 140.f, FLinearColor(0.52f, 0.04f, 0.04f, 1.f) }, // Behind checkout counter
+		};
+		for (const FStainSpec& S : Stains)
+		{
+			AActor* Holder = W->SpawnActor<AActor>(S.Pos, FRotator::ZeroRotator);
+			if (!Holder) { continue; }
+			UDecalComponent* Decal = NewObject<UDecalComponent>(Holder);
+			Decal->RegisterComponent();
+			Holder->SetRootComponent(Decal);
+			Decal->SetWorldLocation(S.Pos);
+			Decal->SetWorldRotation(FRotator(-90.f, S.Yaw, 0.f));
+			Decal->DecalSize = FVector(32.f, S.SizeY, S.SizeX);
+			Decal->FadeScreenSize = 0.001f;
+			if (UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(SpillBaseMat, Holder))
+			{
+				MID->SetTextureParameterValue(TEXT("AlbedoTex"), IchorD);
+				MID->SetTextureParameterValue(TEXT("NormalTex"), IchorN);
+				MID->SetTextureParameterValue(TEXT("MaskTex"), IchorM);
+				MID->SetVectorParameterValue(TEXT("TintColor"), S.Tint);
+				MID->SetScalarParameterValue(TEXT("WetnessScale"), 0.85f);
+				MID->SetScalarParameterValue(TEXT("CleanProgress"), 0.f);
+				Decal->SetDecalMaterial(MID);
+			}
+			Holder->SetActorHiddenInGame(true);
+			CrimeSceneActors.Add(Holder);
+		}
+	}
+
+	// 2. Full forensic chalk body outline around the center aisle stain (head + torso + outstretched limbs)
+	const FLinearColor ChalkCol(0.90f, 0.88f, 0.82f, 1.f);
+	SpawnColoredProp(FVector(782.f, 520.f, 1.8f), FRotator(0.f, 10.f, 0.f),  FVector(0.24f, 0.24f, 0.008f), SphereMesh, ChalkCol); // head outline
+	SpawnColoredProp(FVector(790.f, 558.f, 1.8f), FRotator(0.f, 14.f, 0.f),  FVector(0.72f, 0.032f, 0.008f), CubeMesh, ChalkCol);  // torso left
+	SpawnColoredProp(FVector(818.f, 554.f, 1.8f), FRotator(0.f, 14.f, 0.f),  FVector(0.72f, 0.032f, 0.008f), CubeMesh, ChalkCol);  // torso right
+	SpawnColoredProp(FVector(758.f, 546.f, 1.8f), FRotator(0.f, 65.f, 0.f),  FVector(0.58f, 0.028f, 0.008f), CubeMesh, ChalkCol);  // left arm
+	SpawnColoredProp(FVector(842.f, 536.f, 1.8f), FRotator(0.f, -55.f, 0.f), FVector(0.56f, 0.028f, 0.008f), CubeMesh, ChalkCol);  // right arm
+	SpawnColoredProp(FVector(786.f, 616.f, 1.8f), FRotator(0.f, 22.f, 0.f),  FVector(0.75f, 0.028f, 0.008f), CubeMesh, ChalkCol);  // left leg
+	SpawnColoredProp(FVector(826.f, 614.f, 1.8f), FRotator(0.f, -18.f, 0.f), FVector(0.75f, 0.028f, 0.008f), CubeMesh, ChalkCol);  // right leg
+
+	// 2b. Trail of 10 dried bloody footprints leading from behind the checkout counter -> main aisle -> backroom door
+	const FLinearColor BloodStepCol(0.42f, 0.03f, 0.03f, 1.f);
+	const FVector Footprints[] = {
+		FVector(1220.f, 255.f, 1.6f), FVector(1145.f, 305.f, 1.6f), FVector(1065.f, 355.f, 1.6f),
+		FVector(980.f,  405.f, 1.6f), FVector(900.f,  460.f, 1.6f), FVector(835.f,  525.f, 1.6f),
+		FVector(808.f,  660.f, 1.6f), FVector(792.f,  740.f, 1.6f), FVector(812.f,  830.f, 1.6f),
+		FVector(800.f,  935.f, 1.6f)
+	};
+	for (int32 i = 0; i < UE_ARRAY_COUNT(Footprints); ++i)
+	{
+		const float StepYaw = (i < 6) ? 145.f : 90.f;
+		SpawnColoredProp(Footprints[i], FRotator(0.f, StepYaw + ((i % 2 == 0) ? -12.f : 12.f), 0.f), FVector(0.24f, 0.11f, 0.006f), CubeMesh, BloodStepCol);
+	}
+
+	// 3. Entrance crimson funerary drapes + weathered yellow seal tape + Chinese vermilion paper talismans (黄符 / 封条)
+	const FLinearColor SealYellow(0.86f, 0.66f, 0.14f, 1.f);
+	const FLinearColor SealRed(0.78f, 0.08f, 0.06f, 1.f);
+	const FLinearColor DrapeCrimson(0.36f, 0.03f, 0.03f, 1.f);
+	// Crimson drapes hanging inside the front glass doorway (visual dread, zero collision)
+	SpawnColoredProp(FVector(720.f, 52.f, 175.f), FRotator(0.f, 0.f, 2.f),  FVector(0.85f, 0.03f, 2.45f), CubeMesh, DrapeCrimson);
+	SpawnColoredProp(FVector(880.f, 52.f, 175.f), FRotator(0.f, 0.f, -2.f), FVector(0.85f, 0.03f, 2.45f), CubeMesh, DrapeCrimson);
+	// Crossed seal strips across entrance & middle aisle
+	SpawnColoredProp(FVector(800.f, 65.f, 130.f),  FRotator(10.f, 0.f, 0.f), FVector(2.3f, 0.015f, 0.08f), CubeMesh, SealYellow);
+	SpawnColoredProp(FVector(800.f, 65.f, 112.f),  FRotator(-9.f, 0.f, 0.f), FVector(2.3f, 0.015f, 0.08f), CubeMesh, SealYellow);
+	SpawnColoredProp(FVector(800.f, 445.f, 118.f), FRotator(8.f, 0.f, 0.f),  FVector(2.1f, 0.015f, 0.07f), CubeMesh, SealYellow);
+	SpawnColoredProp(FVector(800.f, 445.f, 102.f), FRotator(-6.f, 0.f, 0.f), FVector(2.1f, 0.015f, 0.07f), CubeMesh, SealYellow);
+
+	// Paper talismans affixed across counter wall, coolers, and aisles
+	const FVector TalismanSpots[] = {
+		FVector(1220.f, 125.f, 160.f), FVector(1290.f, 125.f, 172.f), FVector(1355.f, 125.f, 152.f),
+		FVector(420.f,  950.f, 165.f), FVector(320.f,  950.f, 175.f), FVector(520.f,  950.f, 155.f),
+		FVector(690.f,  450.f, 165.f), FVector(910.f,  450.f, 162.f), FVector(690.f,  750.f, 168.f),
+		FVector(910.f,  750.f, 160.f), FVector(800.f, 1010.f, 195.f), FVector(855.f, 1010.f, 185.f)
+	};
+	for (int32 i = 0; i < UE_ARRAY_COUNT(TalismanSpots); ++i)
+	{
+		const float Tilt = (i % 2 == 0) ? 4.f : -5.f;
+		SpawnColoredProp(TalismanSpots[i], FRotator(0.f, 0.f, Tilt), FVector(0.11f, 0.008f, 0.36f), CubeMesh, SealYellow);
+		SpawnColoredProp(TalismanSpots[i] + FVector(0.f, 0.8f, 0.f), FRotator(0.f, 0.f, Tilt), FVector(0.038f, 0.01f, 0.24f), CubeMesh, SealRed);
+	}
+
+	// 4. Six hanging crimson Chinese paper lanterns with tassels casting vivid vermilion pools against the ghostly green ceiling lights
+	const FVector LanternPositions[] = {
+		FVector(800.f,  210.f, 255.f),
+		FVector(800.f,  580.f, 250.f),
+		FVector(800.f,  920.f, 255.f),
+		FVector(1240.f, 260.f, 255.f),
+		FVector(410.f,  580.f, 255.f),
+		FVector(1190.f, 620.f, 255.f),
+	};
+	for (const FVector& LP : LanternPositions)
+	{
+		if (AActor* Lantern = SpawnColoredProp(LP, FRotator::ZeroRotator, FVector(0.36f, 0.36f, 0.46f), SphereMesh, FLinearColor(0.96f, 0.08f, 0.05f, 1.f), 2.2f))
+		{
+			UPointLightComponent* Light = NewObject<UPointLightComponent>(Lantern);
+			Light->RegisterComponent();
+			Light->AttachToComponent(Lantern->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+			Light->SetRelativeLocation(FVector(0.f, 0.f, -38.f));
+			Light->SetIntensityUnits(ELightUnits::Lumens);
+			Light->SetIntensity(0.f);
+			Light->SetLightColor(FLinearColor(1.0f, 0.12f, 0.06f, 1.f));
+			Light->SetAttenuationRadius(720.f);
+			Light->SetCastShadows(false);
+			CrimeLanternLights.Add(Light);
+		}
+		// Top & bottom dark wooden lantern caps + hanging red tassel
+		SpawnColoredProp(LP + FVector(0.f, 0.f, 23.f),  FRotator::ZeroRotator, FVector(0.18f, 0.18f, 0.05f), CubeMesh, FLinearColor(0.05f, 0.03f, 0.02f, 1.f));
+		SpawnColoredProp(LP + FVector(0.f, 0.f, -23.f), FRotator::ZeroRotator, FVector(0.18f, 0.18f, 0.05f), CubeMesh, FLinearColor(0.05f, 0.03f, 0.02f, 1.f));
+		SpawnColoredProp(LP + FVector(0.f, 0.f, -38.f), FRotator::ZeroRotator, FVector(0.035f, 0.035f, 0.28f), CubeMesh, SealRed, 0.6f);
+	}
+
+	// 5. Large wall blood-splatter decals projected directly onto the decayed Otherworld walls
+	if (SpillBaseMat && IchorD && IchorN && IchorM)
+	{
+		struct FWallStain { FVector Pos; FRotator Rot; float SizeY; float SizeZ; };
+		const FWallStain WallStains[] = {
+			{ FVector(12.f,   560.f, 150.f), FRotator(0.f, 0.f,   0.f), 140.f, 130.f }, // West wall
+			{ FVector(1588.f, 520.f, 145.f), FRotator(0.f, 180.f, 0.f), 140.f, 130.f }, // East wall
+			{ FVector(1280.f, 128.f, 150.f), FRotator(0.f, 90.f,  0.f), 120.f, 110.f }, // Behind counter
+			{ FVector(800.f, 1005.f, 155.f), FRotator(0.f, -90.f, 0.f), 135.f, 120.f }, // Rear corridor wall
+		};
+		for (const FWallStain& WS : WallStains)
+		{
+			AActor* Holder = W->SpawnActor<AActor>(WS.Pos, FRotator::ZeroRotator);
+			if (!Holder) { continue; }
+			UDecalComponent* Decal = NewObject<UDecalComponent>(Holder);
+			Decal->RegisterComponent();
+			Holder->SetRootComponent(Decal);
+			Decal->SetWorldLocation(WS.Pos);
+			Decal->SetWorldRotation(WS.Rot);
+			Decal->DecalSize = FVector(45.f, WS.SizeY, WS.SizeZ);
+			Decal->FadeScreenSize = 0.001f;
+			if (UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(SpillBaseMat, Holder))
+			{
+				MID->SetTextureParameterValue(TEXT("AlbedoTex"), IchorD);
+				MID->SetTextureParameterValue(TEXT("NormalTex"), IchorN);
+				MID->SetTextureParameterValue(TEXT("MaskTex"), IchorM);
+				MID->SetVectorParameterValue(TEXT("TintColor"), FLinearColor(0.58f, 0.03f, 0.03f, 1.f));
+				MID->SetScalarParameterValue(TEXT("WetnessScale"), 0.95f);
+				MID->SetScalarParameterValue(TEXT("CleanProgress"), 0.f);
+				Decal->SetDecalMaterial(MID);
+			}
+			Holder->SetActorHiddenInGame(true);
+			CrimeSceneActors.Add(Holder);
+		}
+	}
+
+	// 6. Overhead hanging funeral white/yellow spirit banners (招魂白幡) along the central aisle (no collision)
+	const FLinearColor FuneralCloth(0.76f, 0.72f, 0.62f, 1.f);
+	const FVector BannerSpots[] = {
+		FVector(735.f, 320.f, 225.f), FVector(865.f, 320.f, 222.f),
+		FVector(735.f, 520.f, 224.f), FVector(865.f, 520.f, 220.f),
+		FVector(735.f, 740.f, 225.f), FVector(865.f, 740.f, 221.f),
+	};
+	for (int32 i = 0; i < UE_ARRAY_COUNT(BannerSpots); ++i)
+	{
+		SpawnColoredProp(BannerSpots[i], FRotator(0.f, (i % 2 == 0) ? 10.f : -10.f, 0.f), FVector(0.24f, 0.012f, 1.05f), CubeMesh, FuneralCloth);
+		SpawnColoredProp(BannerSpots[i] + FVector(0.f, 1.2f, 8.f), FRotator(0.f, (i % 2 == 0) ? 10.f : -10.f, 0.f), FVector(0.06f, 0.014f, 0.68f), CubeMesh, SealRed);
+	}
+
+	// 7. Distant Chinese funerary shrine / memorial table silhouette at the rear aisle end with ghostly jade-green candles
+	const FVector AltarBase(800.f, 972.f, 0.f);
+	const FLinearColor DarkWood(0.09f, 0.04f, 0.03f, 1.f);
+	const FLinearColor LacquerRed(0.32f, 0.045f, 0.035f, 1.f);
+	const FLinearColor StoneGrey(0.14f, 0.14f, 0.13f, 1.f);
+	const FLinearColor CoffinBlack(0.04f, 0.035f, 0.032f, 1.f);
+
+	SpawnColoredProp(AltarBase + FVector(0.f, 0.f, 44.f),  FRotator::ZeroRotator, FVector(1.35f, 0.48f, 0.88f), CubeMesh, DarkWood);
+	SpawnColoredProp(AltarBase + FVector(0.f, -8.f, 118.f), FRotator::ZeroRotator, FVector(0.32f, 0.06f, 0.52f), CubeMesh, CoffinBlack);
+	SpawnColoredProp(AltarBase + FVector(0.f, -12.f, 118.f), FRotator::ZeroRotator, FVector(0.18f, 0.02f, 0.36f), CubeMesh, SealRed, 0.4f);
+	for (float Side : { -42.f, 42.f })
+	{
+		SpawnColoredProp(AltarBase + FVector(Side, -14.f, 100.f), FRotator::ZeroRotator, FVector(0.05f, 0.05f, 0.24f), CubeMesh, SealRed);
+		if (AActor* Flame = SpawnColoredProp(AltarBase + FVector(Side, -14.f, 116.f), FRotator::ZeroRotator, FVector(0.07f, 0.07f, 0.11f), SphereMesh, FLinearColor(0.22f, 0.98f, 0.56f, 1.f), 3.0f))
+		{
+			UPointLightComponent* GhostFlame = NewObject<UPointLightComponent>(Flame);
+			GhostFlame->RegisterComponent();
+			GhostFlame->AttachToComponent(Flame->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+			GhostFlame->SetIntensityUnits(ELightUnits::Lumens);
+			GhostFlame->SetIntensity(0.f);
+			GhostFlame->SetLightColor(FLinearColor(0.18f, 0.96f, 0.52f, 1.f));
+			GhostFlame->SetAttenuationRadius(420.f);
+			GhostFlame->SetCastShadows(false);
+			CrimeLanternLights.Add(GhostFlame);
+		}
+	}
+
+	// 8. ANCIENT CHINESE ANCESTRAL HALL / MOURNING HALL ARCHITECTURE REPLACING THE STORE SHELVES & COUNTER!
+	// 8a. Six pairs of vermilion lacquered wooden pillars + carved dark wood lattice screens aligned 1:1 with the 6 gondolas
+	const FVector GondolaCenters[] = {
+		FVector(400.f, 450.f, 0.f), FVector(800.f, 450.f, 0.f), FVector(1200.f, 450.f, 0.f),
+		FVector(400.f, 750.f, 0.f), FVector(800.f, 750.f, 0.f), FVector(1200.f, 750.f, 0.f),
+	};
+	for (int32 idx = 0; idx < UE_ARRAY_COUNT(GondolaCenters); ++idx)
+	{
+		const FVector& GC = GondolaCenters[idx];
+		// Two floor-to-ceiling crimson wooden pillars with stone plinths at either end of each shelf footprint
+		for (float OffX : { -95.f, 95.f })
+		{
+			SpawnColoredProp(GC + FVector(OffX, 0.f, 148.f), FRotator::ZeroRotator, FVector(0.28f, 0.28f, 2.96f), CylinderMesh, LacquerRed);
+			SpawnColoredProp(GC + FVector(OffX, 0.f, 12.f),  FRotator::ZeroRotator, FVector(0.38f, 0.38f, 0.24f), CubeMesh, StoneGrey);
+		}
+		// Top lacquered lintel beam connecting the pair of pillars
+		SpawnColoredProp(GC + FVector(0.f, 0.f, 268.f), FRotator::ZeroRotator, FVector(2.20f, 0.24f, 0.22f), CubeMesh, LacquerRed);
+
+		if (idx == 1)
+		{
+			// Center front footprint: a heavy black lacquered Chinese coffin (黑漆灵柩) sealed with crossed yellow talisman tape!
+			SpawnColoredProp(GC + FVector(0.f, 0.f, 42.f), FRotator::ZeroRotator, FVector(1.85f, 0.72f, 0.74f), CubeMesh, CoffinBlack);
+			SpawnColoredProp(GC + FVector(0.f, 0.f, 82.f), FRotator::ZeroRotator, FVector(1.94f, 0.78f, 0.14f), CubeMesh, LacquerRed);
+			SpawnColoredProp(GC + FVector(0.f, 0.f, 90.f), FRotator(0.f, 18.f, 0.f),  FVector(1.60f, 0.08f, 0.015f), CubeMesh, SealYellow);
+			SpawnColoredProp(GC + FVector(0.f, 0.f, 90.f), FRotator(0.f, -18.f, 0.f), FVector(1.60f, 0.08f, 0.015f), CubeMesh, SealYellow);
+		}
+		else
+		{
+			// Dark aged wooden partition screen + lattice bars replacing the modern supermarket shelves
+			SpawnColoredProp(GC + FVector(0.f, 0.f, 92.f),  FRotator::ZeroRotator, FVector(1.82f, 0.18f, 1.78f), CubeMesh, DarkWood);
+			SpawnColoredProp(GC + FVector(0.f, 0.f, 182.f), FRotator::ZeroRotator, FVector(1.88f, 0.24f, 0.08f), CubeMesh, LacquerRed);
+			SpawnColoredProp(GC + FVector(0.f, -11.f, 118.f), FRotator(0.f, 0.f, 3.f),  FVector(0.12f, 0.01f, 0.38f), CubeMesh, SealYellow);
+			SpawnColoredProp(GC + FVector(0.f,  11.f, 118.f), FRotator(0.f, 0.f, -4.f), FVector(0.12f, 0.01f, 0.38f), CubeMesh, SealYellow);
+		}
+	}
+
+	// 8b. Checkout counter footprint (1270, 180) transformed into a tall Chinese ancestral shrine & incense altar!
+	const FVector CounterShrine(1270.f, 180.f, 0.f);
+	SpawnColoredProp(CounterShrine + FVector(0.f, 0.f, 48.f),    FRotator::ZeroRotator, FVector(2.30f, 0.78f, 0.96f), CubeMesh, DarkWood);
+	SpawnColoredProp(CounterShrine + FVector(0.f, 0.f, 98.f),    FRotator::ZeroRotator, FVector(2.40f, 0.84f, 0.08f), CubeMesh, LacquerRed);
+	SpawnColoredProp(CounterShrine + FVector(0.f, -20.f, 148.f), FRotator::ZeroRotator, FVector(0.55f, 0.12f, 0.86f), CubeMesh, CoffinBlack);
+	SpawnColoredProp(CounterShrine + FVector(0.f, -13.f, 148.f), FRotator::ZeroRotator, FVector(0.32f, 0.04f, 0.58f), CubeMesh, SealRed, 0.5f);
+	// Incense burner & three glowing ember tips on the counter shrine
+	SpawnColoredProp(CounterShrine + FVector(0.f, 18.f, 108.f),  FRotator::ZeroRotator, FVector(0.24f, 0.24f, 0.16f), CylinderMesh, StoneGrey);
+	for (float IX : { -6.f, 0.f, 6.f })
+	{
+		SpawnColoredProp(CounterShrine + FVector(IX, 18.f, 124.f), FRotator::ZeroRotator, FVector(0.015f, 0.015f, 0.22f), CylinderMesh, FLinearColor(0.35f, 0.28f, 0.18f, 1.f));
+		SpawnColoredProp(CounterShrine + FVector(IX, 18.f, 136.f), FRotator::ZeroRotator, FVector(0.025f, 0.025f, 0.025f), SphereMesh, FLinearColor(1.0f, 0.22f, 0.04f, 1.f), 3.0f);
+	}
+
+	// 8c. Overhead heavy dark-red ancestral hall roof beams spanning the entire store ceiling
+	for (float BeamY : { 210.f, 450.f, 750.f, 960.f })
+	{
+		SpawnColoredProp(FVector(800.f, BeamY, 282.f), FRotator::ZeroRotator, FVector(15.6f, 0.26f, 0.28f), CubeMesh, LacquerRed);
+	}
+	// Longitudinal beams
+	for (float BeamX : { 400.f, 800.f, 1200.f })
+	{
+		SpawnColoredProp(FVector(BeamX, 560.f, 286.f), FRotator::ZeroRotator, FVector(0.24f, 10.5f, 0.24f), CubeMesh, DarkWood);
+	}
 }
 
 void AShiftDirector::SetShifted(bool bInShift)
@@ -356,9 +694,45 @@ void AShiftDirector::Apply(float A)
 	}
 	if (UExponentialHeightFogComponent* Fog = HorrorFog.Get())
 	{
-		Fog->SetFogDensity(FMath::Lerp(0.014f, 0.052f, Smooth));
-		Fog->SetStartDistance(FMath::Lerp(260.f, 55.f, Smooth));
-		Fog->SetFogInscatteringColor(FMath::Lerp(FLinearColor(0.032f, 0.034f, 0.030f, 1.f), FLinearColor(0.055f, 0.008f, 0.008f, 1.f), Smooth));
+		// Clean, crystal-clear modern store air in Normal -> thick ghostly jade-green mist lit by crimson lanterns in Otherworld!
+		Fog->SetFogDensity(FMath::Lerp(0.0045f, 0.038f, Smooth));
+		Fog->SetStartDistance(FMath::Lerp(480.f, 75.f, Smooth));
+		Fog->SetFogInscatteringColor(FMath::Lerp(FLinearColor(0.04f, 0.042f, 0.045f, 1.f), FLinearColor(0.025f, 0.12f, 0.075f, 1.f), Smooth));
+	}
+	const bool bShowCrimeScene = Smooth > 0.25f;
+	if (bSurfacesSwapped != bShowCrimeScene)
+	{
+		bSurfacesSwapped = bShowCrimeScene;
+		for (const FSwappedSurface& S : SwappedSurfaces)
+		{
+			if (UStaticMeshComponent* C = S.Comp.Get())
+			{
+				UMaterialInterface* TargetMat = bShowCrimeScene ? S.ShiftMat.Get() : S.NormalMat.Get();
+				if (TargetMat) { C->SetMaterial(S.Slot, TargetMat); }
+			}
+		}
+		for (const TWeakObjectPtr<AActor>& NPtr : NormalOnlyActors)
+		{
+			if (AActor* NA = NPtr.Get()) { NA->SetActorHiddenInGame(bShowCrimeScene); }
+		}
+		for (const TWeakObjectPtr<UInstancedStaticMeshComponent>& ISMPtr : NormalOnlyISMs)
+		{
+			if (UInstancedStaticMeshComponent* ISM = ISMPtr.Get()) { ISM->SetVisibility(!bShowCrimeScene); }
+		}
+	}
+	for (const TWeakObjectPtr<AActor>& PropPtr : CrimeSceneActors)
+	{
+		if (AActor* Prop = PropPtr.Get())
+		{
+			Prop->SetActorHiddenInGame(!bShowCrimeScene);
+		}
+	}
+	for (const TWeakObjectPtr<UPointLightComponent>& LP : CrimeLanternLights)
+	{
+		if (UPointLightComponent* Light = LP.Get())
+		{
+			Light->SetIntensity(Smooth * 560.f);
+		}
 	}
 	const bool bDark = Smooth > 0.5f;
 	for (int32 i = 0; i < Fixtures.Num(); ++i)
@@ -374,18 +748,18 @@ void AShiftDirector::Apply(float A)
 		PPV->Settings.CameraISO = FMath::Lerp(100.f, 1600.f, Smooth);
 		PPV->Settings.CameraShutterSpeed = FMath::Lerp(60.f, 30.f, Smooth);
 		PPV->Settings.bOverride_ColorSaturation = true;
-		PPV->Settings.ColorSaturation = FMath::Lerp(FVector4(0.72f, 0.70f, 0.68f, 1.f), FVector4(0.62f, 0.44f, 0.44f, 1.f), Smooth);
+		PPV->Settings.ColorSaturation = FMath::Lerp(FVector4(0.96f, 0.96f, 0.96f, 1.f), FVector4(1.18f, 0.84f, 0.72f, 1.f), Smooth);
 		PPV->Settings.bOverride_ColorContrast = true;
-		PPV->Settings.ColorContrast = FMath::Lerp(FVector4(1.16f, 1.15f, 1.18f, 1.f), FVector4(1.32f, 1.26f, 1.28f, 1.f), Smooth);
+		PPV->Settings.ColorContrast = FMath::Lerp(FVector4(1.04f, 1.04f, 1.05f, 1.f), FVector4(1.36f, 1.26f, 1.28f, 1.f), Smooth);
 		PPV->Settings.bOverride_ColorGamma = true;
-		PPV->Settings.ColorGamma = FMath::Lerp(FVector4(0.93f, 0.92f, 0.89f, 1.f), FVector4(0.86f, 0.81f, 0.81f, 1.f), Smooth);
+		PPV->Settings.ColorGamma = FMath::Lerp(FVector4(1.00f, 1.00f, 1.00f, 1.f), FVector4(1.04f, 0.92f, 0.85f, 1.f), Smooth);
 		PPV->Settings.bOverride_BloomIntensity = true;
-		PPV->Settings.BloomIntensity = FMath::Lerp(0.80f, 1.55f, Smooth);
+		PPV->Settings.BloomIntensity = FMath::Lerp(0.45f, 1.85f, Smooth);
 		PPV->Settings.bOverride_SceneFringeIntensity = true;
-		PPV->Settings.SceneFringeIntensity = FMath::Lerp(0.35f, 3.0f, Smooth);
+		PPV->Settings.SceneFringeIntensity = FMath::Lerp(0.05f, 3.20f, Smooth);
 		PPV->Settings.bOverride_FilmGrainIntensity = true;
-		PPV->Settings.FilmGrainIntensity = FMath::Lerp(0.14f, 0.45f, Smooth);
+		PPV->Settings.FilmGrainIntensity = FMath::Lerp(0.04f, 0.42f, Smooth);
 		PPV->Settings.bOverride_VignetteIntensity = true;
-		PPV->Settings.VignetteIntensity = FMath::Lerp(0.45f, 0.82f, Smooth);
+		PPV->Settings.VignetteIntensity = FMath::Lerp(0.22f, 0.68f, Smooth);
 	}
 }

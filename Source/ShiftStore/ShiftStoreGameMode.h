@@ -41,6 +41,7 @@ public:
 	void OnCustomerHelped(AShiftCustomer* Customer);
 	void OnCustomerAtCheckout(AShiftCustomer* Customer);
 	void OnCheckoutCompleted(AShiftCustomer* Customer);
+	void OnCustomerRefused(AShiftCustomer* Customer);
 	void OnMonsterRevealed(AShiftCustomer* Monster, bool bWitnessed);
 	void OnMonsterDemandDelivered(AShiftCustomer* Monster);
 	void OnMonsterWardedOff(AShiftCustomer* Customer);
@@ -51,6 +52,15 @@ public:
 	bool HasActiveAnomaly() const;
 	bool HasBlockingChore() const;
 	bool IsAutomatedSession() const { return bAutomatedSession; }
+	int32 ActiveRuleCount() const { return FMath::Clamp(NightIndex + 1, 1, 3); }
+	void ToggleRuleNote();
+	FString GetOnboardingHint(const AShiftPlayerCharacter* Player) const;
+	bool bRuleNoteOpen = false;
+	float RuleNoteAutoHideTimer = 0.f;
+	float RuleNoteRaiseAlpha = 0.f;
+	bool bHasUsedPhaseShift = false;
+	bool bShowPhaseShiftPrompt = false;
+	float PhaseShiftPromptTimer = 0.f;
 	void PlayPositionalAnomalyPulse(const FVector& Location);
 	void PlayFootstepCue(const FVector* OptionalWorldLocation = nullptr, float Volume = 0.35f);
 	void PlayHeartbeatCue(float Tension, bool bReverb = false);

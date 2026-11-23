@@ -133,7 +133,7 @@ namespace ShiftData
 
 			FShiftNightSpec N1;
 			N1.Title = TEXT("NIGHT 1");
-			N1.Intro = TEXT("First night shift. Finish your chores, serve whoever walks in,\nclean up, and hand the store over at 06:00.");
+			N1.Intro = TEXT("02:00 AM. You took over the late shift at this corner store.\nRumor says a murder happened here years ago, though nobody talks about what happened.\nCheck your pocket note [Tab] for tonight's rule, refuse anyone abnormal [R], and press [Q] to glimpse the old scene if the store feels wrong.");
 			N1.Customers = { Customer(TEXT("Water"), false), Customer(TEXT("Noodles"), true, TEXT("Excuse me... where are the noodle cups?")), Customer(TEXT("Chips"), false) };
 			N1.OpeningTasks = { 3, 5 };
 			N1.Spills = 2; N1.TaskTimeLimit = 240.f; N1.bEerieEvents = true;
@@ -141,7 +141,7 @@ namespace ShiftData
 
 			FShiftNightSpec N2;
 			N2.Title = TEXT("NIGHT 2");
-			N2.Intro = TEXT("Note from the day shift: \"Some customers are not customers.\n If the lights go out, give them what they want. Don't let them touch you.\"");
+			N2.Intro = TEXT("A second rule was scribbled onto the counter note before you arrived.\nSome visitors wear familiar faces, but their habits give them away.\nCheck [Tab] before handing over goods — or refuse them with [R].");
 			N2.Customers = { Customer(TEXT("Milk"), false), Customer(TEXT("Bread"), true, TEXT("Do you have any bread left?")),
 				Monster(TEXT("Soda"), TEXT("Can"), TEXT("I... need something to drink."), TEXT("...So thirsty for thick red tomato soup in a tin can...")), Customer(TEXT("Meal"), false) };
 			N2.OpeningTasks = { 0, 4 };
@@ -150,7 +150,7 @@ namespace ShiftData
 
 			FShiftNightSpec N3;
 			N3.Title = TEXT("NIGHT 3");
-			N3.Intro = TEXT("Last night of the week. The store keeps changing when they come.\nRemember where everything was.");
+			N3.Intro = TEXT("Final shift. All three rules are active tonight, and the old stain on this store is bleeding through.\nTrust the Shift Note [Tab], watch every visitor, and survive until 06:00 AM.");
 			N3.Customers = { Customer(TEXT("Cleaner"), true, TEXT("Where do you keep the cleaner?")),
 				Monster(TEXT("Sauce"), TEXT("Milk"), TEXT("Soy sauce. Where."), TEXT("...White and cold from the dairy carton... not dark...")), Customer(TEXT("Biscuits"), false),
 				Customer(TEXT("Water"), true, TEXT("Sorry, where's the water?")),

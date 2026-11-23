@@ -66,6 +66,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> AnomalyMaskLeftEye;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> AnomalyMaskRightEye;
+	UPROPERTY() TObjectPtr<class UMaterialInterface> CustomerHeadLegsMat;
+	UPROPERTY() TObjectPtr<class UMaterialInterface> CustomerTorsoMat;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UPoseableMeshComponent> MonsterPose;
 	float ChaseElapsedSeconds = 0.f;
 	bool bAutomatedTest = false;
@@ -106,6 +108,7 @@ private:
 	float StareTriggerTime = 0.f;
 	float OtherworldPeekTime = 0.f;
 	bool bOtherworldPreviewActive = false;
+	bool bHeadTiltPoseActive = false;
 	float RevealThreshold = 13.5f;
 	TArray<FVector> StoreRoute;
 	FVector StoreRouteGoal = FVector::ZeroVector;

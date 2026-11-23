@@ -37,7 +37,7 @@ AShiftCustomer::AShiftCustomer()
 
 	if (USkeletalMeshComponent* Skel = GetMesh())
 	{
-		// CDO references make the mannequin, animation BP and their dependencies cookable.
+		// Native UE mannequin skeletal mesh + smooth locomotion ABP, re-textured with matte late-night human PBR materials.
 		static ConstructorHelpers::FObjectFinder<USkeletalMesh> CustomerMesh(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple"));
 		static ConstructorHelpers::FClassFinder<UAnimInstance> CustomerAnimation(TEXT("/Game/Characters/Mannequins/Anims/Unarmed/ABP_Unarmed"));
 		if (CustomerMesh.Succeeded()) { Skel->SetSkeletalMesh(CustomerMesh.Object); }
@@ -51,6 +51,11 @@ AShiftCustomer::AShiftCustomer()
 		Skel->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Block);
 		Skel->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
 	}
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> HeadLegsMatFinder(TEXT("/Game/ShiftStore/Materials/M_CustomerHeadLegs.M_CustomerHeadLegs"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> TorsoMatFinder(TEXT("/Game/ShiftStore/Materials/M_CustomerTorso.M_CustomerTorso"));
+	if (HeadLegsMatFinder.Succeeded()) { CustomerHeadLegsMat = HeadLegsMatFinder.Object; }
+	if (TorsoMatFinder.Succeeded()) { CustomerTorsoMat = TorsoMatFinder.Object; }
 
 	MonsterPose = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("MonsterPose"));
 	MonsterPose->SetupAttachment(GetMesh());
@@ -114,6 +119,7 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 	StareTriggerTime = 0.f;
 	OtherworldPeekTime = 0.f;
 	bOtherworldPreviewActive = false;
+	bHeadTiltPoseActive = false;
 	if (Spec.bMonster && Spec.Tell == EDisguiseTell::None)
 	{
 		if (Spec.MonsterSku == TEXT("Milk"))       { Spec.Tell = EDisguiseTell::RedGlare; }
@@ -125,11 +131,11 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 		Skel->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
 		Skel->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 		Skel->SetRelativeScale3D(FVector(1.f, 1.f, 1.f));
+		Skel->SetVisibility(true);
 	}
 	AnomalyMaskLeftEye->SetVisibility(false);
 	AnomalyMaskRightEye->SetVisibility(false);
 	MonsterPose->SetVisibility(false);
-	GetMesh()->SetVisibility(true);
 	EyeLight->SetIntensity(0.f);
 	bAutomatedTest = FParse::Param(FCommandLine::Get(), TEXT("ShiftSelfTest"))
 		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftPlaythroughTest"))
@@ -138,21 +144,38 @@ void AShiftCustomer::Init(const FShiftCustomerSpec& InSpec)
 		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftPauseTest"))
 		|| FParse::Param(FCommandLine::Get(), TEXT("ShiftSensitivityTest"));
 	RevealThreshold = bAutomatedTest ? 4.2f : FMath::FRandRange(13.0f, 17.0f);
-	const FLinearColor Colors[] = {
-		{ 0.18f, 0.25f, 0.38f },
-		{ 0.16f, 0.32f, 0.24f },
-		{ 0.38f, 0.26f, 0.18f },
-		{ 0.34f, 0.16f, 0.22f },
-		{ 0.28f, 0.30f, 0.32f }
-	};
-	const FLinearColor Tint = Colors[bAutomatedTest ? 0 : FMath::RandRange(0, 4)];
-	for (int32 Slot = 0; Slot < GetMesh()->GetNumMaterials(); ++Slot)
+
+	// Apply matte woven-fabric & pale late-night human PBR materials to SKM_Manny_Simple (5 distinct outfits)
+	if (USkeletalMeshComponent* Skel = GetMesh())
 	{
-		if (UMaterialInstanceDynamic* Material = GetMesh()->CreateDynamicMaterialInstance(Slot))
+		struct FCustomerOutfit { FLinearColor Jacket; FLinearColor Pants; FLinearColor Skin; FLinearColor Hair; };
+		static const FCustomerOutfit Outfits[5] = {
+			{ FLinearColor(0.11f, 0.14f, 0.19f), FLinearColor(0.06f, 0.08f, 0.13f), FLinearColor(0.60f, 0.52f, 0.47f), FLinearColor(0.04f, 0.035f, 0.035f) }, // Charcoal hoodie & dark denim
+			{ FLinearColor(0.22f, 0.14f, 0.10f), FLinearColor(0.05f, 0.05f, 0.06f), FLinearColor(0.56f, 0.49f, 0.45f), FLinearColor(0.08f, 0.055f, 0.04f) }, // Brown trench coat & black slacks
+			{ FLinearColor(0.10f, 0.18f, 0.14f), FLinearColor(0.09f, 0.09f, 0.09f), FLinearColor(0.62f, 0.54f, 0.48f), FLinearColor(0.03f, 0.03f, 0.03f) },   // Olive work jacket & grey pants
+			{ FLinearColor(0.24f, 0.09f, 0.11f), FLinearColor(0.07f, 0.07f, 0.08f), FLinearColor(0.54f, 0.48f, 0.45f), FLinearColor(0.05f, 0.04f, 0.04f) },   // Dark burgundy sweater & charcoal pants
+			{ FLinearColor(0.16f, 0.16f, 0.17f), FLinearColor(0.06f, 0.07f, 0.10f), FLinearColor(0.58f, 0.52f, 0.49f), FLinearColor(0.12f, 0.10f, 0.09f) },   // Slate commuter coat & navy trousers
+		};
+		static uint32 NextOutfit = 0;
+		const FCustomerOutfit& O = Outfits[bAutomatedTest ? 0 : static_cast<int32>((NextOutfit++) % 5u)];
+
+		if (CustomerHeadLegsMat && Skel->GetNumMaterials() > 0)
 		{
-			for (const FName Param : { FName(TEXT("Tint")), FName(TEXT("BaseColor")), FName(TEXT("Color")), FName(TEXT("BodyColor")), FName(TEXT("Paint Tint")) })
+			if (UMaterialInstanceDynamic* HeadLegsMID = UMaterialInstanceDynamic::Create(CustomerHeadLegsMat, this))
 			{
-				Material->SetVectorParameterValue(Param, Tint);
+				HeadLegsMID->SetVectorParameterValue(TEXT("PantsColor"), O.Pants);
+				HeadLegsMID->SetVectorParameterValue(TEXT("SkinColor"), O.Skin);
+				HeadLegsMID->SetVectorParameterValue(TEXT("HairColor"), O.Hair);
+				HeadLegsMID->SetVectorParameterValue(TEXT("ShoeColor"), FLinearColor(0.04f, 0.04f, 0.045f));
+				Skel->SetMaterial(0, HeadLegsMID);
+			}
+		}
+		if (CustomerTorsoMat && Skel->GetNumMaterials() > 1)
+		{
+			if (UMaterialInstanceDynamic* TorsoMID = UMaterialInstanceDynamic::Create(CustomerTorsoMat, this))
+			{
+				TorsoMID->SetVectorParameterValue(TEXT("JacketColor"), O.Jacket);
+				Skel->SetMaterial(1, TorsoMID);
 			}
 		}
 	}
@@ -382,6 +405,13 @@ FVector AShiftCustomer::GrabFocusLocation() const
 
 void AShiftCustomer::BeginLeaving()
 {
+	if (bHeadTiltPoseActive)
+	{
+		bHeadTiltPoseActive = false;
+		MonsterPose->SetVisibility(false);
+		MonsterPose->SetRelativeRotation(FRotator(0.f, 180.f, 0.f));
+		if (USkeletalMeshComponent* Skel = GetMesh()) { Skel->SetVisibility(true); }
+	}
 	State = ECustomerState::Leaving;
 	bBlockedByPlayer = false;
 	BlockedSeconds = 0.f;
@@ -396,12 +426,14 @@ void AShiftCustomer::BeginLeaving()
 
 void AShiftCustomer::ApplyMonsterVisuals()
 {
+	bHeadTiltPoseActive = false;
+	MonsterPose->SetRelativeRotation(FRotator(0.f, 180.f, 0.f));
+	UMaterialInterface* DarkMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ShiftStore/Materials/M_Charcoal.M_Charcoal"));
 	if (USkeletalMeshComponent* Skel = GetMesh())
 	{
 		Skel->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
 		Skel->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 		Skel->SetRelativeScale3D(FVector(0.92f, 0.92f, 1.18f)); // elongated silhouette
-		UMaterialInterface* DarkMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ShiftStore/Materials/M_Charcoal.M_Charcoal"));
 		if (DarkMat)
 		{
 			for (int32 i = 0; i < Skel->GetNumMaterials(); ++i)
@@ -510,27 +542,12 @@ void AShiftCustomer::AttractToNoise(const FVector& NoiseLocation)
 
 void AShiftCustomer::SetOtherworldPreview(bool bShowTrueForm)
 {
+	// Never spoil the monster's true form on [Q]! In the Chinese-horror old-scene phase,
+	// disguised entities keep their human silhouette so the actual reveal remains genuinely shocking.
 	if (!Spec.bMonster || IsMonsterActive() || State == ECustomerState::Leaving) { return; }
 	if (bOtherworldPreviewActive == bShowTrueForm) { return; }
 	bOtherworldPreviewActive = bShowTrueForm;
-	if (USkeletalMeshComponent* Skel = GetMesh())
-	{
-		Skel->SetRelativeScale3D(bShowTrueForm ? FVector(0.92f, 0.92f, 1.18f) : FVector(1.f, 1.f, 1.f));
-		for (UStaticMeshComponent* Eye : { AnomalyMaskLeftEye.Get(), AnomalyMaskRightEye.Get() })
-		{
-			if (!Eye) { continue; }
-			if (bShowTrueForm)
-			{
-				const bool bLeft = Eye == AnomalyMaskLeftEye.Get();
-				const bool bHead = Skel->DoesSocketExist(TEXT("head"));
-				Eye->AttachToComponent(Skel, FAttachmentTransformRules::SnapToTargetNotIncludingScale, bHead ? FName(TEXT("head")) : NAME_None);
-				Eye->SetRelativeLocation(bHead ? FVector(bLeft ? 4.f : 7.f, 12.f, bLeft ? -5.f : 5.f) : FVector(14.f, bLeft ? -6.f : 7.f, bLeft ? 162.f : 165.f));
-				Eye->SetRelativeScale3D(FVector(0.06f, 0.04f, 0.09f));
-			}
-			Eye->SetVisibility(bShowTrueForm);
-		}
-	}
-	EyeLight->SetIntensity(bShowTrueForm ? 80.f : 0.f);
+	EyeLight->SetIntensity(bShowTrueForm ? 14.f : 0.f);
 }
 
 void AShiftCustomer::Tick(float DeltaSeconds)
@@ -539,9 +556,22 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 	if (MonsterPose->IsVisible())
 	{
 		MonsterPose->CopyPoseFromSkeletalComponent(GetMesh());
-		const FQuat HeadRotation = MonsterPose->GetBoneRotationByName(TEXT("head"), EBoneSpaces::ComponentSpace).Quaternion();
-		const FQuat TwistedHead = FQuat(FVector::UpVector, PI) * HeadRotation;
-		MonsterPose->SetBoneRotationByName(TEXT("head"), TwistedHead.Rotator(), EBoneSpaces::ComponentSpace);
+		if (bHeadTiltPoseActive)
+		{
+			// Keep torso & feet planted upright; only tilt the neck & head unnaturally to the side.
+			const FQuat NeckRot = MonsterPose->GetBoneRotationByName(TEXT("neck_01"), EBoneSpaces::ComponentSpace).Quaternion();
+			const FQuat HeadRot = MonsterPose->GetBoneRotationByName(TEXT("head"), EBoneSpaces::ComponentSpace).Quaternion();
+			const FQuat NeckTilt = FQuat(FVector(0.f, 1.f, 0.f), FMath::DegreesToRadians(12.f)) * FQuat(FVector(1.f, 0.f, 0.f), FMath::DegreesToRadians(6.f));
+			const FQuat HeadTilt = FQuat(FVector(0.f, 1.f, 0.f), FMath::DegreesToRadians(28.f)) * FQuat(FVector(1.f, 0.f, 0.f), FMath::DegreesToRadians(10.f));
+			MonsterPose->SetBoneRotationByName(TEXT("neck_01"), (NeckTilt * NeckRot).Rotator(), EBoneSpaces::ComponentSpace);
+			MonsterPose->SetBoneRotationByName(TEXT("head"), (HeadTilt * HeadRot).Rotator(), EBoneSpaces::ComponentSpace);
+		}
+		else
+		{
+			const FQuat HeadRotation = MonsterPose->GetBoneRotationByName(TEXT("head"), EBoneSpaces::ComponentSpace).Quaternion();
+			const FQuat TwistedHead = FQuat(FVector::UpVector, PI) * HeadRotation;
+			MonsterPose->SetBoneRotationByName(TEXT("head"), TwistedHead.Rotator(), EBoneSpaces::ComponentSpace);
+		}
 	}
 	bSeeingPlayer = false;
 
@@ -586,8 +616,8 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 		FootstepTimer = FMath::Min(FootstepTimer, 0.12f);
 	}
 
-	// Active [Q] Otherworld Flash-Peek: disguised entities reveal their terrifying true form in the Otherworld,
-	// and attack immediately if the player stares at their true form for more than 2.5 seconds!
+	// Active [Q] Old-Scene Glimpse: never spoils the monster's true form up front,
+	// but staring at a disguised entity inside the old crime scene makes it notice you and snap!
 	if (Spec.bMonster && !IsMonsterActive() && State != ECustomerState::Leaving && GM && GM->Director)
 	{
 		const bool bPeekActive = GM->Director->IsPlayerPhaseShifted();
@@ -595,7 +625,13 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 		if (bPeekActive && Player && PlayerSeesMe(Player))
 		{
 			OtherworldPeekTime += DeltaSeconds;
-			if (OtherworldPeekTime > 2.5f)
+			if (OtherworldPeekTime > 1.1f)
+			{
+				// It notices you peeking at the old scene and snaps its gaze directly onto you.
+				const FVector ToP = Player->GetActorLocation() - GetActorLocation();
+				SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0.f, ToP.Rotation().Yaw, 0.f), DeltaSeconds, 14.f));
+			}
+			if (OtherworldPeekTime > 2.2f)
 			{
 				RevealMonster(Player);
 				return;
@@ -656,9 +692,21 @@ void AShiftCustomer::Tick(float DeltaSeconds)
 			{
 				if (USkeletalMeshComponent* Skel = GetMesh())
 				{
-					if (Spec.Tell == EDisguiseTell::HeadTilt)
+					if (Spec.Tell == EDisguiseTell::HeadTilt && !bHeadTiltPoseActive)
 					{
-						Skel->SetRelativeRotation(FRotator(16.f, -90.f, 26.f));
+						// Activate upright bone-only head tilt (never lean the whole actor mesh into the floor!)
+						bHeadTiltPoseActive = true;
+						MonsterPose->SetSkinnedAssetAndUpdate(Skel->GetSkeletalMeshAsset());
+						for (int32 Slot = 0; Slot < Skel->GetNumMaterials(); ++Slot)
+						{
+							MonsterPose->SetMaterial(Slot, Skel->GetMaterial(Slot));
+						}
+						MonsterPose->SetRelativeLocation(FVector::ZeroVector);
+						MonsterPose->SetRelativeRotation(FRotator::ZeroRotator);
+						MonsterPose->SetRelativeScale3D(FVector(1.f, 1.f, 1.f));
+						MonsterPose->CopyPoseFromSkeletalComponent(Skel);
+						MonsterPose->SetVisibility(true);
+						Skel->SetVisibility(false);
 					}
 					else if (Spec.Tell == EDisguiseTell::Floating)
 					{

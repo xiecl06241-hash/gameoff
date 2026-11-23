@@ -55,7 +55,7 @@ private:
 	bool bGrabCameraActive = false;
 	float GrabCameraTime = 0.f;
 	FRotator GrabStartRotation = FRotator::ZeroRotator;
-	void UpdateFocusAndInteraction(float DeltaSeconds, bool bInteractJustPressed, bool bInteractDown, bool bThrowJustPressed);
+	void UpdateFocusAndInteraction(float DeltaSeconds, bool bInteractJustPressed, bool bInteractDown, bool bThrowJustPressed, bool bRefuseJustPressed);
 	FName ExtractSkuTag(const AActor* Actor) const;
 
 	bool bPrevInteractDown = false;

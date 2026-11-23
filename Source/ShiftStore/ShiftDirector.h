@@ -63,8 +63,10 @@ private:
 	struct FMovedInstance { TWeakObjectPtr<UInstancedStaticMeshComponent> Comp; int32 Index; FTransform Base; FVector Offset; };
 	struct FLightState { TWeakObjectPtr<ULightComponent> Light; float Normal; float Shift; FLinearColor NormalColor; FLinearColor ShiftColor; };
 	struct FAccentLightState { TWeakObjectPtr<UPointLightComponent> Light; float Normal; float Shift; FLinearColor NormalColor; FLinearColor ShiftColor; };
+	struct FSwappedSurface { TWeakObjectPtr<UStaticMeshComponent> Comp; int32 Slot; TWeakObjectPtr<UMaterialInterface> NormalMat; TWeakObjectPtr<UMaterialInterface> ShiftMat; };
 
 	void Collect();
+	void SpawnChineseHorrorCrimeScene();
 	void Apply(float A);
 	static FVector OffsetFor(const FVector& P);
 
@@ -72,14 +74,23 @@ private:
 	TArray<FMovedInstance> MovedInstances;
 	TArray<FLightState> Lights;
 	TArray<FAccentLightState> AccentLights;
+	TArray<FSwappedSurface> SwappedSurfaces;
 	TArray<TWeakObjectPtr<UStaticMeshComponent>> Fixtures;
 	TArray<TWeakObjectPtr<UMaterialInterface>> FixtureNormalMats;
+	TArray<TWeakObjectPtr<AActor>> CrimeSceneActors;
+	TArray<TWeakObjectPtr<AActor>> NormalOnlyActors;
+	TArray<TWeakObjectPtr<UInstancedStaticMeshComponent>> NormalOnlyISMs;
+	TArray<TWeakObjectPtr<UPointLightComponent>> CrimeLanternLights;
 	TWeakObjectPtr<UStaticMeshComponent> WelcomeSign;
 	TWeakObjectPtr<APostProcessVolume> PostProcess;
 	TWeakObjectPtr<UExponentialHeightFogComponent> HorrorFog;
 	UPROPERTY(Transient) TObjectPtr<UStaticMesh> WelcomeMesh;
 	UPROPERTY(Transient) TObjectPtr<UStaticMesh> NoticeMesh;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInterface> DarkLens;
+	UPROPERTY() TObjectPtr<UMaterialInterface> OtherworldWallMat;
+	UPROPERTY() TObjectPtr<UMaterialInterface> OtherworldFloorMat;
+	UPROPERTY() TObjectPtr<UMaterialInterface> OtherworldCeilingMat;
+	bool bSurfacesSwapped = false;
 
 	bool bShift = false;
 	bool bPlayerPhaseShift = false;

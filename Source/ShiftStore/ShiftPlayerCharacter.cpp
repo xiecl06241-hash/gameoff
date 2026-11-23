@@ -314,7 +314,8 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
-	if (PC->WasInputKeyJustPressed(EKeys::Tab)) { GM->CycleGuidedTask(); }
+	if (PC->WasInputKeyJustPressed(EKeys::Tab)) { GM->ToggleRuleNote(); }
+	if (PC->WasInputKeyJustPressed(EKeys::V)) { GM->CycleGuidedTask(); }
 
 	// Mouse look
 	if (!IsGrabbed())
@@ -440,10 +441,11 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
-	UpdateFocusAndInteraction(DeltaSeconds, bInteractJust, bInteractDown, bThrowJust);
+	const bool bRefuseJust = PC->WasInputKeyJustPressed(EKeys::R);
+	UpdateFocusAndInteraction(DeltaSeconds, bInteractJust, bInteractDown, bThrowJust, bRefuseJust);
 }
 
-void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool bInteractJustPressed, bool bInteractDown, bool bThrowJustPressed)
+void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool bInteractJustPressed, bool bInteractDown, bool bThrowJustPressed, bool bRefuseJustPressed)
 {
 	AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
 	CrosshairPrompt.Reset();
@@ -561,11 +563,16 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 	{
 		if (Cust->State == ECustomerState::WaitingForHelp)
 		{
+			if (bRefuseJustPressed)
+			{
+				GM->OnCustomerRefused(Cust);
+				return;
+			}
 			const FString WantedLabel = ShiftData::ProductLabel(Cust->Spec.WantedSku);
-			if (Cust->Spec.bMonster && HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == Cust->Spec.MonsterSku)
+			if (GM->IsAutomatedSession() && Cust->Spec.bMonster && HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == Cust->Spec.MonsterSku)
 			{
 				const FString TrueLabel = ShiftData::ProductLabel(Cust->Spec.MonsterSku);
-				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Hand %s to Customer"), {FString(TrueLabel)});
+				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Hand %s to Customer  |  [R] Refuse"), {FString(TrueLabel)});
 				if (bInteractJustPressed)
 				{
 					ConsumeHeldItem();
@@ -574,7 +581,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			}
 			else if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == Cust->Spec.WantedSku)
 			{
-				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Hand %s to Customer"), {FString(WantedLabel)});
+				CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Hand %s to Customer  |  [R] Refuse"), {FString(WantedLabel)});
 				if (bInteractJustPressed)
 				{
 					if (Cust->Spec.bMonster)
@@ -591,18 +598,33 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			}
 			else
 			{
-				// Never spoil the monster's true item on the crosshair; the player must observe visual tells and check the Shift Rules!
-				CrosshairPrompt = ShiftLoc::Format(TEXT("Customer: \"%s\" (Bring %s)"), {FString(Cust->Spec.Line.IsEmpty() ? TEXT("Can you find this for me?") : *Cust->Spec.Line), FString(WantedLabel)});
+				// Never spoil the monster's true item on the crosshair; the player must observe visual tells and check the Shift Note!
+				CrosshairPrompt = ShiftLoc::Format(TEXT("Customer: \"%s\" (Bring %s)  |  [R] Refuse"), {FString(Cust->Spec.Line.IsEmpty() ? TEXT("Can you find this for me?") : *Cust->Spec.Line), FString(WantedLabel)});
 			}
 			return;
 		}
 		if (Cust->State == ECustomerState::WaitingAtCheckout)
 		{
-			CrosshairPrompt = TEXT("[E] Ring Up Customer at Checkout");
+			if (bRefuseJustPressed)
+			{
+				GM->OnCustomerRefused(Cust);
+				return;
+			}
+			CrosshairPrompt = TEXT("[E] Ring Up Customer at Checkout  |  [R] Refuse");
 			if (bInteractJustPressed)
 			{
 				GM->OnCheckoutCompleted(Cust);
 			}
+			return;
+		}
+		if (!Cust->IsMonsterActive() && Cust->State != ECustomerState::Leaving)
+		{
+			if (bRefuseJustPressed)
+			{
+				GM->OnCustomerRefused(Cust);
+				return;
+			}
+			CrosshairPrompt = TEXT("[R] Refuse Service");
 			return;
 		}
 		if (Cust->IsMonsterActive())
@@ -626,7 +648,9 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 				if (C->IsMonsterActive())
 				{
 					const FString Demanded = ShiftData::ProductLabel(C->Spec.MonsterSku);
-					if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == C->Spec.MonsterSku)
+					const bool bValidLostDelivery = HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product
+						&& HeldItem->Sku == C->Spec.MonsterSku && (GM->IsAutomatedSession() || HeldItem->bLostItem);
+					if (bValidLostDelivery)
 					{
 						CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Deliver %s to appease the entity!"), {FString(Demanded)});
 						if (bInteractJustPressed)
@@ -636,7 +660,12 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 						}
 						return;
 					}
-					CrosshairPrompt = ShiftLoc::Format(TEXT("Checkout: Bring [%s] here to banish the entity"), {FString(Demanded)});
+					if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && HeldItem->Sku == C->Spec.MonsterSku && !HeldItem->bLostItem)
+					{
+						CrosshairPrompt = TEXT("Not its lost item! Find the red-glowing lost item spawned in the store!");
+						return;
+					}
+					CrosshairPrompt = ShiftLoc::Format(TEXT("Checkout: Bring the red-glowing [%s] here to banish the entity"), {FString(Demanded)});
 					return;
 				}
 				if (C->State == ECustomerState::WaitingAtCheckout)

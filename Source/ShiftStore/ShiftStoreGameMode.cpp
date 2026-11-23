@@ -316,19 +316,36 @@ void AShiftStoreGameMode::BuildNightCustomerRoster()
 		C2.Line = TEXT("Excuse me... where are the noodle cups?");
 	}
 
-	// Shuffle the 3 visual tells and assign each disguised entity its matching rulebook counter-product.
-	TArray<EDisguiseTell> Tells = { EDisguiseTell::HeadTilt, EDisguiseTell::RedGlare, EDisguiseTell::Floating };
+	// Progressive rules: Night 1 uses 1 rule (HeadTilt), Night 2 uses 2, Night 3 uses all 3.
+	TArray<EDisguiseTell> Tells;
+	Tells.Add(EDisguiseTell::HeadTilt);
+	if (ActiveRuleCount() >= 2) { Tells.Add(EDisguiseTell::RedGlare); }
+	if (ActiveRuleCount() >= 3) { Tells.Add(EDisguiseTell::Floating); }
 	for (int32 i = Tells.Num() - 1; i > 0; --i)
 	{
 		Tells.Swap(i, FMath::RandRange(0, i));
 	}
+	const TArray<FShiftProduct>& AllProducts = ShiftData::Products();
 	int32 TellCursor = 0;
 	for (FShiftCustomerSpec& C : ActiveNightCustomers)
 	{
 		if (C.bMonster)
 		{
 			C.Tell = Tells[TellCursor++ % Tells.Num()];
-			C.MonsterSku = ShiftData::CounterSkuForTell(C.Tell);
+			// Randomize the post-reveal lost item SKU so players can never pre-stock a fixed counter item!
+			if (!AllProducts.IsEmpty())
+			{
+				FName Picked = AllProducts[FMath::RandRange(0, AllProducts.Num() - 1)].Sku;
+				if (Picked == C.WantedSku && AllProducts.Num() > 1)
+				{
+					Picked = AllProducts[(FMath::RandRange(1, AllProducts.Num() - 1)) % AllProducts.Num()].Sku;
+				}
+				C.MonsterSku = Picked;
+			}
+			else
+			{
+				C.MonsterSku = ShiftData::CounterSkuForTell(C.Tell);
+			}
 		}
 	}
 
@@ -484,6 +501,11 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 		}
 	}
 	Phase = EShiftPhase::NightIntro;
+	bRuleNoteOpen = false;
+	RuleNoteAutoHideTimer = 0.f;
+	RuleNoteRaiseAlpha = 0.f;
+	bShowPhaseShiftPrompt = false;
+	PhaseShiftPromptTimer = 0.f;
 	BannerText.Empty();
 	BannerTimer = 0.f;
 }
@@ -521,13 +543,15 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 	else if (Phase == EShiftPhase::NightIntro)
 	{
 		Phase = EShiftPhase::Working;
+		if (!bAutomatedSession)
+		{
+			bRuleNoteOpen = true;
+			RuleNoteAutoHideTimer = 3.6f;
+			PlayExternalOrSynthesizedCue(TEXT("cloth_rustle.wav"), 320.f, 0.12f, 0.34f);
+		}
 		if (NightIndex == 0)
 		{
 			RequestDialogue(EShiftDialogueEvent::WorkStart);
-			if (!bAutomatedSession)
-			{
-				SetStatusBanner(TEXT("Press [Q] anytime to SHIFT between Normal & Otherworld — Peek at customers' true forms!"), 5.5f);
-			}
 		}
 		PlaySynthesizedCue(520.f, 0.18f, 0.25f);
 	}
@@ -793,6 +817,9 @@ bool AShiftStoreGameMode::TryPlayerPhaseShift()
 {
 	if (!Director || (Phase != EShiftPhase::Working && Phase != EShiftPhase::Cleanup)) { return false; }
 	if (!Director->TogglePlayerPhaseShift()) { return false; }
+	bHasUsedPhaseShift = true;
+	bShowPhaseShiftPrompt = false;
+	PhaseShiftPromptTimer = 0.f;
 	if (Director->IsPhaseBurstActive())
 	{
 		PlayExternalOrSynthesizedCue(TEXT("light_flicker.wav"), 240.f, 0.25f, 0.36f, true);
@@ -925,6 +952,80 @@ void AShiftStoreGameMode::OnCheckoutCompleted(AShiftCustomer* Customer)
 	Customer->BeginLeaving();
 	PlayExternalOrSynthesizedCue(TEXT("scanner_beep.wav"), 820.f, 0.18f, 0.28f);
 	SetStatusBanner(ShiftLoc::Format(TEXT("Sale complete (+$%.2f). The customer is leaving."), {FString::Printf(TEXT("%.2f"), SalePrice)}), 3.f);
+}
+
+void AShiftStoreGameMode::ToggleRuleNote()
+{
+	if (Phase != EShiftPhase::Working && Phase != EShiftPhase::Cleanup) { return; }
+	bRuleNoteOpen = !bRuleNoteOpen;
+	RuleNoteAutoHideTimer = 0.f;
+	if (!bAutomatedSession)
+	{
+		PlayExternalOrSynthesizedCue(TEXT("cloth_rustle.wav"), 320.f, 0.10f, 0.30f);
+	}
+}
+
+FString AShiftStoreGameMode::GetOnboardingHint(const AShiftPlayerCharacter* Player) const
+{
+	if (bAutomatedSession || NightIndex != 0 || Phase != EShiftPhase::Working || bRuleNoteOpen) { return FString(); }
+	if (bShowPhaseShiftPrompt && !bHasUsedPhaseShift)
+	{
+		return TEXT("The air just went ice cold... Press [Q] to glimpse the old scene left in this store (don't look too long).");
+	}
+	if (const AShiftCustomer* C = ActiveCustomer.Get())
+	{
+		if (C->IsMonsterActive())
+		{
+			return TEXT("Run! Hold [Shift] to sprint — find the red-glowing item and bring it to the register.");
+		}
+		if (C->State == ECustomerState::WaitingForHelp)
+		{
+			return TEXT("Watch their posture closely. Press [Tab] to check the Shift Note — press [R] to refuse if abnormal.");
+		}
+		if (C->State == ECustomerState::WaitingAtCheckout)
+		{
+			return TEXT("Walk behind the counter and press [E] on the customer or scanner to check them out.");
+		}
+		return TEXT("A visitor entered. Watch them closely — press [Q] briefly if the store feels wrong.");
+	}
+	if (HasActiveAnomaly())
+	{
+		return TEXT("Something feels off in the store... Press [Q] to glimpse the old scene, or hold [E] to fix the anomaly.");
+	}
+	if (!ActiveTasks.IsEmpty())
+	{
+		return TEXT("Follow the yellow marker and HOLD [E] to finish your chore. Press [Tab] anytime to check the Shift Note.");
+	}
+	return FString();
+}
+
+void AShiftStoreGameMode::OnCustomerRefused(AShiftCustomer* Customer)
+{
+	if (Phase != EShiftPhase::Working || !Customer || ActiveCustomer.Get() != Customer) { return; }
+	if (Customer->IsMonsterActive() || Customer->State == ECustomerState::Leaving) { return; }
+	bRuleNoteOpen = false;
+	RuleNoteAutoHideTimer = 0.f;
+	if (Customer->Spec.bMonster)
+	{
+		++TotalMonstersWarded;
+		Income += 10.f;
+		ModifySanity(8.f);
+		Customer->EyeLight->SetIntensity(0.f);
+		Customer->Speech->SetTextRenderColor(FColor(180, 235, 210));
+		Customer->Speech->SetText(FText::FromString(ShiftLoc::Text(TEXT("...You saw right through me."))));
+		Customer->BeginLeaving();
+		PlayExternalOrSynthesizedCue(TEXT("ward_off.wav"), 760.f, 0.28f, 0.34f);
+		SetStatusBanner(TEXT("Disguise exposed! Refused service and drove it out (+$10.00 bonus, +Sanity)."), 4.2f);
+	}
+	else
+	{
+		ModifySanity(-15.f);
+		Customer->Speech->SetTextRenderColor(FColor(245, 190, 120));
+		Customer->Speech->SetText(FText::FromString(ShiftLoc::Text(TEXT("What is wrong with you?! I'm never coming back!"))));
+		Customer->BeginLeaving();
+		PlaySynthesizedCue(160.f, 0.25f, 0.30f, true);
+		SetStatusBanner(TEXT("Wrong call! That was a normal customer (-15 Sanity)."), 4.0f);
+	}
 }
 
 void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitnessed)
@@ -1153,6 +1254,19 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 
 	if (Phase != EShiftPhase::Working && Phase != EShiftPhase::Cleanup) { return; }
 
+	if (RuleNoteAutoHideTimer > 0.f)
+	{
+		RuleNoteAutoHideTimer = FMath::Max(0.f, RuleNoteAutoHideTimer - DeltaSeconds);
+		if (RuleNoteAutoHideTimer <= 0.f) { bRuleNoteOpen = false; }
+	}
+	const float TargetNoteAlpha = bRuleNoteOpen ? 1.f : 0.f;
+	RuleNoteRaiseAlpha = FMath::FInterpConstantTo(RuleNoteRaiseAlpha, TargetNoteAlpha, DeltaSeconds, 5.5f);
+	if (PhaseShiftPromptTimer > 0.f)
+	{
+		PhaseShiftPromptTimer = FMath::Max(0.f, PhaseShiftPromptTimer - DeltaSeconds);
+		if (PhaseShiftPromptTimer <= 0.f) { bShowPhaseShiftPrompt = false; }
+	}
+
 	// 1. Overdue task sanity drain (stacks across overdue tasks)
 	int32 OverdueCount = 0;
 	for (const TWeakObjectPtr<AShiftTaskTarget>& TP : ActiveTasks)
@@ -1217,7 +1331,13 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 		{
 			EerieFlickerTimer = FMath::FRandRange(16.f, 26.f);
 			Director->Flicker(0.65f);
-			PlaySynthesizedCue(90.f, 0.25f, 0.18f, true);
+			PlayExternalOrSynthesizedCue(TEXT("light_flicker.wav"), 90.f, 0.25f, 0.26f, true);
+			if (!bAutomatedSession && !bHasUsedPhaseShift)
+			{
+				bShowPhaseShiftPrompt = true;
+				PhaseShiftPromptTimer = 10.f;
+				SetStatusBanner(TEXT("The air just went ice cold... Press [Q] to glimpse the old scene!"), 5.5f);
+			}
 		}
 	}
 

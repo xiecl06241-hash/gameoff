@@ -290,11 +290,12 @@ void AShiftHUD::DrawHUD()
 			ShiftLoc::Text(N.Intro).ParseIntoArrayLines(Lines);
 			for (int32 i = 0; i < Lines.Num(); ++i)
 			{
-				DrawCenteredText(Lines[i], H * 0.36f + i * 36.f, MinimalHorror::Ivory, 1.15f);
+				DrawCenteredText(Lines[i], H * 0.32f + i * 38.f, MinimalHorror::Ivory, 1.08f);
 			}
-			DrawCenteredText(ShiftLoc::Format(TEXT("Customers Expected Tonight: %d   |   Auto-Save Active"), {LexToString(N.Customers.Num())}), H * 0.56f, MinimalHorror::Muted, 1.0f);
-			DrawCenteredText(ShiftLoc::Format(TEXT("Chore time limit: %ds. Timers are paused on this screen."), {LexToString(FMath::RoundToInt(N.TaskTimeLimit))}), H * 0.62f, MinimalHorror::Muted, 0.92f);
-			DrawCenteredText(TEXT("Press [SPACE] or [E] to Begin Night"), H * 0.74f, MinimalHorror::WarmAmber, 1.28f);
+			DrawCenteredText(ShiftLoc::Format(TEXT("Customers Expected Tonight: %d   |   Active Rules: %d"), {LexToString(N.Customers.Num()), LexToString(GM->ActiveRuleCount())}), H * 0.54f, MinimalHorror::WarmAmber, 0.98f);
+			DrawCenteredText(TEXT("[WASD] Move   [E] Interact / Hand Item   [Tab] Shift Note   [R] Refuse   [Q] Glimpse Old Scene"), H * 0.61f, MinimalHorror::SoftIvory, 0.90f);
+			DrawCenteredText(ShiftLoc::Format(TEXT("Chore time limit: %ds. Timers are paused on this screen."), {LexToString(FMath::RoundToInt(N.TaskTimeLimit))}), H * 0.665f, MinimalHorror::Muted, 0.86f);
+			DrawCenteredText(TEXT("Press [SPACE] or [E] to Begin Night"), H * 0.76f, MinimalHorror::WarmAmber, 1.28f);
 		}
 		else if (GM->Phase == EShiftPhase::Dawn)
 		{
@@ -352,29 +353,31 @@ void AShiftHUD::DrawHUD()
 		DrawThinBar(28.f, 100.f, 272.f, 2.f, LossPct, MinimalHorror::DriedBlood, FLinearColor(0.20f, 0.18f, 0.17f, 0.30f));
 	}
 
-	// Minimal [Q] Dual-Reality Phase Shift indicator
+	// Minimal [Q] Old Scene Glimpse & [Tab] Shift Note indicators
 	if (GM->Director)
 	{
 		if (GM->Director->IsPlayerPhaseShifted())
 		{
-			DrawLocalizedText(TEXT("[Q] OTHERWORLD ACTIVE (-Sanity)"), MinimalHorror::Crimson, 28.f, 104.f, Font, 0.76f, 320.f);
+			DrawLocalizedText(TEXT("[Q] OLD SCENE ACTIVE (-Sanity)"), MinimalHorror::Crimson, 28.f, 104.f, Font, 0.76f, 320.f);
 		}
 		else if (GM->Director->PlayerPhaseCooldownRemaining() > 0.5f)
 		{
-			DrawLocalizedText(ShiftLoc::Format(TEXT("[Q] Phase Shift (%ds)"), {LexToString(FMath::CeilToInt(GM->Director->PlayerPhaseCooldownRemaining()))}), MinimalHorror::Muted, 28.f, 104.f, Font, 0.74f, 280.f);
+			DrawLocalizedText(ShiftLoc::Format(TEXT("[Q] Glimpse Old Scene (%ds)"), {LexToString(FMath::CeilToInt(GM->Director->PlayerPhaseCooldownRemaining()))}), MinimalHorror::Muted, 28.f, 104.f, Font, 0.74f, 280.f);
 		}
 		else
 		{
-			DrawLocalizedText(TEXT("[Q] Phase Shift"), FLinearColor(0.74f, 0.72f, 0.66f, 0.68f), 28.f, 104.f, Font, 0.74f, 260.f);
+			DrawLocalizedText(TEXT("[Q] Glimpse Old Scene"), FLinearColor(0.74f, 0.72f, 0.66f, 0.68f), 28.f, 104.f, Font, 0.74f, 260.f);
 		}
 	}
+	DrawLocalizedText(ShiftLoc::Format(TEXT("[Tab] Shift Note (%d)"), {LexToString(GM->ActiveRuleCount())}),
+		GM->bRuleNoteOpen ? MinimalHorror::WarmAmber : FLinearColor(0.76f, 0.73f, 0.66f, 0.72f), 28.f, 126.f, Font, 0.74f, 260.f);
 
 	// Auto-Hide Stamina: ONLY visible while actively sprinting or recovering (< 99%)
 	if (Player && (Player->bIsSprinting || Player->Stamina < 99.f))
 	{
 		const float StamPct = FMath::Clamp(Player->Stamina / 100.f, 0.f, 1.f);
-		DrawLocalizedText(TEXT("SPRINT [Shift]"), MinimalHorror::Muted, 28.f, 128.f, Font, 0.74f, 115.f);
-		DrawThinBar(150.f, 136.f, 150.f, 2.5f, StamPct,
+		DrawLocalizedText(TEXT("SPRINT [Shift]"), MinimalHorror::Muted, 28.f, 150.f, Font, 0.74f, 115.f);
+		DrawThinBar(150.f, 158.f, 150.f, 2.5f, StamPct,
 			StamPct < 0.25f ? MinimalHorror::Crimson : MinimalHorror::SoftIvory,
 			FLinearColor(0.20f, 0.19f, 0.18f, 0.32f));
 	}
@@ -383,27 +386,14 @@ void AShiftHUD::DrawHUD()
 	if (Player && Player->HeldItem.IsValid())
 	{
 		const FString HeldStr = ShiftLoc::Format(TEXT("CARRYING: %s  ([F/RMB] Throw  [G] Drop)"), {FString(Player->HeldItem->DisplayName())});
-		DrawCenteredText(HeldStr, H - 108.f, MinimalHorror::WarmAmber, 0.86f);
+		DrawCenteredText(HeldStr, H - 134.f, MinimalHorror::WarmAmber, 0.86f);
 	}
 
-	// --- 2. Contextual Bottom-Left Shift Rules: ONLY appears when a customer is inside the store! ---
-	if (GM->ActiveCustomer.IsValid())
+	// First-night single-step onboarding whisper (non-intrusive, disappears after Night 1)
+	if (const FString Hint = GM->GetOnboardingHint(Player); !Hint.IsEmpty() && GM->SubtitleTime <= 0.f && GM->RuleNoteRaiseAlpha < 0.25f)
 	{
-		const float RuleY = H - 134.f;
-		const float RuleW = 418.f;
-		const float RuleH = 110.f;
-		const bool bCorrupted = GM->NightIndex >= 2 && (GM->HasActiveAnomaly() || bShifted);
-
-		DrawMemoCard(24.f, RuleY, RuleW, RuleH, bCorrupted);
-		if (bCorrupted)
-		{
-			const FLinearColor WarnCol(0.92f, 0.20f + 0.12f * FMath::Sin(Now * 14.f), 0.18f, 0.95f);
-			DrawLocalizedText(TEXT("[! SIGNAL CORRUPTED — FIX ANOMALY !]"), WarnCol, 34.f, RuleY - 22.f, Font, 0.76f, RuleW - 18.f);
-		}
-		DrawLocalizedText(TEXT("SHIFT RULES — Observe Customer Before Handing:"), bCorrupted ? MinimalHorror::Crimson : MinimalHorror::WarmAmber, 34.f, RuleY + 6.f, Font, 0.78f, RuleW - 20.f);
-		DrawLocalizedText(TEXT("1. Tilted head / stares wall -> Hand [PANTRY Tomato Soup]"), MinimalHorror::SoftIvory, 34.f, RuleY + 32.f, Font, 0.76f, RuleW - 20.f);
-		DrawLocalizedText(TEXT("2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]"), MinimalHorror::SoftIvory, 34.f, RuleY + 57.f, Font, 0.76f, RuleW - 20.f);
-		DrawLocalizedText(TEXT("3. Feet floating off floor -> Hand [MORNING Bread]"), MinimalHorror::SoftIvory, 34.f, RuleY + 82.f, Font, 0.76f, RuleW - 20.f);
+		DrawRect(FLinearColor(0.02f, 0.015f, 0.01f, 0.56f), W * 0.14f, H - 72.f, W * 0.72f, 34.f);
+		DrawCenteredText(Hint, H - 66.f, MinimalHorror::WarmAmber, 0.88f);
 	}
 
 	// --- 3. Proximity Heartbeat / Jumpscare Organic Dark-Blood Vignette ---
@@ -468,7 +458,8 @@ void AShiftHUD::DrawHUD()
 	// --- 7. Whisper-Quiet Horror Reticle & Frameless Interaction Prompt ---
 	const float CX = W * 0.5f;
 	const float CY = H * 0.5f;
-	const bool bHasPrompt = Player && !Player->CrosshairPrompt.IsEmpty();
+	const bool bNoteBlockingView = GM->RuleNoteRaiseAlpha > 0.45f;
+	const bool bHasPrompt = !bNoteBlockingView && Player && !Player->CrosshairPrompt.IsEmpty();
 	if (bHasPrompt)
 	{
 		const FLinearColor DotCol = Player->IsGrabbed() ? MinimalHorror::Crimson : MinimalHorror::Ivory;
@@ -482,13 +473,17 @@ void AShiftHUD::DrawHUD()
 				FLinearColor(0.18f, 0.17f, 0.16f, 0.55f));
 		}
 	}
-	else
+	else if (!bNoteBlockingView)
 	{
 		DrawRect(FLinearColor(0.90f, 0.88f, 0.82f, 0.42f), CX - 1.5f, CY - 1.5f, 3.f, 3.f);
 	}
 
 	DrawTaskGuidance(GM, Player);
 	DrawSubtitle(GM);
+	if (GM->RuleNoteRaiseAlpha > 0.01f)
+	{
+		DrawRuleNoteOverlay(GM);
+	}
 	DrawLocalizedText(TEXT("[Esc] Pause"), FLinearColor(0.65f, 0.63f, 0.58f, 0.52f), W - 118.f, H - 32.f, Font, 0.78f, 108.f);
 }
 
@@ -556,7 +551,7 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 		{
 			Add(ShiftLoc::Format(TEXT("* Customer Help: Bring [%s]"), {ShiftData::ProductLabel(C->Spec.WantedSku)}), Accent);
 			Add(TEXT("Take the product from a shelf, then press [E] on the customer."), Normal);
-			Add(TEXT("Check SHIFT RULES (Bottom-Left): Observe posture before handing!"), FLinearColor(0.88f, 0.58f, 0.34f), 0.80f);
+			Add(TEXT("Press [Tab] to check Shift Note — press [R] to refuse if abnormal!"), FLinearColor(0.88f, 0.58f, 0.34f), 0.80f);
 		}
 		else if (C->State == ECustomerState::WaitingAtCheckout) { Add(TEXT("* Customer waiting at Checkout Register [E]"), Accent); }
 		else if (C->State == ECustomerState::Leaving) { Add(TEXT("Customer is leaving. Keep the doorway clear."), Normal); }
@@ -613,7 +608,7 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 				bEntityAlert = true;
 				Add(ShiftLoc::Format(TEXT("%d overdue chores are draining sanity!"), {LexToString(Overdue)}), MinimalHorror::Crimson);
 			}
-			if (GM->ActiveTasks.Num() > 1) { Add(TEXT("[TAB] Next chore"), Dim, 0.80f); }
+			if (GM->ActiveTasks.Num() > 1) { Add(TEXT("[V] Next chore"), Dim, 0.80f); }
 		}
 		else if (const int32 Loose = GM->Phase == EShiftPhase::Cleanup ? GM->CountLooseMerchandise() : 0; Loose > 0)
 		{
@@ -725,4 +720,98 @@ void AShiftHUD::DrawTaskGuidance(AShiftStoreGameMode* GM, AShiftPlayerCharacter*
 	const float Y = FMath::Clamp(Position.Y + 14.f, 18.f, H - TH - 46.f);
 	DrawText(Tag, FLinearColor(0.f, 0.f, 0.f, 0.88f), X + 1.5f, Y + 1.5f, InterfaceFont(), 0.78f);
 	DrawText(Tag, Accent, X, Y, InterfaceFont(), 0.78f);
+}
+
+void AShiftHUD::DrawRuleNoteOverlay(AShiftStoreGameMode* GM)
+{
+	if (!Canvas || !GM) { return; }
+	const float W = Canvas->ClipX, H = Canvas->ClipY;
+	UFont* Font = InterfaceFont();
+	const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+	const float Ease = FMath::SmoothStep(0.f, 1.f, GM->RuleNoteRaiseAlpha);
+	const int32 RuleCount = GM->ActiveRuleCount();
+	const bool bCorrupted = GM->NightIndex >= 2 && (GM->HasActiveAnomaly() || (GM->Director && GM->Director->IsShifted()));
+
+	// Slight peripheral darkening while focusing eyes up close on the held paper note
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.34f * Ease), 0.f, 0.f, W, H);
+
+	// Held paper note pulled up from pocket — intentionally blocks ~70% of the viewport so checking rules feels tense!
+	const float SwayX = FMath::Sin(Now * 1.9f) * 3.5f * Ease;
+	const float SwayY = FMath::Cos(Now * 2.4f) * 2.5f * Ease;
+	const float NoteW = W * 0.68f;
+	const float NoteH = H * 0.86f;
+	const float X = (W - NoteW) * 0.5f + SwayX;
+	const float Y = FMath::Lerp(H + 36.f, H * 0.18f, Ease) + SwayY;
+
+	// Soft drop shadow behind held paper
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.62f * Ease), X - 12.f, Y + 10.f, NoteW + 24.f, NoteH);
+
+	// Aged dim yellowed pocket paper (muted for 2:30 AM store lighting — never blinding white)
+	const FLinearColor PaperBase = bCorrupted
+		? FLinearColor(0.64f, 0.52f, 0.44f, 0.98f)
+		: FLinearColor(0.73f, 0.67f, 0.54f, 0.98f);
+	DrawRect(PaperBase, X, Y, NoteW, NoteH);
+
+	// Worn edges & inner paper shadow
+	const FLinearColor EdgeShade(0.32f, 0.26f, 0.18f, 0.38f);
+	DrawRect(EdgeShade, X, Y, NoteW, 10.f);
+	DrawRect(EdgeShade, X, Y, 12.f, NoteH);
+	DrawRect(EdgeShade, X + NoteW - 12.f, Y, 12.f, NoteH);
+
+	// Pocket fold creases (horizontal & vertical center fold lines)
+	DrawRect(FLinearColor(0.26f, 0.21f, 0.14f, 0.28f), X + 8.f, Y + NoteH * 0.44f, NoteW - 16.f, 2.5f);
+	DrawRect(FLinearColor(0.86f, 0.80f, 0.68f, 0.22f), X + 8.f, Y + NoteH * 0.44f + 2.5f, NoteW - 16.f, 2.f);
+	DrawRect(FLinearColor(0.26f, 0.21f, 0.14f, 0.22f), X + NoteW * 0.5f, Y + 8.f, 2.5f, NoteH - 16.f);
+
+	// Faint dried crimson stain near lower-right corner
+	DrawRect(FLinearColor(0.38f, 0.06f, 0.05f, 0.26f), X + NoteW * 0.72f, Y + NoteH * 0.58f, NoteW * 0.18f, NoteH * 0.14f);
+	DrawRect(FLinearColor(0.30f, 0.04f, 0.04f, 0.20f), X + NoteW * 0.76f, Y + NoteH * 0.62f, NoteW * 0.12f, NoteH * 0.10f);
+
+	// Dark ink typography on paper
+	const FLinearColor InkDark(0.11f, 0.09f, 0.07f, 0.95f);
+	const FLinearColor InkRed(0.56f, 0.08f, 0.07f, 0.96f);
+	const FLinearColor InkMuted(0.28f, 0.23f, 0.18f, 0.88f);
+
+	// Top pocket hint
+	{
+		const FString TopHint = ShiftLoc::Text(TEXT("[Tab] Put Back in Pocket"));
+		float TW = 0.f, TH = 0.f;
+		GetTextSize(TopHint, TW, TH, Font, 0.86f);
+		DrawText(TopHint, InkMuted, X + NoteW - TW - 28.f, Y + 22.f, Font, 0.86f);
+	}
+
+	// Title + vermilion underline
+	{
+		const FString Title = ShiftLoc::Text(TEXT("NIGHT SHIFT NOTE"));
+		float TW = 0.f, TH = 0.f;
+		GetTextSize(Title, TW, TH, Font, 1.55f);
+		DrawText(Title, bCorrupted ? InkRed : InkDark, X + (NoteW - TW) * 0.5f, Y + 52.f, Font, 1.55f);
+		DrawRect(InkRed, X + 52.f, Y + 102.f, NoteW - 104.f, 2.f);
+	}
+
+	const TCHAR* Rules[] = {
+		TEXT("1. Tilted head / staring blankly -> Not human. Press [R] to refuse service immediately."),
+		TEXT("2. Red eye glare & flickering light -> Not human. Press [R] to refuse service immediately."),
+		TEXT("3. Feet floating silently off the floor -> Not human. Press [R] to refuse service immediately.")
+	};
+	float CurY = Y + 132.f;
+	for (int32 i = 0; i < RuleCount && i < 3; ++i)
+	{
+		const TArray<FString> Wrapped = WrapText(Rules[i], NoteW - 104.f, 1.08f, 3);
+		for (const FString& Line : Wrapped)
+		{
+			DrawText(Line, i == 0 ? InkRed : InkDark, X + 52.f, CurY, Font, 1.08f);
+			CurY += 34.f;
+		}
+		CurY += 20.f;
+	}
+
+	// Bottom warning scribble on the note
+	const TArray<FString> Foot = WrapText(TEXT("[R] Refuse abnormal visitors — never refuse normal guests.  [Q] Glimpse the old scene if the air feels cold."), NoteW - 104.f, 0.90f, 2);
+	float FootY = Y + NoteH * 0.66f;
+	for (const FString& Line : Foot)
+	{
+		DrawText(Line, InkMuted, X + 52.f, FootY, Font, 0.90f);
+		FootY += 28.f;
+	}
 }
