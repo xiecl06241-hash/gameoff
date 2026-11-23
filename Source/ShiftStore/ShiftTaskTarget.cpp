@@ -3,7 +3,10 @@
 #include "Components/SphereComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/DecalComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/Texture2D.h"
+#include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/CommandLine.h"
@@ -37,6 +40,44 @@ AShiftTaskTarget::AShiftTaskTarget()
 	SpillMesh->SetVisibility(false);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	if (Cylinder.Succeeded()) { SpillMesh->SetStaticMesh(Cylinder.Object); }
+
+	SpillDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("SpillDecal"));
+	SpillDecal->SetupAttachment(Hitbox);
+	SpillDecal->SetVisibility(false);
+	SpillDecal->DecalSize = FVector(28.f, 78.f, 78.f);
+	SpillDecal->FadeScreenSize = 0.001f;
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> FloorSpillMat(TEXT("/Game/ShiftStore/Materials/M_FloorSpill.M_FloorSpill"));
+	if (FloorSpillMat.Succeeded()) { SpillBaseMaterial = FloorSpillMat.Object; }
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> CoffeeD(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Coffee_D.T_Spill_Coffee_D"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> CoffeeN(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Coffee_N.T_Spill_Coffee_N"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> CoffeeM(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Coffee_M.T_Spill_Coffee_M"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> IchorD(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Ichor_D.T_Spill_Ichor_D"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> IchorN(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Ichor_N.T_Spill_Ichor_N"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> IchorM(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Ichor_M.T_Spill_Ichor_M"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> MudD(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Mud_D.T_Spill_Mud_D"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> MudN(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Mud_N.T_Spill_Mud_N"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> MudM(TEXT("/Game/ShiftStore/Textures/Spills/T_Spill_Mud_M.T_Spill_Mud_M"));
+
+	if (CoffeeD.Succeeded() && CoffeeN.Succeeded() && CoffeeM.Succeeded())
+	{
+		SpillAlbedoTextures.Add(CoffeeD.Object);
+		SpillNormalTextures.Add(CoffeeN.Object);
+		SpillMaskTextures.Add(CoffeeM.Object);
+	}
+	if (IchorD.Succeeded() && IchorN.Succeeded() && IchorM.Succeeded())
+	{
+		SpillAlbedoTextures.Add(IchorD.Object);
+		SpillNormalTextures.Add(IchorN.Object);
+		SpillMaskTextures.Add(IchorM.Object);
+	}
+	if (MudD.Succeeded() && MudN.Succeeded() && MudM.Succeeded())
+	{
+		SpillAlbedoTextures.Add(MudD.Object);
+		SpillNormalTextures.Add(MudN.Object);
+		SpillMaskTextures.Add(MudM.Object);
+	}
 }
 
 void AShiftTaskTarget::Setup(EShiftTaskType InType, const FString& InLabel, float TimeLimit)
@@ -46,12 +87,47 @@ void AShiftTaskTarget::Setup(EShiftTaskType InType, const FString& InLabel, floa
 	RestartTimer(TimeLimit);
 	if (Type == EShiftTaskType::Spill)
 	{
-		SpillMesh->SetVisibility(true);
-		SpillMesh->SetRelativeScale3D(FVector(FMath::FRandRange(0.8f, 1.3f), FMath::FRandRange(0.6f, 1.1f), 0.01f));
-		SpillMesh->SetRelativeLocation(FVector(0, 0, -GetActorLocation().Z + 1.f));
-		if (UMaterialInstanceDynamic* MID = SpillMesh->CreateDynamicMaterialInstance(0))
+		if (SpillDecal && SpillBaseMaterial)
 		{
-			MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.12f, 0.06f, 0.02f));
+			SpillMesh->SetVisibility(false);
+
+			static uint32 NextSpillVariant = 0;
+			const int32 VariantCount = FMath::Min3(SpillAlbedoTextures.Num(), SpillNormalTextures.Num(), SpillMaskTextures.Num());
+			const int32 VariantIndex = VariantCount > 0 ? static_cast<int32>((NextSpillVariant++) % static_cast<uint32>(VariantCount)) : INDEX_NONE;
+
+			const float HalfX = FMath::FRandRange(68.f, 94.f);
+			const float HalfY = HalfX * FMath::FRandRange(0.84f, 1.14f);
+			SpillDecal->DecalSize = FVector(28.f, HalfY, HalfX);
+			SpillDecal->SetRelativeLocation(FVector(0.f, 0.f, -GetActorLocation().Z));
+			SpillDecal->SetRelativeRotation(FRotator(-90.f, FMath::FRandRange(0.f, 360.f), 0.f));
+
+			SpillMID = UMaterialInstanceDynamic::Create(SpillBaseMaterial, this);
+			if (SpillMID)
+			{
+				if (VariantIndex != INDEX_NONE)
+				{
+					SpillMID->SetTextureParameterValue(TEXT("AlbedoTex"), SpillAlbedoTextures[VariantIndex]);
+					SpillMID->SetTextureParameterValue(TEXT("NormalTex"), SpillNormalTextures[VariantIndex]);
+					SpillMID->SetTextureParameterValue(TEXT("MaskTex"), SpillMaskTextures[VariantIndex]);
+				}
+				const float ToneJitter = FMath::FRandRange(0.88f, 1.12f);
+				SpillMID->SetVectorParameterValue(TEXT("TintColor"), FLinearColor(ToneJitter, ToneJitter * FMath::FRandRange(0.94f, 1.04f), ToneJitter * FMath::FRandRange(0.92f, 1.04f), 1.f));
+				SpillMID->SetScalarParameterValue(TEXT("WetnessScale"), FMath::FRandRange(0.92f, 1.15f));
+				SpillMID->SetScalarParameterValue(TEXT("CleanProgress"), 0.f);
+				SpillDecal->SetDecalMaterial(SpillMID);
+			}
+			SpillDecal->SetVisibility(true);
+		}
+		else
+		{
+			// Fallback if decal material is unavailable
+			SpillMesh->SetVisibility(true);
+			SpillMesh->SetRelativeScale3D(FVector(FMath::FRandRange(0.8f, 1.3f), FMath::FRandRange(0.6f, 1.1f), 0.01f));
+			SpillMesh->SetRelativeLocation(FVector(0, 0, -GetActorLocation().Z + 1.f));
+			if (UMaterialInstanceDynamic* MID = SpillMesh->CreateDynamicMaterialInstance(0))
+			{
+				MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.12f, 0.06f, 0.02f));
+			}
 		}
 	}
 	if (Type == EShiftTaskType::BreakerBox)
@@ -120,4 +196,8 @@ void AShiftTaskTarget::Tick(float DeltaSeconds)
 	const float T = GetWorld()->GetTimeSeconds();
 	Marker->SetRelativeLocation(FVector(0, 0, 45.f + 3.f * FMath::Sin(T * 2.5f)));
 	if (IsOverdue()) { Marker->SetTextRenderColor(FMath::Fmod(T, 0.6f) < 0.3f ? FColor(255, 60, 40) : FColor(120, 20, 10)); }
+	if (Type == EShiftTaskType::Spill && SpillMID)
+	{
+		SpillMID->SetScalarParameterValue(TEXT("CleanProgress"), FMath::Clamp(Progress, 0.f, 1.f));
+	}
 }

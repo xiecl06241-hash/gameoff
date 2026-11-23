@@ -8,6 +8,10 @@
 class USphereComponent;
 class UTextRenderComponent;
 class UStaticMeshComponent;
+class UDecalComponent;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
+class UTexture2D;
 
 /** A chore location: hold E (optionally while carrying a carton / the mop) to complete it. */
 UCLASS()
@@ -35,6 +39,12 @@ public:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<USphereComponent> Hitbox;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UTextRenderComponent> Marker;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> SpillMesh;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UDecalComponent> SpillDecal;
+	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> SpillMID;
+	UPROPERTY() TObjectPtr<UMaterialInterface> SpillBaseMaterial;
+	UPROPERTY() TArray<TObjectPtr<UTexture2D>> SpillAlbedoTextures;
+	UPROPERTY() TArray<TObjectPtr<UTexture2D>> SpillNormalTextures;
+	UPROPERTY() TArray<TObjectPtr<UTexture2D>> SpillMaskTextures;
 
 	EShiftTaskType Type = EShiftTaskType::Count;
 	FString Label;
