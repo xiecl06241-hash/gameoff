@@ -52,6 +52,12 @@ public:
 
 	/** Brief flicker of the main lights (night 1 foreshadowing). */
 	void Flicker(float Duration);
+	/** Update progressive environmental storytelling (coffin lid & shrine incense) for the active night (0..2). */
+	void ConfigureCrimeSceneForNight(int32 NightIndex);
+	/** Toggle the glowing red ring-indicator on the back-office desk telephone. */
+	void SetOfficePhoneRinging(bool bRinging);
+	FVector GetOfficePhoneLocation() const { return FVector(1135.f, 1490.f, 84.f); }
+	bool AreOtherworldSurfacesSwapped() const { return bSurfacesSwapped; }
 	bool ValidateState(bool bExpectedShifted, FString& OutError) const;
 
 protected:
@@ -81,6 +87,14 @@ private:
 	TArray<TWeakObjectPtr<AActor>> NormalOnlyActors;
 	TArray<TWeakObjectPtr<UInstancedStaticMeshComponent>> NormalOnlyISMs;
 	TArray<TWeakObjectPtr<UPointLightComponent>> CrimeLanternLights;
+	TWeakObjectPtr<AActor> CoffinLidActor;
+	TWeakObjectPtr<AActor> CoffinSealA;
+	TWeakObjectPtr<AActor> CoffinSealB;
+	TArray<TWeakObjectPtr<AActor>> IncenseEmbers;
+	TWeakObjectPtr<UPointLightComponent> OfficePhoneLight;
+	bool bOfficePhoneRinging = false;
+	float OfficePhonePulseTime = 0.f;
+	int32 CurrentCrimeNightIndex = 0;
 	TWeakObjectPtr<UStaticMeshComponent> WelcomeSign;
 	TWeakObjectPtr<APostProcessVolume> PostProcess;
 	TWeakObjectPtr<UExponentialHeightFogComponent> HorrorFog;

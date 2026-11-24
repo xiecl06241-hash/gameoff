@@ -74,6 +74,12 @@ void AShiftDirector::Collect()
 		}
 		if (Instanced.Num() > 0) { continue; }
 
+		if (ATextRenderActor* TRA = Cast<ATextRenderActor>(A))
+		{
+			// Hide all modern store text signs (CHECKOUT, AISLE 01-03, Tag_* prices) inside the Chinese ancestral hall!
+			NormalOnlyActors.Add(TRA);
+		}
+
 		if (AStaticMeshActor* SMA = Cast<AStaticMeshActor>(A))
 		{
 			UStaticMeshComponent* C = SMA->GetStaticMeshComponent();
@@ -98,9 +104,19 @@ void AShiftDirector::Collect()
 				|| AName.Contains(TEXT("Scanner")) || AName.Contains(TEXT("Oden"))
 				|| AName.Contains(TEXT("Checkout")) || AName.Contains(TEXT("Coffee"))
 				|| AName.Contains(TEXT("HotCase")) || AName.Contains(TEXT("Display"))
-				|| AName.Contains(TEXT("Aisle")) || AName.Contains(TEXT("PriceTag"))
+				|| AName.Contains(TEXT("Aisle")) || AName.Contains(TEXT("Price"))
+				|| AName.Contains(TEXT("Tag_")) || AName.Contains(TEXT("Hero_"))
+				|| AName.Contains(TEXT("Extinguisher")) || AName.Contains(TEXT("FrontGlass"))
+				|| AName.Contains(TEXT("FrontBase")) || AName.Contains(TEXT("ExitSign"))
+				|| AName.Contains(TEXT("OfficeSign")) || AName.Contains(TEXT("RestroomSign"))
+				|| AName.Contains(TEXT("WarehouseSign")) || AName.Contains(TEXT("ExteriorSign"))
 				|| AName.Contains(TEXT("Shelf")) || AName.Contains(TEXT("Bin"))
-				|| AName.Contains(TEXT("Poster")) || AName.Contains(TEXT("Banner"));
+				|| AName.Contains(TEXT("Poster")) || AName.Contains(TEXT("Banner"))
+				|| AName.Contains(TEXT("StockRack")) || AName.Contains(TEXT("OfficeComputer"))
+				|| AName.Contains(TEXT("OfficeChair")) || AName.Contains(TEXT("StaffLocker"))
+				|| AName.Contains(TEXT("RestroomSink")) || AName.Contains(TEXT("Toilet"))
+				|| AName.Contains(TEXT("Mirror")) || AName.Contains(TEXT("Bucket"))
+				|| AName.Contains(TEXT("Broom")) || AName.Contains(TEXT("Mop"));
 
 			if (bIsModernFixture && (!SM || SM != WelcomeMesh) && (!SM || SM != FixtureMesh))
 			{
@@ -111,7 +127,7 @@ void AShiftDirector::Collect()
 				UMaterialInterface* ShiftMat = nullptr;
 				if (AName.Contains(TEXT("Floor_")) && OtherworldFloorMat) { ShiftMat = OtherworldFloorMat; }
 				else if ((AName.Contains(TEXT("Ceiling_")) || AName.Contains(TEXT("CeilingRail"))) && OtherworldCeilingMat) { ShiftMat = OtherworldCeilingMat; }
-				else if ((AName.Contains(TEXT("SideWall")) || AName.Contains(TEXT("RearWall")) || AName.Contains(TEXT("WindowMullion"))) && OtherworldWallMat) { ShiftMat = OtherworldWallMat; }
+				else if ((AName.Contains(TEXT("Wall")) || AName.Contains(TEXT("WindowMullion"))) && OtherworldWallMat) { ShiftMat = OtherworldWallMat; }
 				if (ShiftMat)
 				{
 					for (int32 Slot = 0; Slot < C->GetNumMaterials(); ++Slot)
@@ -439,9 +455,9 @@ void AShiftDirector::SpawnChineseHorrorCrimeScene()
 		{
 			// Center front footprint: a heavy black lacquered Chinese coffin (黑漆灵柩) sealed with crossed yellow talisman tape!
 			SpawnColoredProp(GC + FVector(0.f, 0.f, 42.f), FRotator::ZeroRotator, FVector(1.85f, 0.72f, 0.74f), CubeMesh, CoffinBlack);
-			SpawnColoredProp(GC + FVector(0.f, 0.f, 82.f), FRotator::ZeroRotator, FVector(1.94f, 0.78f, 0.14f), CubeMesh, LacquerRed);
-			SpawnColoredProp(GC + FVector(0.f, 0.f, 90.f), FRotator(0.f, 18.f, 0.f),  FVector(1.60f, 0.08f, 0.015f), CubeMesh, SealYellow);
-			SpawnColoredProp(GC + FVector(0.f, 0.f, 90.f), FRotator(0.f, -18.f, 0.f), FVector(1.60f, 0.08f, 0.015f), CubeMesh, SealYellow);
+			CoffinLidActor = SpawnColoredProp(GC + FVector(0.f, 0.f, 82.f), FRotator::ZeroRotator, FVector(1.94f, 0.78f, 0.14f), CubeMesh, LacquerRed);
+			CoffinSealA = SpawnColoredProp(GC + FVector(0.f, 0.f, 90.f), FRotator(0.f, 18.f, 0.f),  FVector(1.60f, 0.08f, 0.015f), CubeMesh, SealYellow);
+			CoffinSealB = SpawnColoredProp(GC + FVector(0.f, 0.f, 90.f), FRotator(0.f, -18.f, 0.f), FVector(1.60f, 0.08f, 0.015f), CubeMesh, SealYellow);
 		}
 		else
 		{
@@ -453,18 +469,69 @@ void AShiftDirector::SpawnChineseHorrorCrimeScene()
 		}
 	}
 
-	// 8b. Checkout counter footprint (1270, 180) transformed into a tall Chinese ancestral shrine & incense altar!
+	// 8b. Checkout counter footprint (1270, 180): stark, high-impact minimalist Chinese ancestral shrine (no cluttered props)
 	const FVector CounterShrine(1270.f, 180.f, 0.f);
-	SpawnColoredProp(CounterShrine + FVector(0.f, 0.f, 48.f),    FRotator::ZeroRotator, FVector(2.30f, 0.78f, 0.96f), CubeMesh, DarkWood);
-	SpawnColoredProp(CounterShrine + FVector(0.f, 0.f, 98.f),    FRotator::ZeroRotator, FVector(2.40f, 0.84f, 0.08f), CubeMesh, LacquerRed);
-	SpawnColoredProp(CounterShrine + FVector(0.f, -20.f, 148.f), FRotator::ZeroRotator, FVector(0.55f, 0.12f, 0.86f), CubeMesh, CoffinBlack);
-	SpawnColoredProp(CounterShrine + FVector(0.f, -13.f, 148.f), FRotator::ZeroRotator, FVector(0.32f, 0.04f, 0.58f), CubeMesh, SealRed, 0.5f);
-	// Incense burner & three glowing ember tips on the counter shrine
-	SpawnColoredProp(CounterShrine + FVector(0.f, 18.f, 108.f),  FRotator::ZeroRotator, FVector(0.24f, 0.24f, 0.16f), CylinderMesh, StoneGrey);
+	const FLinearColor GoldTrim(0.76f, 0.56f, 0.16f, 1.f);
+	const FLinearColor PaperWindowRed(0.22f, 0.03f, 0.025f, 1.f);
+
+	// Monolithic floor-to-ceiling black-lacquered shrine backdrop wall (completely erases modern checkout feel)
+	SpawnColoredProp(CounterShrine + FVector(0.f, -46.f, 150.f), FRotator::ZeroRotator, FVector(3.30f, 0.10f, 3.00f), CubeMesh, CoffinBlack);
+	// Heavy dark-lacquered altar table with stark crimson top & full crimson altar cloth
+	SpawnColoredProp(CounterShrine + FVector(0.f, 0.f, 46.f),    FRotator::ZeroRotator, FVector(2.90f, 0.88f, 0.92f), CubeMesh, CoffinBlack);
+	SpawnColoredProp(CounterShrine + FVector(0.f, 0.f, 94.f),    FRotator::ZeroRotator, FVector(3.00f, 0.96f, 0.08f), CubeMesh, LacquerRed);
+	SpawnColoredProp(CounterShrine + FVector(0.f, 45.f, 48.f),   FRotator::ZeroRotator, FVector(2.50f, 0.03f, 0.86f), CubeMesh, DrapeCrimson);
+
+	// Twin tall crimson shrine pillars & heavy overhanging dark-red roof eaves
+	for (float SideX : { -145.f, 145.f })
+	{
+		SpawnColoredProp(CounterShrine + FVector(SideX, 20.f, 148.f), FRotator::ZeroRotator, FVector(0.24f, 0.24f, 2.96f), CylinderMesh, LacquerRed);
+	}
+	SpawnColoredProp(CounterShrine + FVector(0.f, -4.f, 262.f),  FRotator::ZeroRotator, FVector(3.50f, 1.25f, 0.16f), CubeMesh, LacquerRed);
+
+	// Imposing oversized ancestral tablet dead-center (strong silhouette against the black backdrop)
+	SpawnColoredProp(CounterShrine + FVector(0.f, -20.f, 104.f), FRotator::ZeroRotator, FVector(0.88f, 0.36f, 0.14f), CubeMesh, LacquerRed);
+	SpawnColoredProp(CounterShrine + FVector(0.f, -22.f, 168.f), FRotator::ZeroRotator, FVector(0.56f, 0.10f, 1.12f), CubeMesh, CoffinBlack);
+	SpawnColoredProp(CounterShrine + FVector(0.f, -16.f, 168.f), FRotator::ZeroRotator, FVector(0.40f, 0.03f, 0.92f), CubeMesh, SealRed, 0.85f);
+	SpawnColoredProp(CounterShrine + FVector(0.f, -14.f, 168.f), FRotator::ZeroRotator, FVector(0.05f, 0.035f, 0.72f), CubeMesh, GoldTrim);
+
+	// Bronze incense burner & 3->2->1 progressive smoldering incense sticks
+	SpawnColoredProp(CounterShrine + FVector(0.f, 16.f, 108.f), FRotator::ZeroRotator, FVector(0.28f, 0.28f, 0.18f), CylinderMesh, StoneGrey);
 	for (float IX : { -6.f, 0.f, 6.f })
 	{
-		SpawnColoredProp(CounterShrine + FVector(IX, 18.f, 124.f), FRotator::ZeroRotator, FVector(0.015f, 0.015f, 0.22f), CylinderMesh, FLinearColor(0.35f, 0.28f, 0.18f, 1.f));
-		SpawnColoredProp(CounterShrine + FVector(IX, 18.f, 136.f), FRotator::ZeroRotator, FVector(0.025f, 0.025f, 0.025f), SphereMesh, FLinearColor(1.0f, 0.22f, 0.04f, 1.f), 3.0f);
+		SpawnColoredProp(CounterShrine + FVector(IX, 16.f, 126.f), FRotator::ZeroRotator, FVector(0.015f, 0.015f, 0.22f), CylinderMesh, FLinearColor(0.35f, 0.28f, 0.18f, 1.f));
+		if (AActor* Ember = SpawnColoredProp(CounterShrine + FVector(IX, 16.f, 138.f), FRotator::ZeroRotator, FVector(0.032f, 0.032f, 0.032f), SphereMesh, FLinearColor(1.0f, 0.22f, 0.04f, 1.f), 4.0f))
+		{
+			IncenseEmbers.Add(Ember);
+		}
+	}
+
+	// Twin dramatic crimson candlelights framing the giant tablet
+	for (float CX : { -86.f, 86.f })
+	{
+		SpawnColoredProp(CounterShrine + FVector(CX, 8.f, 118.f), FRotator::ZeroRotator, FVector(0.08f, 0.08f, 0.36f), CylinderMesh, SealRed);
+		if (AActor* CandleFlame = SpawnColoredProp(CounterShrine + FVector(CX, 8.f, 140.f), FRotator::ZeroRotator, FVector(0.065f, 0.065f, 0.11f), SphereMesh, FLinearColor(1.0f, 0.45f, 0.08f, 1.f), 4.0f))
+		{
+			UPointLightComponent* CandleLight = NewObject<UPointLightComponent>(CandleFlame);
+			CandleLight->RegisterComponent();
+			CandleLight->AttachToComponent(CandleFlame->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+			CandleLight->SetIntensityUnits(ELightUnits::Lumens);
+			CandleLight->SetIntensity(0.f);
+			CandleLight->SetLightColor(FLinearColor(1.0f, 0.24f, 0.08f, 1.f));
+			CandleLight->SetAttenuationRadius(420.f);
+			CandleLight->SetCastShadows(false);
+			CrimeLanternLights.Add(CandleLight);
+		}
+	}
+
+	// 8b2. Clean monolithic crimson paper-screen shutters sealing off the modern storefront glass windows (Y = 14)
+	for (float WinX : { 280.f, 1280.f })
+	{
+		SpawnColoredProp(FVector(WinX, 14.f, 155.f), FRotator::ZeroRotator, FVector(6.2f, 0.08f, 3.00f), CubeMesh, PaperWindowRed);
+		SpawnColoredProp(FVector(WinX, 19.f, 155.f), FRotator::ZeroRotator, FVector(6.25f, 0.08f, 0.10f), CubeMesh, CoffinBlack);
+		for (float XOff : { -200.f, 0.f, 200.f })
+		{
+			SpawnColoredProp(FVector(WinX + XOff, 19.f, 155.f), FRotator::ZeroRotator, FVector(0.10f, 0.08f, 3.00f), CubeMesh, CoffinBlack);
+		}
 	}
 
 	// 8c. Overhead heavy dark-red ancestral hall roof beams spanning the entire store ceiling
@@ -476,6 +543,158 @@ void AShiftDirector::SpawnChineseHorrorCrimeScene()
 	for (float BeamX : { 400.f, 800.f, 1200.f })
 	{
 		SpawnColoredProp(FVector(BeamX, 560.f, 286.f), FRotator::ZeroRotator, FVector(0.24f, 10.5f, 0.24f), CubeMesh, DarkWood);
+	}
+
+	// 9. BACK-OF-HOUSE THREE-ROOM OTHERWORLD STAGING (stark silhouettes & high-impact lighting)
+	auto SpawnDecal = [&](const FVector& Pos, const FRotator& Rot, const FVector& Size, const FLinearColor& Tint)
+	{
+		if (!SpillBaseMat || !IchorD || !IchorN || !IchorM) { return; }
+		AActor* Holder = W->SpawnActor<AActor>(Pos, FRotator::ZeroRotator);
+		if (!Holder) { return; }
+		UDecalComponent* Decal = NewObject<UDecalComponent>(Holder);
+		Decal->RegisterComponent();
+		Holder->SetRootComponent(Decal);
+		Decal->SetWorldLocation(Pos);
+		Decal->SetWorldRotation(Rot);
+		Decal->DecalSize = Size;
+		Decal->FadeScreenSize = 0.001f;
+		if (UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(SpillBaseMat, Holder))
+		{
+			MID->SetTextureParameterValue(TEXT("AlbedoTex"), IchorD);
+			MID->SetTextureParameterValue(TEXT("NormalTex"), IchorN);
+			MID->SetTextureParameterValue(TEXT("MaskTex"), IchorM);
+			MID->SetVectorParameterValue(TEXT("TintColor"), Tint);
+			MID->SetScalarParameterValue(TEXT("WetnessScale"), 0.92f);
+			MID->SetScalarParameterValue(TEXT("CleanProgress"), 0.f);
+			Decal->SetDecalMaterial(MID);
+		}
+		Holder->SetActorHiddenInGame(true);
+		CrimeSceneActors.Add(Holder);
+	};
+
+	// 9a. Warehouse (X=0..800, Y=1200..1600): Ancestral Mortuary Storage
+	for (float WX : { 170.f, 610.f })
+	{
+		for (float WY : { 1280.f, 1525.f })
+		{
+			SpawnColoredProp(FVector(WX, WY, 148.f), FRotator::ZeroRotator, FVector(0.24f, 0.24f, 2.96f), CylinderMesh, LacquerRed);
+		}
+	}
+	SpawnColoredProp(FVector(390.f, 1400.f, 276.f), FRotator::ZeroRotator, FVector(7.2f, 0.24f, 0.24f), CubeMesh, LacquerRed);
+	// Two heavy sealed dark-wood coffin crates along the north warehouse wall with crossed yellow talismans
+	for (float CrateX : { 230.f, 540.f })
+	{
+		SpawnColoredProp(FVector(CrateX, 1515.f, 44.f), FRotator::ZeroRotator, FVector(1.65f, 0.68f, 0.88f), CubeMesh, CoffinBlack);
+		SpawnColoredProp(FVector(CrateX, 1480.f, 52.f), FRotator(0.f, 0.f, 18.f), FVector(1.30f, 0.015f, 0.07f), CubeMesh, SealYellow);
+		SpawnColoredProp(FVector(CrateX, 1480.f, 52.f), FRotator(0.f, 0.f, -18.f), FVector(1.30f, 0.015f, 0.07f), CubeMesh, SealYellow);
+	}
+	// Warehouse hanging crimson lantern
+	if (AActor* WLantern = SpawnColoredProp(FVector(390.f, 1400.f, 248.f), FRotator::ZeroRotator, FVector(0.34f, 0.34f, 0.44f), SphereMesh, FLinearColor(0.96f, 0.08f, 0.05f, 1.f), 2.2f))
+	{
+		UPointLightComponent* WLight = NewObject<UPointLightComponent>(WLantern);
+		WLight->RegisterComponent();
+		WLight->AttachToComponent(WLantern->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		WLight->SetRelativeLocation(FVector(0.f, 0.f, -34.f));
+		WLight->SetIntensityUnits(ELightUnits::Lumens);
+		WLight->SetIntensity(0.f);
+		WLight->SetLightColor(FLinearColor(1.0f, 0.12f, 0.06f, 1.f));
+		WLight->SetAttenuationRadius(650.f);
+		WLight->SetCastShadows(false);
+		CrimeLanternLights.Add(WLight);
+	}
+	SpawnDecal(FVector(345.f, 1340.f, 4.f), FRotator(-90.f, 75.f, 0.f), FVector(32.f, 75.f, 135.f), FLinearColor(0.50f, 0.03f, 0.03f, 1.f));
+	SpawnDecal(FVector(385.f, 1588.f, 145.f), FRotator(0.f, -90.f, 0.f), FVector(45.f, 145.f, 125.f), FLinearColor(0.56f, 0.03f, 0.03f, 1.f));
+
+	// 9b. Manager's Office (X=800..1300, Y=1200..1600): Old Accounting & Incident Room
+	SpawnColoredProp(FVector(880.f, 1550.f, 148.f), FRotator::ZeroRotator, FVector(0.22f, 0.22f, 2.96f), CylinderMesh, LacquerRed);
+	SpawnColoredProp(FVector(1240.f, 1550.f, 148.f), FRotator::ZeroRotator, FVector(0.22f, 0.22f, 2.96f), CylinderMesh, LacquerRed);
+	// Black-lacquered shroud over the office desk surface + towering dark funerary scroll behind desk
+	SpawnColoredProp(FVector(1070.f, 1510.f, 80.f), FRotator::ZeroRotator, FVector(1.66f, 0.86f, 0.04f), CubeMesh, LacquerRed);
+	SpawnColoredProp(FVector(1070.f, 1584.f, 165.f), FRotator::ZeroRotator, FVector(1.30f, 0.06f, 2.10f), CubeMesh, CoffinBlack);
+	SpawnColoredProp(FVector(1070.f, 1580.f, 165.f), FRotator::ZeroRotator, FVector(0.18f, 0.03f, 1.55f), CubeMesh, SealRed, 0.75f);
+	SpawnDecal(FVector(1070.f, 1588.f, 150.f), FRotator(0.f, -90.f, 0.f), FVector(45.f, 150.f, 130.f), FLinearColor(0.55f, 0.03f, 0.03f, 1.f));
+	if (AActor* OfficeGhostFlame = SpawnColoredProp(FVector(1070.f, 1510.f, 110.f), FRotator::ZeroRotator, FVector(0.08f, 0.08f, 0.12f), SphereMesh, FLinearColor(0.22f, 0.98f, 0.56f, 1.f), 3.0f))
+	{
+		UPointLightComponent* OLight = NewObject<UPointLightComponent>(OfficeGhostFlame);
+		OLight->RegisterComponent();
+		OLight->AttachToComponent(OfficeGhostFlame->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		OLight->SetIntensityUnits(ELightUnits::Lumens);
+		OLight->SetIntensity(0.f);
+		OLight->SetLightColor(FLinearColor(0.18f, 0.96f, 0.52f, 1.f));
+		OLight->SetAttenuationRadius(480.f);
+		OLight->SetCastShadows(false);
+		CrimeLanternLights.Add(OLight);
+	}
+
+	// Normal-world desk telephone on Manager's Office desk (rings on Night 2 to pull player into back-of-house!)
+	auto SpawnNormalProp = [&](const FVector& Loc, const FRotator& Rot, const FVector& Scale, UStaticMesh* Mesh, const FLinearColor& Color, float EmissiveBoost = 0.f) -> AActor*
+	{
+		if (!Mesh) { return nullptr; }
+		AStaticMeshActor* Prop = W->SpawnActor<AStaticMeshActor>(Loc, Rot);
+		if (!Prop) { return nullptr; }
+		UStaticMeshComponent* Comp = Prop->GetStaticMeshComponent();
+		Comp->SetMobility(EComponentMobility::Movable);
+		Comp->SetStaticMesh(Mesh);
+		Comp->SetWorldScale3D(Scale);
+		Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Comp->SetCastShadow(false);
+		if (LitBaseMat)
+		{
+			if (UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(LitBaseMat, Prop))
+			{
+				MID->SetVectorParameterValue(TEXT("Color"), FLinearColor(Color.R * (1.f + EmissiveBoost), Color.G * (1.f + EmissiveBoost), Color.B * (1.f + EmissiveBoost), 1.f));
+				Comp->SetMaterial(0, MID);
+			}
+		}
+		NormalOnlyActors.Add(Prop);
+		return Prop;
+	};
+	const FVector PhonePos = GetOfficePhoneLocation();
+	if (AActor* PhoneBase = SpawnNormalProp(PhonePos, FRotator(0.f, -18.f, 0.f), FVector(0.22f, 0.18f, 0.10f), CubeMesh, FLinearColor(0.06f, 0.06f, 0.07f, 1.f)))
+	{
+		SpawnNormalProp(PhonePos + FVector(0.f, -2.f, 7.5f), FRotator(0.f, -18.f, 0.f), FVector(0.24f, 0.06f, 0.055f), CubeMesh, FLinearColor(0.04f, 0.04f, 0.05f, 1.f));
+		UPointLightComponent* RingLight = NewObject<UPointLightComponent>(PhoneBase);
+		RingLight->RegisterComponent();
+		RingLight->AttachToComponent(PhoneBase->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		RingLight->SetRelativeLocation(FVector(0.f, 0.f, 14.f));
+		RingLight->SetIntensityUnits(ELightUnits::Lumens);
+		RingLight->SetIntensity(0.f);
+		RingLight->SetLightColor(FLinearColor(1.0f, 0.14f, 0.08f, 1.f));
+		RingLight->SetAttenuationRadius(260.f);
+		RingLight->SetCastShadows(false);
+		OfficePhoneLight = RingLight;
+	}
+
+	// 9c. Staff Restroom (X=1300..1600, Y=1200..1600): Cursed Stone Well & Blood Basin
+	const FVector WellPos(1475.f, 1445.f, 0.f);
+	SpawnColoredProp(WellPos + FVector(0.f, 0.f, 34.f), FRotator::ZeroRotator, FVector(0.92f, 0.92f, 0.68f), CylinderMesh, StoneGrey);
+	SpawnColoredProp(WellPos + FVector(0.f, 0.f, 68.f), FRotator::ZeroRotator, FVector(0.76f, 0.76f, 0.04f), CylinderMesh, CoffinBlack);
+	SpawnDecal(WellPos + FVector(0.f, 0.f, 4.f), FRotator(-90.f, 30.f, 0.f), FVector(32.f, 118.f, 118.f), FLinearColor(0.55f, 0.03f, 0.03f, 1.f));
+	if (AActor* WellGlow = SpawnColoredProp(WellPos + FVector(0.f, 0.f, 74.f), FRotator::ZeroRotator, FVector(0.18f, 0.18f, 0.04f), SphereMesh, FLinearColor(0.16f, 0.96f, 0.48f, 1.f), 3.0f))
+	{
+		UPointLightComponent* WellLight = NewObject<UPointLightComponent>(WellGlow);
+		WellLight->RegisterComponent();
+		WellLight->AttachToComponent(WellGlow->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		WellLight->SetRelativeLocation(FVector(0.f, 0.f, 24.f));
+		WellLight->SetIntensityUnits(ELightUnits::Lumens);
+		WellLight->SetIntensity(0.f);
+		WellLight->SetLightColor(FLinearColor(0.16f, 0.96f, 0.48f, 1.f));
+		WellLight->SetAttenuationRadius(420.f);
+		WellLight->SetCastShadows(false);
+		CrimeLanternLights.Add(WellLight);
+	}
+	for (float TZ : { 148.f, 174.f })
+	{
+		SpawnColoredProp(FVector(1585.f, 1445.f, TZ), FRotator(0.f, 90.f, 4.f), FVector(0.12f, 0.01f, 0.38f), CubeMesh, SealYellow);
+	}
+}
+
+void AShiftDirector::SetOfficePhoneRinging(bool bRinging)
+{
+	bOfficePhoneRinging = bRinging;
+	if (!bRinging)
+	{
+		if (UPointLightComponent* L = OfficePhoneLight.Get()) { L->SetIntensity(0.f); }
 	}
 }
 
@@ -579,6 +798,19 @@ void AShiftDirector::Tick(float DeltaSeconds)
 	{
 		Apply(CurrentAlpha);
 	}
+	if (UPointLightComponent* PhoneL = OfficePhoneLight.Get())
+	{
+		if (bOfficePhoneRinging && !bSurfacesSwapped)
+		{
+			OfficePhonePulseTime += DeltaSeconds;
+			const float Pulse = 0.5f + 0.5f * FMath::Sin(OfficePhonePulseTime * 9.0f);
+			PhoneL->SetIntensity(120.f + Pulse * 360.f);
+		}
+		else
+		{
+			PhoneL->SetIntensity(0.f);
+		}
+	}
 }
 
 bool AShiftDirector::ValidateState(bool bExpectedShifted, FString& OutError) const
@@ -644,6 +876,40 @@ bool AShiftDirector::ValidateState(bool bExpectedShifted, FString& OutError) con
 	}
 	OutError.Reset();
 	return true;
+}
+
+void AShiftDirector::ConfigureCrimeSceneForNight(int32 NightIndex)
+{
+	CurrentCrimeNightIndex = FMath::Clamp(NightIndex, 0, 2);
+	const FVector CoffinBase(800.f, 450.f, 0.f);
+	if (AActor* Lid = CoffinLidActor.Get())
+	{
+		if (CurrentCrimeNightIndex == 0)
+		{
+			Lid->SetActorLocationAndRotation(CoffinBase + FVector(0.f, 0.f, 82.f), FRotator::ZeroRotator);
+		}
+		else if (CurrentCrimeNightIndex == 1)
+		{
+			// Night 2: coffin lid pushed slightly ajar revealing a dark seam
+			Lid->SetActorLocationAndRotation(CoffinBase + FVector(12.f, -22.f, 82.f), FRotator(0.f, 14.f, 0.f));
+		}
+		else
+		{
+			// Night 3: coffin lid overturned beside the open empty coffin!
+			Lid->SetActorLocationAndRotation(CoffinBase + FVector(0.f, -56.f, 20.f), FRotator(0.f, 8.f, 34.f));
+		}
+	}
+	if (bSurfacesSwapped)
+	{
+		// Re-apply visibility rules for seals & incense embers immediately if already in Otherworld
+		if (AActor* SealA = CoffinSealA.Get()) { SealA->SetActorHiddenInGame(CurrentCrimeNightIndex >= 1); }
+		if (AActor* SealB = CoffinSealB.Get()) { SealB->SetActorHiddenInGame(CurrentCrimeNightIndex >= 2); }
+		const int32 LitIncense = FMath::Clamp(3 - CurrentCrimeNightIndex, 1, 3);
+		for (int32 i = 0; i < IncenseEmbers.Num(); ++i)
+		{
+			if (AActor* Ember = IncenseEmbers[i].Get()) { Ember->SetActorHiddenInGame(i >= LitIncense); }
+		}
+	}
 }
 
 void AShiftDirector::Apply(float A)
@@ -725,6 +991,16 @@ void AShiftDirector::Apply(float A)
 		if (AActor* Prop = PropPtr.Get())
 		{
 			Prop->SetActorHiddenInGame(!bShowCrimeScene);
+		}
+	}
+	if (bShowCrimeScene)
+	{
+		if (AActor* SealA = CoffinSealA.Get()) { SealA->SetActorHiddenInGame(CurrentCrimeNightIndex >= 1); }
+		if (AActor* SealB = CoffinSealB.Get()) { SealB->SetActorHiddenInGame(CurrentCrimeNightIndex >= 2); }
+		const int32 LitIncense = FMath::Clamp(3 - CurrentCrimeNightIndex, 1, 3);
+		for (int32 i = 0; i < IncenseEmbers.Num(); ++i)
+		{
+			if (AActor* Ember = IncenseEmbers[i].Get()) { Ember->SetActorHiddenInGame(i >= LitIncense); }
 		}
 	}
 	for (const TWeakObjectPtr<UPointLightComponent>& LP : CrimeLanternLights)

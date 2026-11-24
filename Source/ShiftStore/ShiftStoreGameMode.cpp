@@ -9,6 +9,7 @@
 #include "ShiftTaskTarget.h"
 #include "ShiftCustomer.h"
 #include "ShiftItem.h"
+#include "ShiftClueActor.h"
 #include "ShiftSaveGame.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
@@ -163,6 +164,7 @@ void AShiftStoreGameMode::BeginPlay()
 		BreakerBoxTarget = Breaker;
 	}
 
+	SpawnStoryClues();
 	SetupProceduralAudio();
 
 	// If launched with -ShiftAutoStart or -ShiftSelfTest, jump straight into working state
@@ -258,6 +260,27 @@ void AShiftStoreGameMode::SetupProceduralAudio()
 	}
 	HumWave->QueueAudio(reinterpret_cast<const uint8*>(Pcm.GetData()), Pcm.Num() * sizeof(int16));
 	FridgeHumComp = UGameplayStatics::SpawnSoundAtLocation(this, HumWave, FridgePos, FRotator::ZeroRotator, 0.45f, 1.f, 0.f);
+
+	// Low hollow ancestral-hall wind drone for the Chinese-horror Otherworld (cross-fades with FridgeHumComp)
+	USoundWaveProcedural* WindWave = NewObject<USoundWaveProcedural>(this);
+	WindWave->SetSampleRate(22050);
+	WindWave->NumChannels = 1;
+	WindWave->Duration = INDEFINITELY_LOOPING_DURATION;
+	WindWave->SoundGroup = SOUNDGROUP_Effects;
+	WindWave->bLooping = true;
+	TArray<int16> WindPcm;
+	WindPcm.SetNumUninitialized(Samples);
+	float SmoothNoise = 0.f;
+	for (int32 i = 0; i < Samples; ++i)
+	{
+		const float T = static_cast<float>(i) / 22050.f;
+		SmoothNoise = SmoothNoise * 0.96f + FMath::FRandRange(-1.f, 1.f) * 0.04f;
+		const float Mod = 0.65f + 0.35f * FMath::Sin(2.f * PI * 0.35f * T);
+		const float Drone = 0.45f * FMath::Sin(2.f * PI * 41.f * T) + 0.25f * FMath::Sin(2.f * PI * 61.5f * T) + SmoothNoise * 1.4f;
+		WindPcm[i] = static_cast<int16>(FMath::Clamp(Drone * Mod * 4200.f, -32000.f, 32000.f));
+	}
+	WindWave->QueueAudio(reinterpret_cast<const uint8*>(WindPcm.GetData()), WindPcm.Num() * sizeof(int16));
+	OtherworldAmbienceComp = UGameplayStatics::SpawnSound2D(this, WindWave, 0.001f);
 }
 
 void AShiftStoreGameMode::PlayFootstepCue(const FVector* OptionalWorldLocation, float Volume)
@@ -448,9 +471,16 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	CheckpointNight = NightIndex;
 	CheckpointWarded = TotalMonstersWarded;
 	CheckpointShifts = TotalShiftsTriggered;
+	CheckpointCluesMask = CollectedCluesMask;
+	bCheckpointBrassKey = bHasBrassKey;
+	bCheckpointPhoneAnswered = bOfficePhoneAnswered;
 	CheckpointIncome = Income;
 	CheckpointLosses = Losses;
 	bHasNightCheckpoint = true;
+	bOfficePhoneRinging = false;
+	OfficePhoneTriggerTimer = (!bAutomatedSession && NightIndex >= 1 && !bOfficePhoneAnswered) ? 10.f : 0.f;
+	OfficePhoneRingInterval = 0.f;
+	CloseArchiveReader();
 	NextCustomerIdx = 0;
 	GuidedTaskIndex = 0;
 	SalesSinceRestock = 0;
@@ -463,9 +493,17 @@ void AShiftStoreGameMode::StartNight(int32 InNightIndex)
 	MicroShiftRotation = 0;
 	HeartbeatPulseAlpha = 0.f;
 	HeartbeatTimer = 0.f;
+	OtherworldStaySeconds = 0.f;
+	OtherworldSanityDebt = 0.f;
 	BuildNightCustomerRoster();
 
-	if (Director) { Director->SetShifted(false); }
+	if (Director)
+	{
+		Director->SetShifted(false);
+		Director->ConfigureCrimeSceneForNight(NightIndex);
+		Director->SetOfficePhoneRinging(false);
+	}
+	RefreshStoryClues();
 
 	if (AShiftPlayerCharacter* P = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
 	{
@@ -517,6 +555,9 @@ void AShiftStoreGameMode::RestartCurrentNight()
 		NightIndex = CheckpointNight;
 		TotalMonstersWarded = CheckpointWarded;
 		TotalShiftsTriggered = CheckpointShifts;
+		CollectedCluesMask = CheckpointCluesMask;
+		bHasBrassKey = bCheckpointBrassKey;
+		bOfficePhoneAnswered = bCheckpointPhoneAnswered;
 		Income = CheckpointIncome;
 		Losses = CheckpointLosses;
 	}
@@ -537,6 +578,10 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 		Losses = 0.f;
 		TotalMonstersWarded = 0;
 		TotalShiftsTriggered = 0;
+		CollectedCluesMask = 0;
+		bHasBrassKey = false;
+		bOfficePhoneAnswered = false;
+		bOfficePhoneRinging = false;
 		bEndingStatsComplete = true;
 		StartNight(0);
 	}
@@ -577,6 +622,10 @@ void AShiftStoreGameMode::OnAdvanceScreenKey()
 		Losses = 0.f;
 		TotalMonstersWarded = 0;
 		TotalShiftsTriggered = 0;
+		CollectedCluesMask = 0;
+		bHasBrassKey = false;
+		bOfficePhoneAnswered = false;
+		bOfficePhoneRinging = false;
 		bEndingStatsComplete = true;
 		SaveProgress();
 		StartNight(0);
@@ -602,7 +651,13 @@ void AShiftStoreGameMode::ReturnToTitle()
 	}
 	ClearNightActors();
 	for (TActorIterator<AShiftItem> It(GetWorld()); It; ++It) { It->Destroy(); }
-	if (Director) { Director->SetShifted(false); }
+	if (Director)
+	{
+		Director->SetShifted(false);
+		Director->ConfigureCrimeSceneForNight(NightIndex);
+		Director->SetOfficePhoneRinging(false);
+	}
+	RefreshStoryClues();
 	BannerText.Empty();
 	BannerTimer = 0.f;
 	GameOverReason.Empty();
@@ -826,9 +881,9 @@ bool AShiftStoreGameMode::TryPlayerPhaseShift()
 		HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.65f);
 		if (AShiftCustomer* C = ActiveCustomer.Get(); C && C->IsMonsterActive() && C->State != ECustomerState::MonsterGrabbing)
 		{
-			C->Stun(0.75f);
+			C->Stun(1.2f);
 		}
-		SetStatusBanner(TEXT("PHASE SNAP! Aisles shifted back for 2.5s — Slip past the entity!"), 2.5f);
+		SetStatusBanner(TEXT("REALITY SNAP! Entity stunned 1.2s — Slip past it!"), 2.5f);
 	}
 	else if (Director->IsPlayerPhaseShifted())
 	{
@@ -976,7 +1031,7 @@ FString AShiftStoreGameMode::GetOnboardingHint(const AShiftPlayerCharacter* Play
 	{
 		if (C->IsMonsterActive())
 		{
-			return TEXT("Run! Hold [Shift] to sprint — find the red-glowing item and bring it to the register.");
+			return TEXT("Run! Follow the cyan beacon to grab the Cursed Relic [E], then offer it at the Main Shrine! Press [Q] to stun if cornered.");
 		}
 		if (C->State == ECustomerState::WaitingForHelp)
 		{
@@ -1031,6 +1086,7 @@ void AShiftStoreGameMode::OnCustomerRefused(AShiftCustomer* Customer)
 void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitnessed)
 {
 	if (!Monster) { return; }
+	CloseArchiveReader();
 	++TotalShiftsTriggered;
 	if (Director) { Director->SetShifted(true); }
 
@@ -1054,18 +1110,24 @@ void AShiftStoreGameMode::OnMonsterRevealed(AShiftCustomer* Monster, bool bWitne
 	if (bWitnessed)
 	{
 		RequestDialogue(EShiftDialogueEvent::WitnessReveal);
-		SetStatusBanner(ShiftLoc::Format(TEXT("THE STORE SHIFTED! Find [%s] (Red Glow) and deliver it to the Checkout Register!"), {FString(ItemName)}), 5.f);
+		SetStatusBanner(TEXT("ENTITY REVEALED! Follow the cyan beacon to grab the Cursed Relic, then offer it at the Shrine!"), 5.f);
 	}
 	else
 	{
-		SetStatusBanner(ShiftLoc::Format(TEXT("Lights died behind you... An unseen entity is stalking! Find [%s] -> Checkout Register!"), {FString(ItemName)}), 5.f);
+		SetStatusBanner(TEXT("Something awakened behind you! Follow the cyan beacon -> offer the Cursed Relic at the Shrine!"), 5.f);
 	}
 }
 
 void AShiftStoreGameMode::OnMonsterDemandDelivered(AShiftCustomer* Monster)
 {
 	if (!Monster) { return; }
-	if (Director) { Director->SetShifted(false); }
+	if (Director)
+	{
+		Director->SetShifted(false);
+		Director->ConfigureCrimeSceneForNight(NightIndex);
+		Director->SetOfficePhoneRinging(false);
+	}
+	RefreshStoryClues();
 	if (AShiftItem* L = ActiveLostItem.Get()) { L->Destroy(); ActiveLostItem.Reset(); }
 
 	Monster->SatisfyAndLeave();
@@ -1159,9 +1221,17 @@ void AShiftStoreGameMode::TriggerGameOver(const FString& Reason)
 {
 	GameOverReason = Reason;
 	Phase = EShiftPhase::GameOver;
+	CloseArchiveReader();
+	bOfficePhoneRinging = false;
 	ResetDialogue();
 	if (AShiftPlayerCharacter* P = Cast<AShiftPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0))) { P->ReleaseFromGrab(false); }
-	if (Director) { Director->SetShifted(false); }
+	if (Director)
+	{
+		Director->SetShifted(false);
+		Director->ConfigureCrimeSceneForNight(NightIndex);
+		Director->SetOfficePhoneRinging(false);
+	}
+	RefreshStoryClues();
 	PlaySynthesizedCue(95.f, 0.8f, 0.45f, true);
 }
 
@@ -1183,6 +1253,9 @@ bool AShiftStoreGameMode::SaveProgress()
 		SG->TotalShiftsTriggered = TotalShiftsTriggered;
 		SG->NightStartWarded = Phase == EShiftPhase::Dawn && NightIndex == ShiftData::Nights().Num() - 1 ? CheckpointWarded : TotalMonstersWarded;
 		SG->NightStartShifts = Phase == EShiftPhase::Dawn && NightIndex == ShiftData::Nights().Num() - 1 ? CheckpointShifts : TotalShiftsTriggered;
+		SG->CollectedCluesMask = CollectedCluesMask;
+		SG->bHasBrassKey = bHasBrassKey;
+		SG->bOfficePhoneAnswered = bOfficePhoneAnswered;
 		return UGameplayStatics::SaveGameToSlot(SG, ProgressSlotName(), 0);
 	}
 	return false;
@@ -1195,6 +1268,10 @@ bool AShiftStoreGameMode::LoadProgress()
 	Losses = 0.f;
 	TotalMonstersWarded = 0;
 	TotalShiftsTriggered = 0;
+	CollectedCluesMask = 0;
+	bHasBrassKey = false;
+	bOfficePhoneAnswered = false;
+	bOfficePhoneRinging = false;
 	bEndingStatsComplete = true;
 	if (UGameplayStatics::DoesSaveGameExist(ProgressSlotName(), 0))
 	{
@@ -1205,6 +1282,9 @@ bool AShiftStoreGameMode::LoadProgress()
 			Losses = SG->CumulativeLosses;
 			TotalMonstersWarded = SG->StatsVersion > 0 ? SG->NightStartWarded : 0;
 			TotalShiftsTriggered = SG->StatsVersion > 0 ? SG->NightStartShifts : 0;
+			CollectedCluesMask = SG->CollectedCluesMask;
+			bHasBrassKey = SG->bHasBrassKey;
+			bOfficePhoneAnswered = SG->bOfficePhoneAnswered;
 			bEndingStatsComplete = SG->StatsVersion > 0 ? SG->bEndingStatsComplete : NightIndex == 0;
 			return true;
 		}
@@ -1229,14 +1309,19 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 
 	if (BannerTimer > 0.f) { BannerTimer = FMath::Max(0.f, BannerTimer - DeltaSeconds); }
 
-	// Keep procedural refrigeration hum buffer fed
+	// Cross-fade Normal fridge hum <-> Otherworld ancestral hall wind & distant cold bronze bell
+	const float ShiftAlpha = Director ? Director->Alpha() : 0.f;
+	if (FridgeHumComp) { FridgeHumComp->SetVolumeMultiplier(FMath::Lerp(0.45f, 0.03f, ShiftAlpha)); }
+	if (OtherworldAmbienceComp) { OtherworldAmbienceComp->SetVolumeMultiplier(FMath::Lerp(0.001f, 0.52f, ShiftAlpha)); }
+
+	// Keep procedural ambience buffers fed
 	AudioFeedTimer += DeltaSeconds;
-	if (AudioFeedTimer >= 1.0f && FridgeHumComp && FridgeHumComp->IsPlaying())
+	if (AudioFeedTimer >= 1.0f)
 	{
 		AudioFeedTimer = 0.f;
-		if (USoundWaveProcedural* Wave = Cast<USoundWaveProcedural>(FridgeHumComp->Sound))
+		if (FridgeHumComp && FridgeHumComp->IsPlaying())
 		{
-			if (Wave->GetAvailableAudioByteCount() < 22050 * 2)
+			if (USoundWaveProcedural* Wave = Cast<USoundWaveProcedural>(FridgeHumComp->Sound); Wave && Wave->GetAvailableAudioByteCount() < 22050 * 2)
 			{
 				const int32 Samples = 22050;
 				TArray<int16> Pcm;
@@ -1250,9 +1335,90 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 				Wave->QueueAudio(reinterpret_cast<const uint8*>(Pcm.GetData()), Pcm.Num() * sizeof(int16));
 			}
 		}
+		if (OtherworldAmbienceComp && OtherworldAmbienceComp->IsPlaying())
+		{
+			if (USoundWaveProcedural* Wave = Cast<USoundWaveProcedural>(OtherworldAmbienceComp->Sound); Wave && Wave->GetAvailableAudioByteCount() < 22050 * 2)
+			{
+				const int32 Samples = 22050;
+				TArray<int16> Pcm;
+				Pcm.SetNumUninitialized(Samples);
+				float SmoothNoise = 0.f;
+				for (int32 i = 0; i < Samples; ++i)
+				{
+					const float T = static_cast<float>(i) / 22050.f;
+					SmoothNoise = SmoothNoise * 0.96f + FMath::FRandRange(-1.f, 1.f) * 0.04f;
+					const float Drone = 0.45f * FMath::Sin(2.f * PI * 41.f * T) + 0.25f * FMath::Sin(2.f * PI * 61.5f * T) + SmoothNoise * 1.4f;
+					Pcm[i] = static_cast<int16>(FMath::Clamp(Drone * 3600.f, -32000.f, 32000.f));
+				}
+				Wave->QueueAudio(reinterpret_cast<const uint8*>(Pcm.GetData()), Pcm.Num() * sizeof(int16));
+			}
+		}
+	}
+
+	// Occasional eerie distant bronze bell chime while inside the Chinese ancestral hall Otherworld
+	if (!bAutomatedSession && ShiftAlpha > 0.55f && (Phase == EShiftPhase::Working || Phase == EShiftPhase::Cleanup))
+	{
+		OtherworldChimeTimer -= DeltaSeconds;
+		if (OtherworldChimeTimer <= 0.f)
+		{
+			OtherworldChimeTimer = FMath::FRandRange(4.8f, 8.2f);
+			USoundWaveProcedural* Bell = NewObject<USoundWaveProcedural>(this);
+			Bell->SetSampleRate(22050);
+			Bell->NumChannels = 1;
+			Bell->Duration = 0.85f;
+			const int32 BellSamples = FMath::RoundToInt(22050.f * 0.85f);
+			TArray<int16> BellPcm;
+			BellPcm.SetNumUninitialized(BellSamples);
+			for (int32 i = 0; i < BellSamples; ++i)
+			{
+				const float T = static_cast<float>(i) / 22050.f;
+				const float Env = FMath::Exp(-T * 4.2f);
+				const float Sig = 0.50f * FMath::Sin(2.f * PI * 880.f * T)
+					+ 0.30f * FMath::Sin(2.f * PI * 1318.f * T)
+					+ 0.20f * FMath::Sin(2.f * PI * 2110.f * T);
+				BellPcm[i] = static_cast<int16>(FMath::Clamp(Sig * Env * 6800.f, -32000.f, 32000.f));
+			}
+			Bell->QueueAudio(reinterpret_cast<const uint8*>(BellPcm.GetData()), BellPcm.Num() * sizeof(int16));
+			UGameplayStatics::PlaySound2D(this, Bell, 0.32f);
+		}
+	}
+	else
+	{
+		OtherworldChimeTimer = FMath::Min(OtherworldChimeTimer, 1.8f);
 	}
 
 	if (Phase != EShiftPhase::Working && Phase != EShiftPhase::Cleanup) { return; }
+
+	RefreshStoryClues();
+
+	// Night 2+ late-night ringing back-office phone event
+	if (!bAutomatedSession && NightIndex >= 1 && !bOfficePhoneAnswered)
+	{
+		if (!bOfficePhoneRinging)
+		{
+			if (OfficePhoneTriggerTimer > 0.f)
+			{
+				OfficePhoneTriggerTimer = FMath::Max(0.f, OfficePhoneTriggerTimer - DeltaSeconds);
+				if (OfficePhoneTriggerTimer <= 0.f)
+				{
+					bOfficePhoneRinging = true;
+					OfficePhoneRingInterval = 0.2f;
+					if (Director) { Director->SetOfficePhoneRinging(true); }
+					SetStatusBanner(TEXT("The office phone is ringing in the backroom..."), 5.5f);
+				}
+			}
+		}
+		else
+		{
+			OfficePhoneRingInterval -= DeltaSeconds;
+			if (OfficePhoneRingInterval <= 0.f)
+			{
+				OfficePhoneRingInterval = 3.2f;
+				const FVector PhoneLoc = Director ? Director->GetOfficePhoneLocation() : FVector(1135.f, 1490.f, 84.f);
+				PlayExternalOrSynthesizedCue(TEXT("phone_ring.wav"), 920.f, 0.42f, 0.46f, false, &PhoneLoc);
+			}
+		}
+	}
 
 	if (RuleNoteAutoHideTimer > 0.f)
 	{
@@ -1281,17 +1447,41 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 		ModifySanity(-ShiftData::OverdueDrainPerSec * OverdueCount * DeltaSeconds);
 	}
 
-	// 2. Monster line-of-sight, grab sanity drain, active [Q] Otherworld drain, and proximity heartbeat pulse
+	// 2. Monster line-of-sight, grab sanity drain, progressive [Q] Otherworld drain & recovery, and proximity heartbeat pulse
 	HeartbeatPulseAlpha = FMath::Max(0.f, HeartbeatPulseAlpha - DeltaSeconds * 2.2f);
 	if (Director && Director->IsPlayerPhaseShifted())
 	{
-		ModifySanity(-4.5f * DeltaSeconds);
+		OtherworldStaySeconds += DeltaSeconds;
+		// First 8s: free grace period to inspect the ancestral hall; 8..22s: gentle -0.9/s; >22s: escalating -2.6/s
+		float DrainRate = 0.f;
+		if (OtherworldStaySeconds > 22.f) { DrainRate = 2.6f; }
+		else if (OtherworldStaySeconds > 8.f) { DrainRate = 0.9f; }
+
+		if (DrainRate > 0.f)
+		{
+			const float Drain = DrainRate * DeltaSeconds;
+			OtherworldSanityDebt = FMath::Min(ShiftData::MaxSanity, OtherworldSanityDebt + Drain);
+			ModifySanity(-Drain);
+		}
 		HeartbeatTimer -= DeltaSeconds;
 		if (HeartbeatTimer <= 0.f)
 		{
-			HeartbeatTimer = 1.75f;
-			HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.42f);
-			if (!bAutomatedSession) { PlayHeartbeatCue(0.45f, true); }
+			HeartbeatTimer = OtherworldStaySeconds > 22.f ? 1.35f : 2.15f;
+			HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, OtherworldStaySeconds > 8.f ? 0.36f : 0.16f);
+			if (!bAutomatedSession && OtherworldStaySeconds > 6.f) { PlayHeartbeatCue(OtherworldStaySeconds > 22.f ? 0.65f : 0.35f, true); }
+		}
+	}
+	else
+	{
+		OtherworldStaySeconds = FMath::Max(0.f, OtherworldStaySeconds - DeltaSeconds * 2.5f);
+		// Slowly recover only the temporary sanity spent peeking into the Otherworld when safely back in Normal store
+		const bool bSafeInNormal = (!Director || !Director->IsShifted()) && OverdueCount == 0
+			&& (!ActiveCustomer.IsValid() || !ActiveCustomer->IsMonsterActive());
+		if (bSafeInNormal && OtherworldSanityDebt > 0.01f && Sanity < ShiftData::MaxSanity)
+		{
+			const float Recover = FMath::Min(OtherworldSanityDebt, 2.0f * DeltaSeconds);
+			OtherworldSanityDebt = FMath::Max(0.f, OtherworldSanityDebt - Recover);
+			ModifySanity(Recover);
 		}
 	}
 	if (AShiftCustomer* C = ActiveCustomer.Get())
@@ -1387,4 +1577,184 @@ void AShiftStoreGameMode::ShiftSkipNight()
 	ClearNightActors();
 	Phase = EShiftPhase::Dawn;
 	SaveProgress();
+}
+
+void AShiftStoreGameMode::SpawnStoryClues()
+{
+	UWorld* W = GetWorld();
+	if (!W) { return; }
+	for (TWeakObjectPtr<AShiftClueActor>& Old : StoryClues)
+	{
+		if (AShiftClueActor* Ptr = Old.Get()) { Ptr->Destroy(); }
+	}
+	StoryClues.Empty();
+
+	struct FClueSpec
+	{
+		int32 Id;
+		int32 MinNight;
+		FVector Pos;
+		float Yaw;
+		bool bOtherworld;
+		bool bNormal;
+		bool bKey;
+		bool bNeedKey;
+		bool bNeedPhone;
+		const TCHAR* Title;
+		const TCHAR* Body;
+	};
+	const FClueSpec Specs[] = {
+		{ 0, 0, FVector(1045.f, 1485.f, 81.f), 14.f, false, true, false, false, false,
+			TEXT("FILE 01 / LIN MO'S HANDOVER NOTE"),
+			TEXT("Do not believe the manager. This store was built directly over the burned Shen ancestral hall. If the lights flicker, press [Q] and check the back warehouse — the shelves are hiding what is still buried here.") },
+		{ 1, 0, FVector(340.f, 1455.f, 12.f), -22.f, true, false, false, false, false,
+			TEXT("FILE 02 / YELLOWED NEWSPAPER CLIPPING (18 YEARS AGO)"),
+			TEXT("Three members of the Shen family died in the midnight fire. Police sealed the hall, yet demolition crews refused to touch the heavy black coffin beneath the floorboards. A convenience store was erected directly over the site.") },
+		{ 2, 1, FVector(1548.f, 1350.f, 88.f), 90.f, false, true, false, false, false,
+			TEXT("FILE 03 / CRACKED BADGE 'CLERK #04'"),
+			TEXT("Found beside the restroom sink with dried crimson smears: 'There are three incense sticks on the counter shrine. One burns out each night. When the last ember dies, the empty coffin chooses a replacement.'") },
+		{ 3, 1, FVector(1090.f, 1485.f, 81.f), -12.f, false, true, false, false, true,
+			TEXT("FILE 04 / MANAGER'S HIDDEN LEDGER"),
+			TEXT("Four night clerks vanished in two years — every six months like clockwork. The manager keeps raising the night-shift wage so a fresh pair of hands will stand behind the shrine and keep the ancestral incense lit.") },
+		{ 4, 2, FVector(800.f, 450.f, 56.f), 8.f, true, false, false, false, false,
+			TEXT("FILE 05 / TORN SHEN FAMILY REGISTER"),
+			TEXT("Pulled from inside the overturned coffin. The last three names are written in fresh ink: Clerk #02, Clerk #03, Lin Mo (#04). Beneath Lin Mo's name is a blank line stamped: 'TONIGHT'S CLERK'.") },
+		{ -1, 2, FVector(1122.f, 1525.f, 81.f), 32.f, false, true, true, false, false,
+			TEXT("TARNISHED BRASS KEY"),
+			TEXT("Engraved with the character 'SHEN'. Fits the locked iron casket hidden beneath the rear ancestral altar in the Otherworld [Q].") },
+		{ 5, 2, FVector(800.f, 932.f, 48.f), 0.f, true, false, false, true, false,
+			TEXT("FILE 06 / THE SOUL-BINDING DEED"),
+			TEXT("Sealed inside the iron casket: 'The hall feeds on fear and service. Name the dead, finish the third shift without surrendering the store, and the soul-binding deed burns to ash at dawn.'") }
+	};
+
+	for (const FClueSpec& S : Specs)
+	{
+		if (AShiftClueActor* Clue = W->SpawnActor<AShiftClueActor>(S.Pos, FRotator(0.f, S.Yaw, 0.f)))
+		{
+			Clue->Configure(S.Id, S.MinNight, S.bOtherworld, S.bNormal, S.bKey, S.bNeedKey, S.bNeedPhone, S.Title, S.Body);
+			StoryClues.Add(Clue);
+		}
+	}
+	RefreshStoryClues();
+}
+
+void AShiftStoreGameMode::RefreshStoryClues()
+{
+	const bool bShifted = Director && Director->IsEffectiveShifted();
+	for (TWeakObjectPtr<AShiftClueActor>& Ptr : StoryClues)
+	{
+		if (AShiftClueActor* Clue = Ptr.Get())
+		{
+			Clue->RefreshVisualState(NightIndex, bShifted, CollectedCluesMask, bHasBrassKey, bOfficePhoneAnswered);
+		}
+	}
+}
+
+int32 AShiftStoreGameMode::GetCollectedClueCount() const
+{
+	int32 Count = 0;
+	for (int32 i = 0; i < TotalStoryClues; ++i)
+	{
+		if ((CollectedCluesMask & (1 << i)) != 0) { ++Count; }
+	}
+	return Count;
+}
+
+bool AShiftStoreGameMode::InteractWithClue(AShiftClueActor* Clue)
+{
+	if (!Clue) { return false; }
+	const bool bShifted = Director && Director->IsEffectiveShifted();
+	if (!Clue->IsCurrentlyVisible(NightIndex, bShifted, CollectedCluesMask, bHasBrassKey, bOfficePhoneAnswered))
+	{
+		return false;
+	}
+	if (Clue->bRequiresBrassKey && !bHasBrassKey)
+	{
+		PlaySynthesizedCue(170.f, 0.16f, 0.28f, true);
+		SetStatusBanner(TEXT("The iron casket is locked — find the brass key in the Manager's Office (Normal world)."), 4.2f);
+		return false;
+	}
+	if (Clue->bIsBrassKey)
+	{
+		bHasBrassKey = true;
+		PlayExternalOrSynthesizedCue(TEXT("item_pickup.wav"), 840.f, 0.18f, 0.34f);
+		SetStatusBanner(TEXT("Picked up Tarnished Brass Key! Use [Q] and unlock the casket at the rear altar."), 4.8f);
+	}
+	else if (Clue->ClueId >= 0 && Clue->ClueId < TotalStoryClues)
+	{
+		CollectedCluesMask |= (1 << Clue->ClueId);
+		PlayExternalOrSynthesizedCue(TEXT("cloth_rustle.wav"), 440.f, 0.16f, 0.34f);
+		if (!bAutomatedSession)
+		{
+			bRuleNoteOpen = false;
+			RuleNoteAutoHideTimer = 0.f;
+			bArchiveReaderOpen = true;
+			ActiveArchiveTitleKey = Clue->TitleKey;
+			ActiveArchiveBodyKey = Clue->BodyKey;
+		}
+		SetStatusBanner(ShiftLoc::Format(TEXT("Archive collected (%d / %d): %s"), { LexToString(GetCollectedClueCount()), LexToString(TotalStoryClues), ShiftLoc::Text(Clue->TitleKey) }), 4.5f);
+	}
+	RefreshStoryClues();
+	return true;
+}
+
+bool AShiftStoreGameMode::AnswerOfficePhone()
+{
+	if (!bOfficePhoneRinging || bOfficePhoneAnswered) { return false; }
+	bOfficePhoneRinging = false;
+	bOfficePhoneAnswered = true;
+	if (Director) { Director->SetOfficePhoneRinging(false); }
+	PlaySynthesizedCue(118.f, 0.65f, 0.32f, true);
+	SubtitleText = ShiftLoc::Text(TEXT("...Get out... don't let the third incense burn out... check the desk drawer..."));
+	SubtitleTime = 6.5f;
+	SubtitlePriority = 2;
+	SetStatusBanner(TEXT("The line went dead... Something slid out onto the Manager's desk!"), 4.8f);
+	RefreshStoryClues();
+	return true;
+}
+
+void AShiftStoreGameMode::CloseArchiveReader()
+{
+	bArchiveReaderOpen = false;
+}
+
+FString AShiftStoreGameMode::GetInvestigationLead() const
+{
+	if (bOfficePhoneRinging)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Answer the ringing telephone in the Manager's Office"));
+	}
+	if ((CollectedCluesMask & (1 << 0)) == 0)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Inspect the Manager's Office desk in the backroom"));
+	}
+	if ((CollectedCluesMask & (1 << 1)) == 0)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Press [Q] and search the back Warehouse in the Otherworld"));
+	}
+	if (NightIndex >= 1 && (CollectedCluesMask & (1 << 2)) == 0)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Inspect the Staff Restroom sink in the backroom"));
+	}
+	if (NightIndex >= 1 && bOfficePhoneAnswered && (CollectedCluesMask & (1 << 3)) == 0)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Read the hidden ledger on the Manager's Office desk"));
+	}
+	if (NightIndex >= 2 && (CollectedCluesMask & (1 << 4)) == 0)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Press [Q] and inspect the overturned center coffin"));
+	}
+	if (NightIndex >= 2 && !bHasBrassKey)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Find the tarnished brass key on the Manager's Office desk"));
+	}
+	if (NightIndex >= 2 && bHasBrassKey && (CollectedCluesMask & (1 << 5)) == 0)
+	{
+		return ShiftLoc::Text(TEXT("LEAD: Press [Q] and unlock the casket beneath the rear altar"));
+	}
+	if (GetCollectedClueCount() >= TotalStoryClues)
+	{
+		return ShiftLoc::Text(TEXT("TRUTH UNCOVERED (6/6): Survive until dawn to break the deed!"));
+	}
+	return FString();
 }

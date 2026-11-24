@@ -442,7 +442,7 @@ void AShiftCustomer::ApplyMonsterVisuals()
 			}
 		}
 	}
-	MonsterPose->SetSkeletalMesh(GetMesh()->GetSkeletalMeshAsset());
+	MonsterPose->SetSkinnedAssetAndUpdate(GetMesh()->GetSkeletalMeshAsset());
 	MonsterPose->CopyPoseFromSkeletalComponent(GetMesh());
 	for (int32 Slot = 0; Slot < GetMesh()->GetNumMaterials(); ++Slot)
 	{

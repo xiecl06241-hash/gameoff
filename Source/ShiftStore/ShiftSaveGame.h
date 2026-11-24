@@ -19,4 +19,7 @@ public:
 	UPROPERTY() int32 NightStartShifts = 0;
 	UPROPERTY() float CumulativeIncome = 0.f;
 	UPROPERTY() float CumulativeLosses = 0.f;
+	UPROPERTY() int32 CollectedCluesMask = 0;
+	UPROPERTY() bool bHasBrassKey = false;
+	UPROPERTY() bool bOfficePhoneAnswered = false;
 };

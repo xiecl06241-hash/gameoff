@@ -2,6 +2,7 @@
 #include "ShiftCustomer.h"
 #include "ShiftDirector.h"
 #include "ShiftItem.h"
+#include "ShiftClueActor.h"
 #include "ShiftSaveGame.h"
 #include "ShiftTaskTarget.h"
 #include "ShiftPlayerCharacter.h"
@@ -553,9 +554,71 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			Director->ClearPlayerPhaseShift();
 			const bool bPhaseExited = !Director->IsPlayerPhaseShifted() && !Director->IsEffectiveShifted();
 			if (!CheckSelfTest(TEXT("player_phase_shift_toggle_and_clear"), bPhaseEntered && bPhaseExited)) { return; }
+			Director->ConfigureCrimeSceneForNight(0);
+			Director->ConfigureCrimeSceneForNight(1);
+			Director->ConfigureCrimeSceneForNight(2);
+			Director->ConfigureCrimeSceneForNight(NightIndex);
+			if (!CheckSelfTest(TEXT("otherworld_surfaces_restored_on_normal"), !Director->AreOtherworldSurfacesSwapped())) { return; }
+			if (AShiftCustomer* RefuseMonster = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::InsideDoor, FRotator::ZeroRotator))
+			{
+				const float IncomeBeforeRefuse = Income;
+				ActiveCustomer = RefuseMonster;
+				RefuseMonster->Init(CurrentNightSpec().Customers[2]);
+				OnCustomerRefused(RefuseMonster);
+				const bool bRefusedMonsterOk = RefuseMonster->State == ECustomerState::Leaving && FMath::IsNearlyEqual(Income, IncomeBeforeRefuse + 10.f);
+				ActiveCustomer.Reset();
+				RefuseMonster->Destroy();
+				if (!CheckSelfTest(TEXT("refuse_monster_wards_off"), bRefusedMonsterOk)) { return; }
+			}
+			if (AShiftCustomer* RefuseHuman = GetWorld()->SpawnActor<AShiftCustomer>(ShiftData::InsideDoor, FRotator::ZeroRotator))
+			{
+				const float SanityBeforeRefuse = Sanity;
+				ActiveCustomer = RefuseHuman;
+				RefuseHuman->Init(CurrentNightSpec().Customers[0]);
+				OnCustomerRefused(RefuseHuman);
+				const bool bRefusedHumanPenalty = RefuseHuman->State == ECustomerState::Leaving && Sanity < SanityBeforeRefuse - 10.f;
+				Sanity = SanityBeforeRefuse;
+				ActiveCustomer.Reset();
+				RefuseHuman->Destroy();
+				if (!CheckSelfTest(TEXT("refuse_human_penalizes_sanity"), bRefusedHumanPenalty)) { return; }
+			}
+			// Verify story clues, cross-world brass key puzzle, and ringing office phone unlock
+			if (!CheckSelfTest(TEXT("story_clues_spawned"), StoryClues.Num() == 7)) { return; }
+			const int32 SavedNightForClueTest = NightIndex;
+			NightIndex = 2;
+			CollectedCluesMask = 0;
+			bHasBrassKey = false;
+			bOfficePhoneAnswered = false;
+			bOfficePhoneRinging = true;
+			const bool bPhoneOk = AnswerOfficePhone() && bOfficePhoneAnswered && !bOfficePhoneRinging;
+			AShiftClueActor* LedgerClue = nullptr;
+			AShiftClueActor* KeyClue = nullptr;
+			AShiftClueActor* DeedClue = nullptr;
+			for (const TWeakObjectPtr<AShiftClueActor>& Ptr : StoryClues)
+			{
+				if (AShiftClueActor* C = Ptr.Get())
+				{
+					if (C->ClueId == 3) { LedgerClue = C; }
+					else if (C->bIsBrassKey) { KeyClue = C; }
+					else if (C->ClueId == 5) { DeedClue = C; }
+				}
+			}
+			const bool bLedgerOk = bPhoneOk && LedgerClue && InteractWithClue(LedgerClue);
+			if (!CheckSelfTest(TEXT("office_phone_unlocks_ledger"), bLedgerOk)) { return; }
+			// Test cross-world brass key lock -> unlock
+			Director->SetShifted(true);
+			const bool bLockedWithoutKey = DeedClue && !InteractWithClue(DeedClue);
+			Director->SetShifted(false);
+			const bool bTookKey = KeyClue && InteractWithClue(KeyClue) && bHasBrassKey;
+			Director->SetShifted(true);
+			const bool bUnlockedWithKey = DeedClue && InteractWithClue(DeedClue) && GetCollectedClueCount() == 2;
+			Director->SetShifted(false);
+			if (!CheckSelfTest(TEXT("clue_brass_key_cross_world"), bLockedWithoutKey && bTookKey && bUnlockedWithKey)) { return; }
+			NightIndex = SavedNightForClueTest;
+
 			if (!CheckSelfTest(TEXT("isolated_save_written"), SaveProgress())) { return; }
 			const UShiftSaveGame* Saved = Cast<UShiftSaveGame>(UGameplayStatics::LoadGameFromSlot(ProgressSlotName(), 0));
-			if (!CheckSelfTest(TEXT("isolated_save_roundtrip"), Saved && Saved->SavedNightIndex == NightIndex && Saved->CumulativeIncome == Income && Saved->CumulativeLosses == Losses && Saved->TotalMonstersWarded == TotalMonstersWarded && Saved->TotalShiftsTriggered == TotalShiftsTriggered)) { return; }
+			if (!CheckSelfTest(TEXT("isolated_save_roundtrip"), Saved && Saved->SavedNightIndex == NightIndex && Saved->CumulativeIncome == Income && Saved->CumulativeLosses == Losses && Saved->TotalMonstersWarded == TotalMonstersWarded && Saved->TotalShiftsTriggered == TotalShiftsTriggered && Saved->CollectedCluesMask == CollectedCluesMask && Saved->bHasBrassKey == bHasBrassKey)) { return; }
 			FinishSelfTest(true);
 		}
 		break;

@@ -84,6 +84,12 @@ void AShiftItem::SetHeld(bool bHeld)
 	{
 		bInFlight = false;
 		if (Glow) { Glow->SetVisibility(false); }
+		if (BeaconMesh) { BeaconMesh->SetVisibility(false); }
+	}
+	else if (bLostItem)
+	{
+		if (Glow) { Glow->SetVisibility(true); }
+		if (BeaconMesh) { BeaconMesh->SetVisibility(true); }
 	}
 }
 
@@ -135,24 +141,46 @@ void AShiftItem::Tick(float DeltaSeconds)
 	}
 	if (bLostItem && !Glow)
 	{
-		// Subtle breathing ember glow rather than a giant beacon; players rely on shelf memory or audio pulse.
+		// Vivid ghostly cyan-jade beacon + tall light pillar so players spot the Cursed Relic immediately against the crimson lanterns!
 		Glow = NewObject<UPointLightComponent>(this);
 		Glow->SetupAttachment(Mesh);
 		Glow->RegisterComponent();
 		Glow->SetIntensityUnits(ELightUnits::Lumens);
-		Glow->SetLightColor(FLinearColor(0.85f, 0.14f, 0.08f));
-		Glow->SetAttenuationRadius(75.f);
+		Glow->SetLightColor(FLinearColor(0.16f, 0.98f, 0.78f));
+		Glow->SetAttenuationRadius(480.f);
 		Glow->SetCastShadows(false);
+
+		if (UStaticMesh* Cyl = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")))
+		{
+			BeaconMesh = NewObject<UStaticMeshComponent>(this);
+			BeaconMesh->SetupAttachment(Mesh);
+			BeaconMesh->RegisterComponent();
+			BeaconMesh->SetStaticMesh(Cyl);
+			BeaconMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			BeaconMesh->SetCastShadow(false);
+			BeaconMesh->SetWorldScale3D(FVector(0.08f, 0.08f, 2.60f));
+			if (UMaterialInterface* ColdMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ShiftStore/Materials/M_ColdLight.M_ColdLight")))
+			{
+				BeaconMesh->SetMaterial(0, ColdMat);
+			}
+		}
 	}
 	if (Glow && Glow->IsVisible())
 	{
 		GlowTime += DeltaSeconds;
-		Glow->SetIntensity(12.f + 10.f * FMath::Sin(GlowTime * 2.6f));
-		Glow->SetWorldLocation(GetActorLocation() + FVector(0, 0, 22));
+		Glow->SetIntensity(320.f + 120.f * FMath::Sin(GlowTime * 3.8f));
+		Glow->SetWorldLocation(GetActorLocation() + FVector(0, 0, 32));
+		if (BeaconMesh && BeaconMesh->IsVisible())
+		{
+			const float Pulse = 0.065f + 0.025f * FMath::Sin(GlowTime * 4.5f);
+			BeaconMesh->SetWorldLocation(GetActorLocation() + FVector(0.f, 0.f, 130.f));
+			BeaconMesh->SetWorldRotation(FRotator::ZeroRotator);
+			BeaconMesh->SetWorldScale3D(FVector(Pulse, Pulse, 2.60f));
+		}
 		PulseCueTime -= DeltaSeconds;
 		if (PulseCueTime <= 0.f)
 		{
-			PulseCueTime = 3.2f;
+			PulseCueTime = 2.4f;
 			if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>(); GM && GM->Phase == EShiftPhase::Working)
 			{
 				GM->PlayPositionalAnomalyPulse(GetActorLocation());

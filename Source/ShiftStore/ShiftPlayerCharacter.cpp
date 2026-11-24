@@ -1,6 +1,7 @@
 #include "ShiftPlayerCharacter.h"
 #include "ShiftLocalization.h"
 #include "ShiftItem.h"
+#include "ShiftClueActor.h"
 #include "ShiftTaskTarget.h"
 #include "ShiftCustomer.h"
 #include "ShiftDirector.h"
@@ -314,6 +315,18 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
+	// Archive paper reader overlay: dismiss with [E] / [Space] / [Tab] / [LMB]
+	if (GM->bArchiveReaderOpen)
+	{
+		if (PC->WasInputKeyJustPressed(EKeys::E) || PC->WasInputKeyJustPressed(EKeys::SpaceBar)
+			|| PC->WasInputKeyJustPressed(EKeys::Tab) || PC->WasInputKeyJustPressed(EKeys::LeftMouseButton))
+		{
+			GM->CloseArchiveReader();
+			bPrevInteractDown = PC->IsInputKeyDown(EKeys::E) || PC->IsInputKeyDown(EKeys::LeftMouseButton);
+		}
+		return;
+	}
+
 	if (PC->WasInputKeyJustPressed(EKeys::Tab)) { GM->ToggleRuleNote(); }
 	if (PC->WasInputKeyJustPressed(EKeys::V)) { GM->CycleGuidedTask(); }
 
@@ -480,6 +493,66 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 
 	AActor* HitActor = bHit ? Hit.GetActor() : nullptr;
 
+	// 0a. Ringing back-office desk telephone (Night 2+ story event)
+	if (GM->bOfficePhoneRinging && (!GM->Director || !GM->Director->IsEffectiveShifted()))
+	{
+		const FVector PhonePos = GM->Director ? GM->Director->GetOfficePhoneLocation() : FVector(1135.f, 1490.f, 84.f);
+		const FVector ToPhone = PhonePos - Start;
+		const float DistToPhone = ToPhone.Size();
+		if (DistToPhone < 220.f && FVector::DotProduct(FirstPersonCamera->GetForwardVector(), ToPhone.GetSafeNormal()) > 0.65f)
+		{
+			CrosshairPrompt = ShiftLoc::Text(TEXT("[E] Answer Ringing Telephone"));
+			if (bInteractJustPressed)
+			{
+				GM->AnswerOfficePhone();
+			}
+			return;
+		}
+	}
+
+	// 0b. Collectible Story Archives & Tarnished Brass Key (hit or close gaze fallback)
+	AShiftClueActor* FocusedClue = Cast<AShiftClueActor>(HitActor);
+	if (!FocusedClue)
+	{
+		const bool bShifted = GM->Director && GM->Director->IsEffectiveShifted();
+		float BestDot = 0.84f;
+		for (const TWeakObjectPtr<AShiftClueActor>& CluePtr : GM->StoryClues)
+		{
+			AShiftClueActor* Candidate = CluePtr.Get();
+			if (!Candidate || !Candidate->IsCurrentlyVisible(GM->NightIndex, bShifted, GM->CollectedCluesMask, GM->bHasBrassKey, GM->bOfficePhoneAnswered)) { continue; }
+			const FVector ToClue = Candidate->GetActorLocation() - Start;
+			if (ToClue.Size() > 210.f) { continue; }
+			const float Dot = FVector::DotProduct(FirstPersonCamera->GetForwardVector(), ToClue.GetSafeNormal());
+			if (Dot > BestDot)
+			{
+				BestDot = Dot;
+				FocusedClue = Candidate;
+			}
+		}
+	}
+	if (FocusedClue)
+	{
+		if (FocusedClue->bIsBrassKey)
+		{
+			CrosshairPrompt = ShiftLoc::Text(TEXT("[E] Take Tarnished Brass Key"));
+		}
+		else if (FocusedClue->bRequiresBrassKey)
+		{
+			CrosshairPrompt = GM->bHasBrassKey
+				? ShiftLoc::Text(TEXT("[E] Unlock Iron Casket with Brass Key"))
+				: ShiftLoc::Text(TEXT("[E] Sealed Iron Casket (Requires Brass Key)"));
+		}
+		else
+		{
+			CrosshairPrompt = ShiftLoc::Text(TEXT("[E] Inspect Archive"));
+		}
+		if (bInteractJustPressed)
+		{
+			GM->InteractWithClue(FocusedClue);
+		}
+		return;
+	}
+
 	// 1. Task target (chore / spill / warehouse stock source)
 	if (AShiftTaskTarget* Task = Cast<AShiftTaskTarget>(HitActor))
 	{
@@ -634,9 +707,10 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		}
 	}
 
-	// 3. Checkout Register / Scanner / Counter
+	// 3. Checkout Register / Scanner / Counter (or Ancestral Hall Shrine in Otherworld)
 	if (HitActor)
 	{
+		const bool bInAncestralHall = GM->Director && GM->Director->IsEffectiveShifted();
 		const FString Label = HitActor->GetName();
 		const bool bIsCheckout = HitActor->ActorHasTag(TEXT("Interactive.Scanner"))
 			|| FVector::Dist2D(Hit.ImpactPoint, ShiftData::RegisterLocation) < 135.f;
@@ -652,7 +726,9 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 						&& HeldItem->Sku == C->Spec.MonsterSku && (GM->IsAutomatedSession() || HeldItem->bLostItem);
 					if (bValidLostDelivery)
 					{
-						CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Deliver %s to appease the entity!"), {FString(Demanded)});
+						CrosshairPrompt = ShiftLoc::Format(bInAncestralHall
+							? TEXT("[E] Offer %s at the shrine to appease the spirit!")
+							: TEXT("[E] Deliver %s to appease the entity!"), {FString(Demanded)});
 						if (bInteractJustPressed)
 						{
 							ConsumeHeldItem();
@@ -665,10 +741,12 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 						CrosshairPrompt = TEXT("Not its lost item! Find the red-glowing lost item spawned in the store!");
 						return;
 					}
-					CrosshairPrompt = ShiftLoc::Format(TEXT("Checkout: Bring the red-glowing [%s] here to banish the entity"), {FString(Demanded)});
+					CrosshairPrompt = ShiftLoc::Format(bInAncestralHall
+						? TEXT("Ancestral Shrine: Follow the cyan beacon and offer the Cursed Relic [%s] here")
+						: TEXT("Checkout: Bring the cyan-glowing [%s] here to banish the entity"), {FString(Demanded)});
 					return;
 				}
-				if (C->State == ECustomerState::WaitingAtCheckout)
+				if (C->State == ECustomerState::WaitingAtCheckout && !bInAncestralHall)
 				{
 					CrosshairPrompt = TEXT("[E] Ring Up Customer");
 					if (bInteractJustPressed)
@@ -678,10 +756,19 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 					return;
 				}
 			}
+			if (bInAncestralHall && !GM->IsAutomatedSession())
+			{
+				CrosshairPrompt = GM->NightIndex == 0
+					? TEXT("Three incense sticks still smolder on the shrine... yet the ash is soaking wet.")
+					: (GM->NightIndex == 1
+						? TEXT("Only two incense sticks remain lit. Someone was just kneeling here.")
+						: TEXT("One last incense stick flickers before the tablet. The name on it looks familiar..."));
+				return;
+			}
 		}
 
-		// 4. Oden station — take a hot broth cup to throw at the monster
-		if (HitActor->ActorHasTag(TEXT("Interactive.Oden")))
+		// 4. Oden station — hidden inside the Otherworld ancestral hall
+		if (HitActor->ActorHasTag(TEXT("Interactive.Oden")) && (!bInAncestralHall || GM->IsAutomatedSession()))
 		{
 			if (HeldItem.IsValid())
 			{
@@ -707,8 +794,8 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			return;
 		}
 
-		// Put merchandise back: aim a held (non-demanded) product at any shelf, cooler or display prop.
-		if (HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && !HeldItem->bLostItem && !HeldItem->bHotCup)
+		// Put merchandise back: only available in Normal convenience store state (hidden shelves in Otherworld must not prompt)
+		if ((!bInAncestralHall || GM->IsAutomatedSession()) && HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product && !HeldItem->bLostItem && !HeldItem->bHotCup)
 		{
 			const FString HitName = HitActor->GetName();
 			const bool bShelfLike = HitActor->ActorHasTag(TEXT("Fixture.Shelf")) || HitActor->ActorHasTag(TEXT("Interactive.FridgeDoor"))
@@ -731,7 +818,9 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 				CrosshairPrompt = ShiftLoc::Text(TEXT("Hands full. Put it back on a shelf, or press [G] to drop it."));
 				return;
 			}
-			CrosshairPrompt = ShiftLoc::Format(TEXT("[E] Pick up %s"), {FString(ShiftItem->DisplayName())});
+			CrosshairPrompt = ShiftItem->bLostItem
+				? ShiftLoc::Format(TEXT("[E] Take Cursed Relic (%s) -> Offer at Shrine!"), {FString(ShiftItem->DisplayName())})
+				: ShiftLoc::Format(TEXT("[E] Pick up %s"), {FString(ShiftItem->DisplayName())});
 			if (bInteractJustPressed)
 			{
 				PickupItem(ShiftItem);
@@ -759,7 +848,29 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			return;
 		}
 
-		// 7. Hero product props or shelf display stock -> pick up a carryable product
+		// 7. In the Otherworld ancestral hall, never grab invisible modern shelves — show atmospheric environmental whispers instead!
+		if (bInAncestralHall && !GM->IsAutomatedSession())
+		{
+			if (FVector::Dist2D(Hit.ImpactPoint, FVector(800.f, 450.f, 0.f)) < 145.f)
+			{
+				CrosshairPrompt = GM->NightIndex == 0
+					? TEXT("A sealed black wooden coffin... deep scratch marks line the inner seam.")
+					: (GM->NightIndex == 1
+						? TEXT("The coffin lid has slid open a crack... freezing damp air seeps out.")
+						: TEXT("The coffin lid lies overturned. Inside is completely empty."));
+			}
+			else if (FVector::Dist2D(Hit.ImpactPoint, FVector(800.f, 972.f, 0.f)) < 135.f)
+			{
+				CrosshairPrompt = TEXT("A faded memorial table... two pale green flames refuse to go out.");
+			}
+			else if (GM->Director && GM->Director->IsMonsterShifted() && (HitActor->ActorHasTag(TEXT("Fixture.Shelf")) || HitActor->GetName().Contains(TEXT("Gondola"))))
+			{
+				CrosshairPrompt = TEXT("Press [Q] to snap back to the store for 2.5s — or pull the corridor breaker.");
+			}
+			return;
+		}
+
+		// 7b. Hero product props or shelf display stock -> pick up a carryable product
 		const FName Sku = ExtractSkuTag(HitActor);
 		const bool bTakeTarget = !Sku.IsNone() || HitActor->ActorHasTag(TEXT("Fixture.Shelf")) || HitActor->ActorHasTag(TEXT("Interactive.FridgeDoor"))
 			|| HitActor->GetName().Contains(TEXT("Fridge")) || HitActor->GetName().Contains(TEXT("WallShelf")) || HitActor->GetName().Contains(TEXT("Drinks"));

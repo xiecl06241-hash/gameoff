@@ -28,6 +28,7 @@ private:
 	void DrawSubtitle(class AShiftStoreGameMode* GM);
 	void DrawTaskGuidance(class AShiftStoreGameMode* GM, class AShiftPlayerCharacter* Player);
 	void DrawRuleNoteOverlay(class AShiftStoreGameMode* GM);
+	void DrawArchiveReaderOverlay(class AShiftStoreGameMode* GM);
 
 	// Minimalist Analog Psychological Horror UI helpers
 	void DrawHorrorScrim(float X, float Y, float W, float H, FLinearColor AccentLine, float BgAlpha = 0.56f, bool bLeftStripe = true);

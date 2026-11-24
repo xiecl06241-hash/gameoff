@@ -43,4 +43,5 @@ private:
 	float GlowTime = 0.f;
 	float PulseCueTime = 1.5f;
 	TObjectPtr<class UPointLightComponent> Glow;
+	TObjectPtr<UStaticMeshComponent> BeaconMesh;
 };

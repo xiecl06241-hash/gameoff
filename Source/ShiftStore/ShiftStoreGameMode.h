@@ -9,6 +9,7 @@ class AShiftDirector;
 class AShiftTaskTarget;
 class AShiftCustomer;
 class AShiftItem;
+class AShiftClueActor;
 class UAudioComponent;
 class AShiftPlayerCharacter;
 
@@ -68,7 +69,20 @@ public:
 	int32 TotalMonstersWarded = 0;
 	int32 TotalShiftsTriggered = 0;
 	bool bEndingStatsComplete = true;
-	bool IsTrueEnding() const { return bEndingStatsComplete && TotalShiftsTriggered == 0 && TotalMonstersWarded > 0; }
+	static constexpr int32 TotalStoryClues = 6;
+	int32 CollectedCluesMask = 0;
+	bool bHasBrassKey = false;
+	bool bOfficePhoneRinging = false;
+	bool bOfficePhoneAnswered = false;
+	bool bArchiveReaderOpen = false;
+	FString ActiveArchiveTitleKey;
+	FString ActiveArchiveBodyKey;
+	int32 GetCollectedClueCount() const;
+	bool InteractWithClue(AShiftClueActor* Clue);
+	bool AnswerOfficePhone();
+	void CloseArchiveReader();
+	FString GetInvestigationLead() const;
+	bool IsTrueEnding() const { return GetCollectedClueCount() >= TotalStoryClues || (bEndingStatsComplete && TotalShiftsTriggered == 0 && TotalMonstersWarded > 0); }
 	void BuildNightCustomerRoster();
 
 	void OnItemHitCustomer(AShiftItem* Item, AShiftCustomer* Customer);
@@ -90,6 +104,7 @@ public:
 	UPROPERTY() TWeakObjectPtr<AShiftTaskTarget> CartonSource;
 	UPROPERTY() TWeakObjectPtr<AShiftTaskTarget> BreakerBoxTarget;
 	TArray<TWeakObjectPtr<AShiftTaskTarget>> ActiveTasks;
+	TArray<TWeakObjectPtr<AShiftClueActor>> StoryClues;
 	TWeakObjectPtr<AShiftCustomer> ActiveCustomer;
 	TWeakObjectPtr<AShiftItem> ActiveLostItem;
 
@@ -129,6 +144,8 @@ private:
 	void SpawnRestockAfterService();
 	void SpawnPostServiceTask();
 	void SpawnCleanupSpills(int32 Count);
+	void SpawnStoryClues();
+	void RefreshStoryClues();
 	void ClearNightActors();
 	bool TryFinishCleanup();
 	void TrySpawnNextCustomer();
@@ -140,6 +157,9 @@ private:
 	int32 CheckpointNight = 0;
 	int32 CheckpointWarded = 0;
 	int32 CheckpointShifts = 0;
+	int32 CheckpointCluesMask = 0;
+	bool bCheckpointBrassKey = false;
+	bool bCheckpointPhoneAnswered = false;
 	float CheckpointIncome = 0.f;
 	float CheckpointLosses = 0.f;
 	bool bHasNightCheckpoint = false;
@@ -175,7 +195,13 @@ private:
 	void PlaySynthesizedCue(float FreqHz, float DurationSec, float Volume = 0.25f, bool bNoise = false);
 
 	UPROPERTY() TObjectPtr<UAudioComponent> FridgeHumComp;
+	UPROPERTY() TObjectPtr<UAudioComponent> OtherworldAmbienceComp;
 	UPROPERTY() TObjectPtr<UAudioComponent> CueAudioComp;
+	float OtherworldChimeTimer = 3.2f;
+	float OtherworldStaySeconds = 0.f;
+	float OtherworldSanityDebt = 0.f;
+	float OfficePhoneTriggerTimer = 0.f;
+	float OfficePhoneRingInterval = 0.f;
 	float CustomerSpawnCooldown = 2.0f;
 	float EerieFlickerTimer = 14.f;
 	float MicroShiftTimer = 28.f;

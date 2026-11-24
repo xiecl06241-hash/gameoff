@@ -312,11 +312,16 @@ void AShiftHUD::DrawHUD()
 		}
 		else if (GM->Phase == EShiftPhase::Ending)
 		{
-			DrawCenteredText(GM->IsTrueEnding() ? TEXT("TRUE ENDING — MASTER OF THE NIGHT SHIFT") : TEXT("SURVIVOR ENDING — 06:00 AM HANDOVER"),
+			const bool bSolvedMystery = GM->GetCollectedClueCount() >= AShiftStoreGameMode::TotalStoryClues;
+			DrawCenteredText(bSolvedMystery
+				? TEXT("TRUE ENDING — THE SOUL-BINDING DEED IS BROKEN")
+				: (GM->IsTrueEnding() ? TEXT("TRUE ENDING — MASTER OF THE NIGHT SHIFT") : TEXT("SURVIVOR ENDING — 06:00 AM HANDOVER")),
 				H * 0.145f, GM->IsTrueEnding() ? MinimalHorror::WarmAmber : MinimalHorror::Ivory, 2.0f);
-			const FString EndingBody = GM->IsTrueEnding()
-				? ShiftLoc::Text(TEXT("You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\""))
-				: ShiftLoc::Text(TEXT("Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings."));
+			const FString EndingBody = bSolvedMystery
+				? ShiftLoc::Text(TEXT("At 06:00 AM, the last incense ember dies and the Soul-Binding Deed turns to ash.\nSunlight floods the empty store. Behind the counter, no ancestral shrine remains.\nFor the first time in eighteen years, the Shen family can finally rest."))
+				: (GM->IsTrueEnding()
+					? ShiftLoc::Text(TEXT("You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\""))
+					: ShiftLoc::Text(TEXT("Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.")));
 			TArray<FString> EndingLines;
 			EndingBody.ParseIntoArrayLines(EndingLines);
 			for (int32 Line = 0; Line < EndingLines.Num(); ++Line)
@@ -324,7 +329,7 @@ void AShiftHUD::DrawHUD()
 				DrawCenteredText(EndingLines[Line], H * (0.31f + Line * 0.052f), MinimalHorror::Ivory, 1.12f);
 			}
 			DrawCenteredText(ShiftLoc::Format(TEXT("Final Revenue: $%.2f   |   Total Losses: -$%.2f   |   Net: $%.2f"), {FString::Printf(TEXT("%.2f"), GM->Income), FString::Printf(TEXT("%.2f"), GM->Losses), FString::Printf(TEXT("%.2f"), GM->Income - GM->Losses)}), H * 0.51f, MinimalHorror::WarmAmber, 1.2f);
-			DrawCenteredText(ShiftLoc::Format(TEXT("Disguises Warded Off: %d   |   Store Shifts Survived: %d"), {LexToString(GM->TotalMonstersWarded), LexToString(GM->TotalShiftsTriggered)}), H * 0.585f, MinimalHorror::Muted, 1.02f);
+			DrawCenteredText(ShiftLoc::Format(TEXT("Disguises Warded Off: %d   |   Store Shifts Survived: %d   |   Archives: %d / %d"), {LexToString(GM->TotalMonstersWarded), LexToString(GM->TotalShiftsTriggered), LexToString(GM->GetCollectedClueCount()), LexToString(AShiftStoreGameMode::TotalStoryClues)}), H * 0.585f, MinimalHorror::Muted, 1.02f);
 			DrawCenteredText(TEXT("Thank you for playing SHIFT / 24! Press [SPACE] to Play Again."), H * 0.73f, MinimalHorror::Ivory, 1.24f);
 		}
 		return;
@@ -371,13 +376,17 @@ void AShiftHUD::DrawHUD()
 	}
 	DrawLocalizedText(ShiftLoc::Format(TEXT("[Tab] Shift Note (%d)"), {LexToString(GM->ActiveRuleCount())}),
 		GM->bRuleNoteOpen ? MinimalHorror::WarmAmber : FLinearColor(0.76f, 0.73f, 0.66f, 0.72f), 28.f, 126.f, Font, 0.74f, 260.f);
+	DrawLocalizedText(GM->bHasBrassKey
+		? ShiftLoc::Format(TEXT("ARCHIVES: %d / %d  |  BRASS KEY"), {LexToString(GM->GetCollectedClueCount()), LexToString(AShiftStoreGameMode::TotalStoryClues)})
+		: ShiftLoc::Format(TEXT("ARCHIVES: %d / %d"), {LexToString(GM->GetCollectedClueCount()), LexToString(AShiftStoreGameMode::TotalStoryClues)}),
+		GM->GetCollectedClueCount() >= AShiftStoreGameMode::TotalStoryClues ? MinimalHorror::WarmAmber : FLinearColor(0.76f, 0.86f, 0.82f, 0.78f), 28.f, 148.f, Font, 0.74f, 300.f);
 
 	// Auto-Hide Stamina: ONLY visible while actively sprinting or recovering (< 99%)
 	if (Player && (Player->bIsSprinting || Player->Stamina < 99.f))
 	{
 		const float StamPct = FMath::Clamp(Player->Stamina / 100.f, 0.f, 1.f);
-		DrawLocalizedText(TEXT("SPRINT [Shift]"), MinimalHorror::Muted, 28.f, 150.f, Font, 0.74f, 115.f);
-		DrawThinBar(150.f, 158.f, 150.f, 2.5f, StamPct,
+		DrawLocalizedText(TEXT("SPRINT [Shift]"), MinimalHorror::Muted, 28.f, 172.f, Font, 0.74f, 115.f);
+		DrawThinBar(150.f, 180.f, 150.f, 2.5f, StamPct,
 			StamPct < 0.25f ? MinimalHorror::Crimson : MinimalHorror::SoftIvory,
 			FLinearColor(0.20f, 0.19f, 0.18f, 0.32f));
 	}
@@ -458,7 +467,7 @@ void AShiftHUD::DrawHUD()
 	// --- 7. Whisper-Quiet Horror Reticle & Frameless Interaction Prompt ---
 	const float CX = W * 0.5f;
 	const float CY = H * 0.5f;
-	const bool bNoteBlockingView = GM->RuleNoteRaiseAlpha > 0.45f;
+	const bool bNoteBlockingView = GM->RuleNoteRaiseAlpha > 0.45f || GM->bArchiveReaderOpen;
 	const bool bHasPrompt = !bNoteBlockingView && Player && !Player->CrosshairPrompt.IsEmpty();
 	if (bHasPrompt)
 	{
@@ -483,6 +492,10 @@ void AShiftHUD::DrawHUD()
 	if (GM->RuleNoteRaiseAlpha > 0.01f)
 	{
 		DrawRuleNoteOverlay(GM);
+	}
+	if (GM->bArchiveReaderOpen)
+	{
+		DrawArchiveReaderOverlay(GM);
 	}
 	DrawLocalizedText(TEXT("[Esc] Pause"), FLinearColor(0.65f, 0.63f, 0.58f, 0.52f), W - 118.f, H - 32.f, Font, 0.78f, 108.f);
 }
@@ -542,10 +555,18 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 		if (C->IsMonsterActive())
 		{
 			bEntityAlert = true;
-			Add(TEXT("!! ABNORMAL ENTITY IN STORE !!"), MinimalHorror::Crimson, 0.92f);
-			Add(ShiftLoc::Format(TEXT("Demand: Find [%s] (Red Glow)"), {ShiftData::ProductLabel(C->Spec.MonsterSku)}), Accent);
-			Add(TEXT("-> Deliver it to the Checkout Register!"), Normal);
-			Add(TEXT("Shelves swapped stock! Corridor Breaker [E] restores light 10s."), Dim, 0.80f);
+			const bool bCarryingRelic = Player && Player->HeldItem.IsValid() && Player->HeldItem->bLostItem;
+			Add(TEXT("!! ENTITY HUNTING YOU !!"), MinimalHorror::Crimson, 0.94f);
+			if (!bCarryingRelic)
+			{
+				Add(TEXT("1/2  Follow the cyan beacon — grab the Cursed Relic [E]"), FLinearColor(0.32f, 0.96f, 0.82f, 0.98f), 0.90f);
+				Add(TEXT("[Shift] Sprint  ·  [Q] Reality Snap (stuns entity 1.2s)"), Normal, 0.82f);
+			}
+			else
+			{
+				Add(TEXT("2/2  Run to the Ancestral Shrine (Counter) and press [E] to offer it!"), Accent, 0.90f);
+				Add(TEXT("[Shift] Sprint  ·  [Q] Reality Snap if cornered"), Normal, 0.82f);
+			}
 		}
 		else if (C->State == ECustomerState::WaitingForHelp)
 		{
@@ -610,6 +631,10 @@ float AShiftHUD::DrawObjectivePanel(AShiftStoreGameMode* GM, AShiftPlayerCharact
 			}
 			if (GM->ActiveTasks.Num() > 1) { Add(TEXT("[V] Next chore"), Dim, 0.80f); }
 		}
+		if (const FString Lead = GM->GetInvestigationLead(); !Lead.IsEmpty())
+		{
+			Add(Lead, GM->bOfficePhoneRinging ? MinimalHorror::Crimson : FLinearColor(0.45f, 0.90f, 0.82f, 0.94f), 0.80f);
+		}
 		else if (const int32 Loose = GM->Phase == EShiftPhase::Cleanup ? GM->CountLooseMerchandise() : 0; Loose > 0)
 		{
 			Add(ShiftLoc::Format(TEXT("Tidy up: %d items left on the floor"), {LexToString(Loose)}), Accent, 0.96f);
@@ -673,6 +698,54 @@ void AShiftHUD::DrawSubtitle(AShiftStoreGameMode* GM)
 
 void AShiftHUD::DrawTaskGuidance(AShiftStoreGameMode* GM, AShiftPlayerCharacter* Player)
 {
+	// During an active monster hunt, show a crisp ghostly-cyan beacon marker to the Cursed Relic (1/2) or Main Shrine (2/2)!
+	if (Player && GM && GM->ActiveCustomer.IsValid() && GM->ActiveCustomer->IsMonsterActive())
+	{
+		const bool bCarryingRelic = Player->HeldItem.IsValid() && Player->HeldItem->bLostItem;
+		FVector Target = ShiftData::RegisterLocation + FVector(0.f, 0.f, 40.f);
+		FString Label = TEXT("MAIN SHRINE");
+		if (!bCarryingRelic)
+		{
+			if (const AShiftItem* Lost = GM->ActiveLostItem.Get())
+			{
+				Target = Lost->GetActorLocation() + FVector(0.f, 0.f, 55.f);
+				Label = TEXT("CURSED RELIC");
+			}
+			else { return; }
+		}
+		const float W = Canvas->ClipX, H = Canvas->ClipY;
+		const FVector Screen = Project(Target);
+		FVector2D Position(Screen.X, Screen.Y);
+		const bool bOnScreen = Screen.Z > 0.f && Position.X > 70.f && Position.X < W - 70.f && Position.Y > H * 0.22f && Position.Y < H - 120.f;
+		FVector2D Direction(0.f, -1.f);
+		if (!bOnScreen)
+		{
+			const FRotator CameraRotation = PlayerOwner->PlayerCameraManager->GetCameraRotation();
+			const FVector Delta = Target - PlayerOwner->PlayerCameraManager->GetCameraLocation();
+			const float Bearing = FMath::Atan2(FVector::DotProduct(Delta, CameraRotation.RotateVector(FVector::RightVector)),
+				FVector::DotProduct(Delta, CameraRotation.Vector()));
+			Direction = FVector2D(FMath::Sin(Bearing), -FMath::Cos(Bearing));
+			const FVector2D Center(W * 0.5f, H * 0.50f), Extents(W * 0.5f - 86.f, H * 0.5f - 140.f);
+			const float Distance = FMath::Min(Extents.X / FMath::Max(FMath::Abs(Direction.X), 0.001f), Extents.Y / FMath::Max(FMath::Abs(Direction.Y), 0.001f));
+			Position = Center + Direction * Distance;
+			Position.Y = FMath::Clamp(Position.Y, 150.f, H - 140.f);
+		}
+		const FVector2D Side(-Direction.Y, Direction.X);
+		const FVector2D Tip = Position + Direction * 12.f;
+		const FLinearColor CyanBeacon = bCarryingRelic ? MinimalHorror::WarmAmber : FLinearColor(0.24f, 0.98f, 0.80f, 0.96f);
+		DrawLine(Tip.X, Tip.Y, Position.X - Direction.X * 8.f + Side.X * 9.f, Position.Y - Direction.Y * 8.f + Side.Y * 9.f, CyanBeacon, 2.5f);
+		DrawLine(Tip.X, Tip.Y, Position.X - Direction.X * 8.f - Side.X * 9.f, Position.Y - Direction.Y * 8.f - Side.Y * 9.f, CyanBeacon, 2.5f);
+		const int32 Meters = FMath::Max(1, FMath::RoundToInt(FVector::Dist2D(Player->GetActorLocation(), Target) / 100.f));
+		const FString Tag = FString::Printf(TEXT("%s · %dm"), *ShiftLoc::Text(Label), Meters);
+		float TW = 0.f, TH = 0.f;
+		GetTextSize(Tag, TW, TH, InterfaceFont(), 0.84f);
+		const float X = FMath::Clamp(Position.X - TW * 0.5f, 18.f, W - TW - 18.f);
+		const float Y = FMath::Clamp(Position.Y + 14.f, 18.f, H - TH - 46.f);
+		DrawText(Tag, FLinearColor(0.f, 0.f, 0.f, 0.92f), X + 1.5f, Y + 1.5f, InterfaceFont(), 0.84f);
+		DrawText(Tag, CyanBeacon, X, Y, InterfaceFont(), 0.84f);
+		return;
+	}
+
 	const AShiftGuideActor* Guide = GM->GuideRenderer;
 	if (!Guide || !Player || !Guide->bActive || Guide->Status == EShiftRouteStatus::Unreachable) { return; }
 	const float W = Canvas->ClipX, H = Canvas->ClipY;
@@ -814,4 +887,55 @@ void AShiftHUD::DrawRuleNoteOverlay(AShiftStoreGameMode* GM)
 		DrawText(Line, InkMuted, X + 52.f, FootY, Font, 0.90f);
 		FootY += 28.f;
 	}
+}
+
+void AShiftHUD::DrawArchiveReaderOverlay(AShiftStoreGameMode* GM)
+{
+	if (!GM || !Canvas || !GM->bArchiveReaderOpen) { return; }
+	UFont* Font = InterfaceFont();
+	const float W = Canvas->ClipX;
+	const float H = Canvas->ClipY;
+
+	// Dim outer periphery
+	DrawRect(FLinearColor(0.01f, 0.01f, 0.01f, 0.68f), 0.f, 0.f, W, H);
+
+	const float CardW = FMath::Clamp(W * 0.62f, 520.f, 840.f);
+	const float CardH = FMath::Clamp(H * 0.58f, 360.f, 520.f);
+	const float X = (W - CardW) * 0.5f;
+	const float Y = (H - CardH) * 0.5f;
+
+	// Drop shadow & aged archive dossier paper
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.72f), X - 10.f, Y + 10.f, CardW + 20.f, CardH + 8.f);
+	DrawRect(FLinearColor(0.75f, 0.69f, 0.56f, 0.99f), X, Y, CardW, CardH);
+	DrawRect(FLinearColor(0.30f, 0.24f, 0.16f, 0.36f), X, Y, CardW, 10.f);
+	DrawRect(FLinearColor(0.30f, 0.24f, 0.16f, 0.36f), X, Y + CardH - 10.f, CardW, 10.f);
+
+	const FLinearColor InkDark(0.11f, 0.09f, 0.07f, 0.96f);
+	const FLinearColor InkRed(0.56f, 0.08f, 0.07f, 0.96f);
+	const FLinearColor InkMuted(0.28f, 0.23f, 0.18f, 0.88f);
+
+	// Title
+	const TArray<FString> TitleLines = WrapText(GM->ActiveArchiveTitleKey, CardW - 96.f, 1.32f, 2);
+	float CurY = Y + 42.f;
+	for (const FString& Line : TitleLines)
+	{
+		DrawText(Line, InkRed, X + 48.f, CurY, Font, 1.32f);
+		CurY += 40.f;
+	}
+	DrawRect(InkRed, X + 48.f, CurY + 4.f, CardW - 96.f, 2.f);
+	CurY += 28.f;
+
+	// Body text
+	const TArray<FString> BodyLines = WrapText(GM->ActiveArchiveBodyKey, CardW - 96.f, 1.06f, 9);
+	for (const FString& Line : BodyLines)
+	{
+		DrawText(Line, InkDark, X + 48.f, CurY, Font, 1.06f);
+		CurY += 34.f;
+	}
+
+	// Footer prompt
+	const FString CloseHint = ShiftLoc::Text(TEXT("[E / Space / Tab] Close Archive"));
+	float TW = 0.f, TH = 0.f;
+	GetTextSize(CloseHint, TW, TH, Font, 0.92f);
+	DrawText(CloseHint, InkMuted, X + (CardW - TW) * 0.5f, Y + CardH - 46.f, Font, 0.92f);
 }

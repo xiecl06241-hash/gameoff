@@ -18,7 +18,7 @@
 2. 在解压后的 `Windows` 目录中双击 **`ShiftStore.exe`**；也可双击同目录的 **`启动正常场景.cmd`**，以 **1920×1080 全屏**启动。开发工作区中的对应位置是 **`Builds/Windows/ShiftStore.exe`**。
 3. 选择语言：**1 English／2 日本語／3 繁體中文／4 简体中文**。点击选项，或按数字键选择后按 `Enter` 确认。
 4. 标题页按 **`Space`／`E`／`Enter` 开始新游戏，从第一晚开始**；按 **`C` 继续已有存档**。进入夜晚说明页后，再按 `Space`／`Enter` 开始操作。
-5. 使用 **WASD 移动、鼠标观察、E 交互或长按做任务**。看**右上角的当前目标和操作步骤**，沿黄色箭头到达工作点，再对准高亮目标交互。按 **Tab** 切换任务指引。按 **Esc** 打开暂停菜单，可继续游戏、调整鼠标灵敏度、返回主菜单或退出。
+5. 使用 **WASD 移动、Shift 冲刺、鼠标观察、E 交互或长按做任务**。按 **Tab** 从口袋掏出／放回《夜班守则纸条》（第 1/2/3 晚渐进 1/2/3 条），面对异常顾客按 **R** 主动拒单驱离；按 **Q** 窥视这家店残留的旧影（现代便利店 ↔ 原址中式老宅灵堂，别看太久）。按 **V** 切换日常任务指引，按 **Esc** 打开暂停菜单与鼠标灵敏度设置。
 
 试玩打包版无需安装 UE、Visual Studio 或 Python。**不要只复制单个 EXE**，游戏还需要同目录下的 `ShiftStore/`、`Engine/` 等配套文件。
 
@@ -114,10 +114,15 @@ python .github/scripts/build_windows.py
 | Key / Input | Action |
 | --- | --- |
 | `W` `A` `S` `D` | Move |
+| `Left Shift` / `Right Shift` | Sprint (uses Stamina) |
 | `Mouse` (or Arrow Keys) | Look |
-| `E` or `Left Mouse Button` | Interact / Pick up item / Hold to complete chore / Ring up / Struggle |
+| `E` or `Left Mouse Button` | Interact / Pick up / Hold chore / Ring up / Offer at shrine / Struggle |
+| `Tab` | Pull out / put away Pocket Shift Note (1→2→3 progressive rules) |
+| `R` | Refuse service to abnormal customer (or rewind night on Game Over) |
+| `Q` | Glimpse Old Scene (Convenience Store ↔ Chinese Ancestral Hall) / 2.5s Phase Snap during chase |
 | `F` or `Right Mouse Button` | Throw held item (stuns entity on hit) |
 | `G` | Drop held item |
+| `V` | Cycle guided chore target |
 | `Space` / `Enter` | Advance Title / Night Intro / Dawn screens |
 | `R` | Restart current night from auto-save (on Game Over screen) |
 | `Alt + F4` | Quit |
