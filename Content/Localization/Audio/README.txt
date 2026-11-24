@@ -1,21 +1,12 @@
-SHIFT / 24 external sound cues
+SHIFT / 24 PR #1 playable audio preview
 
-Use standard RIFF WAVE, PCM format 1, signed 16-bit little-endian samples,
-mono or stereo, 8000–192000 Hz. Each file must be smaller than 64 MiB.
+Runtime WAVs use mono 48 kHz, signed 16-bit RIFF PCM.
+Door entry, item pickup/drop/throw, paper note, task start, heartbeat, reveal,
+phase switching and state-dependent ambience use converted PR #1 candidates.
+Ambient beds stop at title/dawn/game-over and switch between normal, Otherworld
+and active-monster states. Ordinary footsteps, scanner, light flicker and ward-off
+retain their previous CC0 recordings.
 
-Supported filenames
-door_chime.wav
-scanner_beep.wav
-light_flicker.wav
-jumpscare_reveal.wav
-ward_off.wav
-
-For development, place files in this directory. Packaging stages this directory.
-For the Windows build, files can also be placed in
-Windows/ShiftStore/Content/Localization/Audio/ before launching the game.
-Adding a previously absent cue requires no editor or Python installation.
-If the filename was already included in a packaged PAK, rebuild the package to
-replace that cue reliably. Restart the game after changing files.
-
-Missing, unsupported or truncated files use the existing synthesized sounds.
-No recorded WAV clips are included in this implementation.
+Credits: SourceArt/Audio/RUNTIME_CREDITS.md (Windows/Licenses/PR1_AUDIO_CREDITS.md).
+Reproduce conversion: python Tools/prepare_pr1_audio.py --ffmpeg <ffmpeg executable>.
+Missing or invalid one-shot cues fall back to synthesized sounds.

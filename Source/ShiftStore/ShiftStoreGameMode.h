@@ -64,6 +64,7 @@ public:
 	void PlayPositionalAnomalyPulse(const FVector& Location);
 	void PlayFootstepCue(const FVector* OptionalWorldLocation = nullptr, float Volume = 0.35f);
 	void PlayHeartbeatCue(float Tension, bool bReverb = false);
+	void PlayTaskWorkCue(EShiftTaskType Type);
 	bool PlayExternalOrSynthesizedCue(const FString& WavFileName, float FallbackFreqHz, float FallbackDurationSec, float Volume = 0.28f, bool bFallbackNoise = false, const FVector* OptionalWorldLocation = nullptr);
 	int32 TotalMonstersWarded = 0;
 	int32 TotalShiftsTriggered = 0;
@@ -172,10 +173,14 @@ private:
 	float SelfTestExitSeconds = 0.f;
 
 	void SetupProceduralAudio();
+	void TickAmbientAudio(float DeltaSeconds);
 	void PlaySynthesizedCue(float FreqHz, float DurationSec, float Volume = 0.25f, bool bNoise = false);
 
 	UPROPERTY() TObjectPtr<UAudioComponent> FridgeHumComp;
 	UPROPERTY() TObjectPtr<UAudioComponent> CueAudioComp;
+	UPROPERTY() TObjectPtr<UAudioComponent> AmbientAudioComp;
+	FString AmbientCueName;
+	float AmbientCueTimer = 0.f;
 	float CustomerSpawnCooldown = 2.0f;
 	float EerieFlickerTimer = 14.f;
 	float MicroShiftTimer = 28.f;

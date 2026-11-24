@@ -149,7 +149,7 @@ void AShiftPlayerCharacter::PickupItem(AShiftItem* Item)
 	Item->SetActorRelativeRotation(FRotator(0.f, -20.f, 0.f));
 	if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>(); GM && !GM->IsAutomatedSession())
 	{
-		GM->PlayExternalOrSynthesizedCue(TEXT("cloth_rustle.wav"), 320.f, 0.08f, 0.30f);
+		GM->PlayExternalOrSynthesizedCue(TEXT("item_pickup.wav"), 320.f, 0.08f, 0.30f);
 	}
 }
 
@@ -460,6 +460,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 			HeldItem.Reset();
 			ToThrow->SetActorLocation(ReleaseLocation(*ToThrow));
 			ToThrow->Throw(FirstPersonCamera->GetForwardVector() * 980.f + FVector(0, 0, 140.f), this);
+			if (GM) { GM->PlayExternalOrSynthesizedCue(TEXT("item_throw.wav"), 180.f, 0.12f, 0.28f); }
 			return;
 		}
 		else
@@ -540,6 +541,7 @@ void AShiftPlayerCharacter::UpdateFocusAndInteraction(float DeltaSeconds, bool b
 		CrosshairPrompt = ShiftLoc::Format(TEXT("[Hold E] %s (%d%%)"), {FString(Task->Label), LexToString(FMath::RoundToInt(Task->Progress * 100.f))});
 		if (bInteractDown)
 		{
+			if (Task->Progress <= 0.f) { GM->PlayTaskWorkCue(Task->Type); }
 			Task->Progress += DeltaSeconds / FMath::Max(0.2f, Task->HoldDuration());
 			HoldProgress = FMath::Clamp(Task->Progress, 0.f, 1.f);
 			if (Task->Progress >= 1.f)

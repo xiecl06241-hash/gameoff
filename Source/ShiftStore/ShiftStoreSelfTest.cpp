@@ -542,6 +542,16 @@ void AShiftStoreGameMode::TickSelfTest(float DeltaSeconds)
 			bAudioSafe &= IFileManager::Get().Delete(*AudioPath);
 			if (!CheckSelfTest(TEXT("audio_fallback_safe_when_wav_missing"), bAudioSafe)) { return; }
 			if (!CheckSelfTest(TEXT("bundled_wav_cue_loads_and_plays"), PlayExternalOrSynthesizedCue(TEXT("door_chime.wav"), 740.f, 0.22f, 0.05f))) { return; }
+			bool bPrAudioReady = true;
+			for (const TCHAR* Cue : { TEXT("door_chime.wav"), TEXT("door_open.wav"), TEXT("cloth_rustle.wav"),
+				TEXT("item_pickup.wav"), TEXT("item_drop.wav"), TEXT("item_throw.wav"), TEXT("task_mop.wav"),
+				TEXT("task_tidy.wav"), TEXT("task_cook.wav"), TEXT("heartbeat.wav"), TEXT("heartbeat_fast.wav"),
+				TEXT("heartbeat_reverb.wav"), TEXT("jumpscare_reveal.wav"), TEXT("phase_shift.wav"),
+				TEXT("ambient_night.wav"), TEXT("ambient_otherworld.wav"), TEXT("ambient_threat.wav") })
+			{
+				bPrAudioReady &= PlayExternalOrSynthesizedCue(Cue, 440.f, 0.05f, 0.f);
+			}
+			if (!CheckSelfTest(TEXT("pr1_all_runtime_audio_decodes_in_package"), bPrAudioReady)) { return; }
 			const int32 ShiftsBeforeEndingTest = TotalShiftsTriggered;
 			TotalShiftsTriggered = 0;
 			const bool bTrueEnding = TotalMonstersWarded > 0 && IsTrueEnding();

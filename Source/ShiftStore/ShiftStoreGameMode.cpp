@@ -272,6 +272,41 @@ void AShiftStoreGameMode::PlayFootstepCue(const FVector* OptionalWorldLocation, 
 	}
 }
 
+void AShiftStoreGameMode::PlayTaskWorkCue(EShiftTaskType Type)
+{
+	const TCHAR* Cue = Type == EShiftTaskType::CookOden ? TEXT("task_cook.wav")
+		: Type == EShiftTaskType::Spill ? TEXT("task_mop.wav") : TEXT("task_tidy.wav");
+	PlayExternalOrSynthesizedCue(Cue, 320.f, 0.15f, 0.32f);
+}
+
+void AShiftStoreGameMode::TickAmbientAudio(float DeltaSeconds)
+{
+	const bool bPlayingNight = !bAutomatedSession && (Phase == EShiftPhase::Working || Phase == EShiftPhase::Cleanup);
+	const AShiftCustomer* Customer = ActiveCustomer.Get();
+	const FString Desired = !bPlayingNight ? FString()
+		: Customer && Customer->IsMonsterActive() ? TEXT("ambient_threat.wav")
+		: Director && Director->IsEffectiveShifted() ? TEXT("ambient_otherworld.wav") : TEXT("ambient_night.wav");
+	if (Desired != AmbientCueName)
+	{
+		if (AmbientAudioComp) { AmbientAudioComp->Stop(); }
+		AmbientAudioComp = nullptr;
+		AmbientCueName = Desired;
+		AmbientCueTimer = 0.f;
+	}
+	if (Desired.IsEmpty()) { return; }
+	AmbientCueTimer -= DeltaSeconds;
+	if (AmbientCueTimer <= 0.f)
+	{
+		if (AmbientAudioComp) { AmbientAudioComp->Stop(); }
+		if (USoundWaveProcedural* Wave = LoadPcmCue(this, Desired))
+		{
+			AmbientAudioComp = UGameplayStatics::SpawnSound2D(this, Wave, 0.16f);
+			AmbientCueTimer = Wave->Duration;
+		}
+		else { AmbientCueTimer = 5.f; }
+	}
+}
+
 void AShiftStoreGameMode::PlayHeartbeatCue(float Tension, bool bReverb)
 {
 	const float Vol = FMath::Lerp(0.24f, 0.58f, FMath::Clamp(Tension, 0.f, 1.f));
@@ -832,7 +867,7 @@ bool AShiftStoreGameMode::TryPlayerPhaseShift()
 	}
 	else if (Director->IsPlayerPhaseShifted())
 	{
-		PlaySynthesizedCue(78.f, 0.28f, 0.36f, true);
+		PlayExternalOrSynthesizedCue(TEXT("phase_shift.wav"), 78.f, 0.28f, 0.36f, true);
 		HeartbeatPulseAlpha = FMath::Max(HeartbeatPulseAlpha, 0.52f);
 	}
 	else
@@ -1228,6 +1263,7 @@ void AShiftStoreGameMode::Tick(float DeltaSeconds)
 	}
 
 	if (BannerTimer > 0.f) { BannerTimer = FMath::Max(0.f, BannerTimer - DeltaSeconds); }
+	TickAmbientAudio(DeltaSeconds);
 
 	// Keep procedural refrigeration hum buffer fed
 	AudioFeedTimer += DeltaSeconds;

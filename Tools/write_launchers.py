@@ -8,6 +8,8 @@ licenses = OUT / 'Licenses'
 licenses.mkdir(exist_ok=True)
 shutil.copy2(ROOT / 'SourceArt/Fonts/LICENSE', licenses / 'Noto-SIL-OFL-1.1.txt')
 shutil.copy2(ROOT / 'THIRD_PARTY_NOTICES.md', licenses / 'THIRD_PARTY_NOTICES.md')
+shutil.copy2(ROOT / 'SourceArt/Audio/RUNTIME_CREDITS.md', licenses / 'PR1_AUDIO_CREDITS.md')
+shutil.copy2(ROOT / 'SourceArt/Audio/runtime_manifest.json', licenses / 'PR1_AUDIO_MANIFEST.json')
 
 for label, state in [('启动正常场景', 'Normal'), ('启动异常场景', 'Shift')]:
     (OUT / (label + '.cmd')).write_text(
@@ -37,7 +39,7 @@ for label, state in [('启动正常场景', 'Normal'), ('启动异常场景', 'S
     'G：放下手中物品\n'
     'Space / Enter：跳过标题、每晚交班说明、天亮结算页\n'
     'R：淘汰后回溯重玩当前夜晚\n'
-    'Tab：切换当前指引的日常任务；跟随黄色通道和距离标记。\n'
+    'Tab：举起／收起夜班守则纸条。V：切换当前指引的日常任务。\n'
     'Esc：暂停／继续；菜单可用鼠标点击，或上下方向键／W、S 选择并按 Enter／Space 确认\n'
     'Esc → 鼠标灵敏度：拖动滑条或用左右方向键调整，范围 0.10–3.00 倍，默认 1.00 倍；自动保存，可恢复默认。\n'
     '暂停时任务、清醒度扣除和怪物行动停止。返回主菜单会丢失本晚未保存的进度，保留最近天亮时的存档。\n'
