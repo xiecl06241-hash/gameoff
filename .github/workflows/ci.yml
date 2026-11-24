@@ -2,9 +2,10 @@ name: Repository checks
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
+    tags: ['**']
   pull_request:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
