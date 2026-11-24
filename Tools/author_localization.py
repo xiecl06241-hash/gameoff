@@ -6,6 +6,10 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 # Columns: English source key, Simplified Chinese, Japanese, Traditional Chinese.
 ENTRIES = [
+    ("HANDS: Empty  ([E] Pick up / Interact)",
+    "空手（[E] 拾取 / 交互）",
+    "手ぶら（[E] 拾う / 調べる）",
+    "空手（[E] 拾取 / 互動）"),
     ("Mouse Sensitivity", "鼠标灵敏度", "マウス感度", "滑鼠靈敏度"),
     ("Lower is slower. Changes are saved automatically.", "数值越低，视角移动越慢。设置会自动保存。", "値が小さいほど視点移動が遅くなります。変更は自動保存されます。", "數值越低，視角移動越慢。設定會自動儲存。"),
     ("Mouse sensitivity: %sx", "鼠标灵敏度：{0} 倍", "マウス感度：{0} 倍", "滑鼠靈敏度：{0} 倍"),

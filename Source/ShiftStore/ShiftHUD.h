@@ -4,6 +4,8 @@
 #include "GameFramework/HUD.h"
 #include "ShiftHUD.generated.h"
 
+class UShiftRootWidget;
+
 UCLASS()
 class SHIFTSTORE_API AShiftHUD : public AHUD
 {
@@ -12,6 +14,11 @@ class SHIFTSTORE_API AShiftHUD : public AHUD
 public:
 	AShiftHUD();
 	virtual void DrawHUD() override;
+
+	/** Set false to fall back to the legacy Canvas HUD. */
+	UPROPERTY(EditDefaultsOnly, Category="UI")
+	bool bUseUMG = true;
+
 	static FBox2D LanguageButton(int32 Index, float Width, float Height);
 	static FBox2D PauseButton(int32 Index, float Width, float Height);
 	static FBox2D SensitivitySlider(float Width, float Height);
@@ -20,8 +27,18 @@ public:
 	int32 ObjectiveTaskRows = 0;
 	int32 SubtitleLines = 0;
 	bool bObjectiveFitsViewport = true;
+	void ToggleRules();
+
+protected:
+	virtual void BeginPlay() override;
 
 private:
+	UPROPERTY(Transient)
+	TObjectPtr<UShiftRootWidget> RootWidget;
+
+	UPROPERTY(EditDefaultsOnly, Category="UI")
+	TSubclassOf<UShiftRootWidget> RootWidgetClass;
+
 	void DrawMouseSettings(const class AShiftPlayerController* PC);
 	float DrawObjectivePanel(class AShiftStoreGameMode* GM, class AShiftPlayerCharacter* Player);
 	TArray<FString> WrapText(const FString& Str, float Width, float Scale, int32 MaxLines = 0) const;

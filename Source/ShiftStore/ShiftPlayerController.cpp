@@ -48,11 +48,19 @@ void AShiftPlayerController::CloseMouseSettings()
 
 void AShiftPlayerController::DecreaseSensitivity()
 {
+	if (UsesUMG())
+	{
+		return;
+	}
 	if (bPauseMenuOpen && bMouseSettingsOpen && SelectedMouseSetting == 0) { SetMouseSensitivity(Sensitivity - 0.05f); }
 }
 
 void AShiftPlayerController::IncreaseSensitivity()
 {
+	if (UsesUMG())
+	{
+		return;
+	}
 	if (bPauseMenuOpen && bMouseSettingsOpen && SelectedMouseSetting == 0) { SetMouseSensitivity(Sensitivity + 0.05f); }
 }
 
@@ -72,6 +80,7 @@ void AShiftPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 	// The controller still processes these bindings while the world is paused.
 	InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AShiftPlayerController::TogglePauseMenu).bExecuteWhenPaused = true;
+	InputComponent->BindKey(EKeys::R, IE_Pressed, this, &AShiftPlayerController::ToggleRules);
 	for (const FKey Key : {EKeys::Up, EKeys::W})
 	{
 		InputComponent->BindKey(Key, IE_Pressed, this, &AShiftPlayerController::PreviousPauseAction).bExecuteWhenPaused = true;
@@ -96,21 +105,27 @@ void AShiftPlayerController::SetupInputComponent()
 	}
 }
 
+bool AShiftPlayerController::UsesUMG() const
+{
+	const AShiftHUD* HUD = Cast<AShiftHUD>(GetHUD());
+	return HUD && HUD->bUseUMG;
+}
+
 void AShiftPlayerController::SetPauseMenuOpen(bool bOpen)
 {
 	if (bOpen == bPauseMenuOpen || !SetPause(bOpen)) { return; }
 	bPauseMenuOpen = bOpen;
 	MenuTransitionFrame = GFrameCounter;
 	bWaitForGameplayRelease = true;
-	SetShowMouseCursor(bOpen);
+	// SetShowMouseCursor(bOpen);
 	if (bOpen)
 	{
 		SelectedPauseAction = 0;
 		GetMousePosition(PreviousMenuMouse.X, PreviousMenuMouse.Y);
-		FInputModeGameAndUI Mode;
-		Mode.SetHideCursorDuringCapture(false);
-		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		SetInputMode(Mode);
+		// FInputModeGameAndUI Mode;
+		// Mode.SetHideCursorDuringCapture(false);
+		// Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		// SetInputMode(Mode);
 		if (AShiftPlayerCharacter* Clerk = Cast<AShiftPlayerCharacter>(GetPawn()))
 		{
 			Clerk->GetCharacterMovement()->StopMovementImmediately();
@@ -121,8 +136,9 @@ void AShiftPlayerController::SetPauseMenuOpen(bool bOpen)
 		ReleaseMenuMouse();
 		SaveMouseSensitivity();
 		bMouseSettingsOpen = false;
-		SetInputMode(FInputModeGameOnly());
+		// SetInputMode(FInputModeGameOnly());
 	}
+	UpdateUIInputMode();
 }
 
 void AShiftPlayerController::TogglePauseMenu()
@@ -151,6 +167,10 @@ bool AShiftPlayerController::BlocksGameplayInput()
 
 void AShiftPlayerController::PreviousPauseAction()
 {
+	if (UsesUMG())
+	{
+		return;
+	}
 	if (!bPauseMenuOpen) { return; }
 	if (bMouseSettingsOpen) { SelectedMouseSetting = (SelectedMouseSetting + 2) % 3; }
 	else { SelectedPauseAction = (SelectedPauseAction + 3) % 4; }
@@ -158,6 +178,10 @@ void AShiftPlayerController::PreviousPauseAction()
 
 void AShiftPlayerController::NextPauseAction()
 {
+	if (UsesUMG())
+	{
+		return;
+	}
 	if (!bPauseMenuOpen) { return; }
 	if (bMouseSettingsOpen) { SelectedMouseSetting = (SelectedMouseSetting + 1) % 3; }
 	else { SelectedPauseAction = (SelectedPauseAction + 1) % 4; }
@@ -165,6 +189,10 @@ void AShiftPlayerController::NextPauseAction()
 
 void AShiftPlayerController::ConfirmPauseAction()
 {
+	if (UsesUMG())
+	{
+		return;
+	}
 	if (!bPauseMenuOpen) { return; }
 	if (bMouseSettingsOpen)
 	{
@@ -196,6 +224,10 @@ void AShiftPlayerController::ConfirmPauseAction()
 
 void AShiftPlayerController::ClickPauseAction()
 {
+	if (UsesUMG())
+	{
+		return;
+	}
 	if (!bPauseMenuOpen) { return; }
 	FVector2D Mouse;
 	int32 Width = 0, Height = 0;
@@ -235,6 +267,7 @@ void AShiftPlayerController::ClickPauseAction()
 void AShiftPlayerController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	UpdateUIInputMode();
 	if (bPauseMenuOpen)
 	{
 		FVector2D Mouse;
@@ -267,4 +300,73 @@ void AShiftPlayerController::Tick(float DeltaSeconds)
 	}
 	if (FParse::Param(FCommandLine::Get(), TEXT("ShiftPauseTest"))) { TickPauseTest(); }
 	if (FParse::Param(FCommandLine::Get(), TEXT("ShiftSensitivityTest"))) { TickSensitivityTest(); }
+}
+
+void AShiftPlayerController::UIResume()
+{
+	SetPauseMenuOpen(false);
+}
+
+void AShiftPlayerController::UIReturnToTitle()
+{
+	SetPauseMenuOpen(false);
+	if(AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>())
+	{
+		GM->ReturnToTitle();
+	}
+}
+
+void AShiftPlayerController::UIQuit(){
+	SaveMouseSensitivity();
+	UKismetSystemLibrary::QuitGame(this,this,EQuitPreference::Quit,false);
+}
+
+void AShiftPlayerController::UpdateUIInputMode()
+{
+	const AShiftStoreGameMode* GM = GetWorld()
+		? GetWorld()->GetAuthGameMode<AShiftStoreGameMode>()
+		: nullptr;
+	
+	const bool bMenu = bPauseMenuOpen || bRulesOpen
+    || (GM && GM->Phase != EShiftPhase::Working && GM->Phase != EShiftPhase::Cleanup);
+
+	if(bMenu == bLastMenuInput){
+		return ;
+	}
+	bLastMenuInput = bMenu;
+	if(bMenu)
+	{
+		SetShowMouseCursor(true);
+		FInputModeGameAndUI Mode;
+		Mode.SetHideCursorDuringCapture(false);
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(Mode);
+	}
+	else{
+		SetShowMouseCursor(false);
+		SetInputMode(FInputModeGameOnly());
+	}
+}
+
+void AShiftPlayerController::SetRulesOpen(bool bOpen)
+{
+    bRulesOpen = bOpen;
+    UpdateUIInputMode();
+}
+
+void AShiftPlayerController::ToggleRules()
+{
+    const AShiftStoreGameMode* GM = GetWorld()
+        ? GetWorld()->GetAuthGameMode<AShiftStoreGameMode>()
+        : nullptr;
+
+    if (!GM || (GM->Phase != EShiftPhase::Working && GM->Phase != EShiftPhase::Cleanup))
+    {
+        return;
+    }
+
+    if (AShiftHUD* HUD = Cast<AShiftHUD>(GetHUD()))
+    {
+        HUD->ToggleRules();
+    }
 }

@@ -22,6 +22,15 @@ public:
 	static constexpr float MaxSensitivity = 3.f;
 	void SetMouseSensitivity(float Value, bool bPersist = true);
 
+	// --- UMG menu API ---
+	void UIResume();
+	void UIReturnToTitle();
+	void UIQuit();
+
+	/** Applies GameAndUI for menus/pause and GameOnly for gameplay. */
+	void UpdateUIInputMode();
+	void SetRulesOpen(bool bOpen);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -48,6 +57,7 @@ private:
 	float SensitivityTestTimer = 0.f;
 	float SensitivityTestSanity = 0.f;
 	void SetPauseMenuOpen(bool bOpen);
+	bool UsesUMG() const;
 	void PreviousPauseAction();
 	void NextPauseAction();
 	void ConfirmPauseAction();
@@ -59,6 +69,7 @@ private:
 	int32 SelectedPauseAction = 0;
 	uint64 MenuTransitionFrame = MAX_uint64;
 	FVector2D PreviousMenuMouse = FVector2D(-1.f, -1.f);
+	bool bLastMenuInput = false;
 
 	int32 PauseTestStep = 0;
 	double PauseTestNextTime = 0.;
@@ -70,4 +81,8 @@ private:
 	FVector PauseTestMonsterLocation = FVector::ZeroVector;
 	FVector PauseTestPlayerLocation = FVector::ZeroVector;
 	float PauseTestShiftAlpha = 0.f;
+
+	// rules button
+	void ToggleRules();
+	bool bRulesOpen = false;
 };

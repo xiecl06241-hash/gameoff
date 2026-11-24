@@ -9,6 +9,8 @@
 #include "ShiftCustomer.h"
 #include "ShiftDirector.h"
 #include "ShiftItem.h"
+#include "UI/ShiftUIRoot.h"
+#include "Blueprint/UserWidget.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
@@ -17,7 +19,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Camera/CameraComponent.h"
 #include "UObject/ConstructorHelpers.h"
-
+#include "Components/SlateWrapperTypes.h"
 namespace HorrorPalette
 {
 	static const FLinearColor Bone(0.89f, 0.86f, 0.79f, 1.f);
@@ -33,6 +35,11 @@ AShiftHUD::AShiftHUD()
 	static ConstructorHelpers::FObjectFinder<UFont> SC(TEXT("/Game/ShiftStore/Fonts/NotoSansCJKsc-Regular_Font.NotoSansCJKsc-Regular_Font"));
 	static ConstructorHelpers::FObjectFinder<UFont> JP(TEXT("/Game/ShiftStore/Fonts/NotoSansCJKjp-Regular_Font.NotoSansCJKjp-Regular_Font"));
 	static ConstructorHelpers::FObjectFinder<UFont> TC(TEXT("/Game/ShiftStore/Fonts/NotoSansCJKtc-Regular_Font.NotoSansCJKtc-Regular_Font"));
+	static ConstructorHelpers::FClassFinder<UShiftRootWidget> RootClass(
+		TEXT("/Game/ShiftStore/UI/WBP_ShiftRoot"));
+	if(RootClass.Class){
+		RootWidgetClass = RootClass.Class;
+	}
 	ChineseFont = SC.Object;
 	JapaneseFont = JP.Object;
 	TraditionalChineseFont = TC.Object;
@@ -220,9 +227,52 @@ void AShiftHUD::DrawCenteredText(const FString& Str, float Y, FLinearColor Color
 	DrawText(Text, Color, X, Y, Font, Scale);
 }
 
+void AShiftHUD::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if(!bUseUMG || !RootWidgetClass)
+	{
+		bUseUMG = false;
+		return;
+	}
+	APlayerController* PC = GetOwningPlayerController();
+	if(!PC)
+	{
+		bUseUMG = false;
+		return;
+	}
+
+	RootWidget = CreateWidget<UShiftRootWidget>(PC,RootWidgetClass);
+	if(!RootWidget)
+	{
+		bUseUMG = false;
+		return;
+	}
+
+	RootWidget->AddToViewport();
+	RootWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+}
+
 void AShiftHUD::DrawHUD()
 {
 	Super::DrawHUD();
+
+	if(bUseUMG)
+	{
+		const AShiftStoreGameMode* GM = GetWorld() 
+			? GetWorld()->GetAuthGameMode<AShiftStoreGameMode>()
+			: nullptr;
+		const AShiftPlayerController* PC = Cast<AShiftPlayerController>(PlayerOwner);
+
+		const bool bGameplay = GM && (GM->Phase==EShiftPhase::Working || GM->Phase == EShiftPhase::Cleanup);
+		const bool bPaused = PC&& PC->IsPauseMenuOpen();
+		if(bGameplay || bPaused)
+		{
+			return;
+		}
+	}
+
 	if (!Canvas) { return; }
 
 	AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
@@ -734,4 +784,12 @@ void AShiftHUD::DrawTaskGuidance(AShiftStoreGameMode* GM, AShiftPlayerCharacter*
 	const float Y = FMath::Clamp(Position.Y + 16.f, 18.f, H - TH - 52.f);
 	DrawRect(FLinearColor(0.01f, 0.01f, 0.01f, 0.55f), X - 6.f, Y - 2.f, TW + 12.f, TH + 4.f);
 	DrawText(Tag, Accent, X, Y, InterfaceFont(), 0.82f);
+}
+
+void AShiftHUD::ToggleRules()
+{
+    if (RootWidget)
+    {
+        RootWidget->ToggleRules();
+    }
 }
