@@ -29,6 +29,7 @@ public:
 
 	/** Applies GameAndUI for menus/pause and GameOnly for gameplay. */
 	void UpdateUIInputMode();
+	bool UsesUMG() const;
 	void SetRulesOpen(bool bOpen);
 
 protected:
@@ -57,7 +58,7 @@ private:
 	float SensitivityTestTimer = 0.f;
 	float SensitivityTestSanity = 0.f;
 	void SetPauseMenuOpen(bool bOpen);
-	bool UsesUMG() const;
+	// bool UsesUMG() const;
 	void PreviousPauseAction();
 	void NextPauseAction();
 	void ConfirmPauseAction();

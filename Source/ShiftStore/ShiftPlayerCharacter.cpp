@@ -39,13 +39,33 @@ AShiftPlayerCharacter::AShiftPlayerCharacter()
 void AShiftPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC)
 	{
-		if (AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>(); GM && GM->Phase == EShiftPhase::LanguageSelection)
-		{
-			GM->OpenLanguageSelection();
-			return;
-		}
+		return;
+	}
+
+	AShiftStoreGameMode* GM = GetWorld()
+		? GetWorld()->GetAuthGameMode<AShiftStoreGameMode>()
+		: nullptr;
+
+	if (!GM)
+	{
+		return;
+	}
+
+	if (GM->Phase == EShiftPhase::LanguageSelection)
+	{
+		GM->OpenLanguageSelection();
+		return;
+	}
+
+	// 只有真正进入游戏时才强制 GameOnly。
+	// Title / NightIntro / Dawn / GameOver / Ending
+	// 由 AShiftPlayerController::UpdateUIInputMode() 统一处理。
+	if (GM->Phase == EShiftPhase::Working || GM->Phase == EShiftPhase::Cleanup)
+	{
 		PC->SetShowMouseCursor(false);
 		FInputModeGameOnly Mode;
 		PC->SetInputMode(Mode);
@@ -229,12 +249,28 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	AShiftStoreGameMode* GM = GetWorld()->GetAuthGameMode<AShiftStoreGameMode>();
 	if (!PC || !GM) { return; }
+
 	UpdateGrabCamera(DeltaSeconds);
+
 	if (AShiftPlayerController* ShiftPC = Cast<AShiftPlayerController>(PC); ShiftPC && ShiftPC->BlocksGameplayInput())
 	{
 		bPrevInteractDown = false;
 		bPrevThrowDown = false;
 		return;
+	}
+
+	// UMG 标题 / 语言弹窗 / 第一晚对话由 UMG 处理，禁止旧的按键逻辑重复响应。
+	if (AShiftPlayerController* ShiftPC = Cast<AShiftPlayerController>(PC))
+	{
+		if (!GM->IsAutomatedSession() && ShiftPC->UsesUMG()
+			&& (GM->Phase == EShiftPhase::Title
+				|| GM->Phase == EShiftPhase::LanguageSelection
+				|| (GM->Phase == EShiftPhase::NightIntro && GM->NightIndex == 0)))
+		{
+			bPrevInteractDown = false;
+			bPrevThrowDown = false;
+			return;
+		}
 	}
 
 	if (GM->Phase == EShiftPhase::LanguageSelection)
@@ -247,11 +283,13 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		{
 			GM->SelectedLanguage = (GM->SelectedLanguage + 1) % ShiftLoc::LanguageCount;
 		}
+
 		const FKey NumberKeys[] = { EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four };
 		for (int32 Index = 0; Index < ShiftLoc::LanguageCount; ++Index)
 		{
 			if (PC->WasInputKeyJustPressed(NumberKeys[Index])) { GM->SelectedLanguage = Index; }
 		}
+
 		FVector2D Mouse;
 		bool bClickedChoice = false;
 		if (PC->GetMousePosition(Mouse.X, Mouse.Y))
@@ -260,6 +298,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 			const bool bMoved = PreviousMenuMouse.X >= 0.f && FVector2D::DistSquared(Mouse, PreviousMenuMouse) > 1.f;
 			int32 Width = 0, Height = 0;
 			PC->GetViewportSize(Width, Height);
+
 			if (bMoved || bClick)
 			{
 				for (int32 Index = 0; Index < ShiftLoc::LanguageCount; ++Index)
@@ -273,7 +312,9 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 			}
 			PreviousMenuMouse = Mouse;
 		}
+
 		ShiftLoc::SetLanguage(GM->SelectedLanguage, false);
+
 		if (PC->WasInputKeyJustPressed(EKeys::Enter) || PC->WasInputKeyJustPressed(EKeys::SpaceBar) || bClickedChoice)
 		{
 			GM->ConfirmLanguage();
@@ -281,6 +322,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		}
 		return;
 	}
+
 	if (GM->Phase == EShiftPhase::Title && PC->WasInputKeyJustPressed(EKeys::L))
 	{
 		GM->OpenLanguageSelection();
@@ -311,14 +353,15 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	// Mouse look
 	if (!IsGrabbed())
 	{
-	float MouseX = 0.f, MouseY = 0.f;
-	PC->GetInputMouseDelta(MouseX, MouseY);
-	ApplyMouseLook(MouseX, MouseY);
-	// Arrow key look fallback for accessibility / headless testing
-	if (PC->IsInputKeyDown(EKeys::Left))  { AddControllerYawInput(-70.f * DeltaSeconds); }
-	if (PC->IsInputKeyDown(EKeys::Right)) { AddControllerYawInput(70.f * DeltaSeconds); }
-	if (PC->IsInputKeyDown(EKeys::Up))    { AddControllerPitchInput(-50.f * DeltaSeconds); }
-	if (PC->IsInputKeyDown(EKeys::Down))  { AddControllerPitchInput(50.f * DeltaSeconds); }
+		float MouseX = 0.f, MouseY = 0.f;
+		PC->GetInputMouseDelta(MouseX, MouseY);
+		ApplyMouseLook(MouseX, MouseY);
+
+		// Arrow key look fallback for accessibility / headless testing
+		if (PC->IsInputKeyDown(EKeys::Left))  { AddControllerYawInput(-70.f * DeltaSeconds); }
+		if (PC->IsInputKeyDown(EKeys::Right)) { AddControllerYawInput(70.f * DeltaSeconds); }
+		if (PC->IsInputKeyDown(EKeys::Up))    { AddControllerPitchInput(-50.f * DeltaSeconds); }
+		if (PC->IsInputKeyDown(EKeys::Down))  { AddControllerPitchInput(50.f * DeltaSeconds); }
 	}
 
 	// Movement & [Shift] Sprint (disabled while grabbed by a monster)
@@ -326,6 +369,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 	{
 		FVector Fwd = GetActorForwardVector(); Fwd.Z = 0.f; Fwd.Normalize();
 		FVector Right = GetActorRightVector(); Right.Z = 0.f; Right.Normalize();
+
 		bool bMovingInput = false;
 		if (PC->IsInputKeyDown(EKeys::W)) { AddMovementInput(Fwd, 1.f); bMovingInput = true; }
 		if (PC->IsInputKeyDown(EKeys::S)) { AddMovementInput(Fwd, -1.f); bMovingInput = true; }
@@ -334,6 +378,7 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 
 		const bool bShiftKey = PC->IsInputKeyDown(EKeys::LeftShift) || PC->IsInputKeyDown(EKeys::RightShift);
 		bIsSprinting = bShiftKey && bMovingInput && Stamina > 1.f;
+
 		if (bIsSprinting)
 		{
 			Stamina = FMath::Max(0.f, Stamina - 24.f * DeltaSeconds);
@@ -347,11 +392,17 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 				Stamina = FMath::Min(100.f, Stamina + 34.f * DeltaSeconds);
 			}
 		}
+
 		const float BaseSpeed = GM->IsAutomatedSession() ? 260.f : 285.f;
 		GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? 435.f : BaseSpeed;
+
 		if (!bGrabCameraActive)
 		{
-			FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(FirstPersonCamera->FieldOfView, bIsSprinting ? 93.f : 85.f, DeltaSeconds, 10.f));
+			FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(
+				FirstPersonCamera->FieldOfView,
+				bIsSprinting ? 93.f : 85.f,
+				DeltaSeconds,
+				10.f));
 		}
 	}
 	else
@@ -381,11 +432,14 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 			AShiftItem* Used = HeldItem.Get();
 			const FShiftProduct* Prod = ShiftData::FindProduct(Used->Sku);
 			const float StunSec = Prod ? Prod->StunSeconds : 2.f;
+
 			GM->OnItemBroken(Used, true);
 			ConsumeHeldItem();
 			Monster->Stun(StunSec);
 			ReleaseFromGrab();
-			GM->SetStatusBanner(ShiftLoc::Format(TEXT("Smashed monster with merchandise! Escaped (Stunned %.1fs)"), {FString::Printf(TEXT("%.1f"), StunSec)}), 2.5f);
+			GM->SetStatusBanner(ShiftLoc::Format(
+				TEXT("Smashed monster with merchandise! Escaped (Stunned %.1fs)"),
+				{ FString::Printf(TEXT("%.1f"), StunSec) }), 2.5f);
 			return;
 		}
 
@@ -398,7 +452,15 @@ void AShiftPlayerCharacter::Tick(float DeltaSeconds)
 		{
 			StruggleProgress = FMath::Max(0.f, StruggleProgress - DeltaSeconds * 0.15f);
 		}
-		CrosshairPrompt = ShiftLoc::Format(TEXT("GRABBED! Hold/Mash [E] to struggle (%d%%)%s"), {LexToString(FMath::RoundToInt(StruggleProgress * 100.f)), FString((HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product) ? TEXT(" | [F/RMB] Smash with item!") : TEXT(""))});
+
+		CrosshairPrompt = ShiftLoc::Format(
+			TEXT("GRABBED! Hold/Mash [E] to struggle (%d%%)%s"),
+			{
+				LexToString(FMath::RoundToInt(StruggleProgress * 100.f)),
+				FString((HeldItem.IsValid() && HeldItem->Kind == EShiftItemKind::Product)
+					? TEXT(" | [F/RMB] Smash with item!")
+					: TEXT(""))
+			});
 
 		if (StruggleProgress >= 1.f)
 		{

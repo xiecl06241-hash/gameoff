@@ -6,6 +6,43 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 # Columns: English source key, Simplified Chinese, Japanese, Traditional Chinese.
 ENTRIES = [
+    ("START GAME", "开始游戏", "ゲーム開始", "開始遊戲"),
+    ("SETTINGS", "设置", "設定", "設定"),
+    ("LANGUAGE", "语言", "言語", "語言"),
+    ("SELECT LANGUAGE", "选择语言", "言語を選択", "選擇語言"),
+
+    ("STORE MANAGER", "店长", "店長", "店長"),
+    ("YOU", "你", "あなた", "你"),
+
+    ("First night shift. The store is yours until 06:00.",
+    "第一晚。这家店在 06:00 前归你管。",
+    "初日の夜勤。06:00 まではこの店は君の担当だ。",
+    "第一晚。這家店在 06:00 前歸你管。"),
+
+    ("Keep the shelves full, serve every customer, and clean up before dawn.",
+    "把货架补满，接待每位顾客，天亮前清理干净。",
+    "棚を埋め、すべての客を接客し、夜明け前に片付けろ。",
+    "把貨架補滿，接待每位顧客，天亮前清理乾淨。"),
+
+    ("WASD to move, mouse to look, E to interact or hold for chores.",
+    "WASD 移动，鼠标观察，E 互动 / 长按干活。",
+    "WASD で移動、マウスで視点、E で調べる / 長押しで作業。",
+    "WASD 移動，滑鼠觀察，E 互動 / 長按幹活。"),
+
+    ("Tab shows your task, R opens the rules, Esc pauses.",
+    "Tab 查看任务，R 打开守则，Esc 暂停。",
+    "Tab でタスク、R でルール、Esc で一時停止。",
+    "Tab 查看任務，R 開啟守則，Esc 暫停。"),
+
+    ("...What if the lights go out?",
+    "……如果灯灭了怎么办？",
+    "……もし明かりが消えたら？",
+    "……如果燈滅了怎麼辦？"),
+
+    ("Then don't argue with what walks in. Find what it wants and bring it to the register.",
+    "别和走进来的东西讲道理。找到它要的，送到收银台。",
+    "入ってくるものと議論するな。欲しがる物を探してレジへ運べ。",
+    "別和走進來的東西講道理。找到它要的，送到收銀台。"),
     ("HANDS: Empty  ([E] Pick up / Interact)",
     "空手（[E] 拾取 / 交互）",
     "手ぶら（[E] 拾う / 調べる）",

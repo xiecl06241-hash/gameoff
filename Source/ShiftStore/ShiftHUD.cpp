@@ -258,16 +258,24 @@ void AShiftHUD::DrawHUD()
 {
 	Super::DrawHUD();
 
-	if(bUseUMG)
+	if (bUseUMG)
 	{
-		const AShiftStoreGameMode* GM = GetWorld() 
+		const AShiftStoreGameMode* GM = GetWorld()
 			? GetWorld()->GetAuthGameMode<AShiftStoreGameMode>()
 			: nullptr;
 		const AShiftPlayerController* PC = Cast<AShiftPlayerController>(PlayerOwner);
 
-		const bool bGameplay = GM && (GM->Phase==EShiftPhase::Working || GM->Phase == EShiftPhase::Cleanup);
-		const bool bPaused = PC&& PC->IsPauseMenuOpen();
-		if(bGameplay || bPaused)
+		const bool bUMGNightIntro =
+			GM && GM->Phase == EShiftPhase::NightIntro && GM->NightIndex == 0;
+
+		const bool bUMGScreen = GM && (
+			GM->Phase == EShiftPhase::Working ||
+			GM->Phase == EShiftPhase::Cleanup ||
+			GM->Phase == EShiftPhase::Title ||
+			bUMGNightIntro);
+
+		const bool bPaused = PC && PC->IsPauseMenuOpen();
+		if (bUMGScreen || bPaused)
 		{
 			return;
 		}

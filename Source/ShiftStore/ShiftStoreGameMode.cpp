@@ -160,14 +160,20 @@ void AShiftStoreGameMode::BeginPlay()
 		return;
 	}
 	bHasSavedProgress = LoadProgress();
+
 	if (FParse::Param(*CmdLine, TEXT("ShiftAutoStart")))
 	{
 		StartNight(NightIndex);
 		Phase = EShiftPhase::Working;
 	}
-	else
+	else if (bAutomatedSession)
 	{
 		OpenLanguageSelection();
+	}
+	else
+	{
+		Phase = EShiftPhase::Title;
+		SelectedLanguage = ShiftLoc::CurrentLanguage();
 	}
 	if (FParse::Param(*CmdLine, TEXT("ShiftFeedbackTest")) || FParse::Param(*CmdLine, TEXT("ShiftPlaythroughTest")))
 	{
