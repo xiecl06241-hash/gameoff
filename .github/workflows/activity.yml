@@ -1,0 +1,106 @@
+name: Repository activity log
+
+# Metadata only: never check out or execute code from an event's branch/PR.
+on:
+  push:
+  create:
+  delete:
+  pull_request_target:
+    types: [assigned, unassigned, labeled, unlabeled, opened, edited, closed,
+      reopened, synchronize, converted_to_draft, locked, unlocked, enqueued,
+      dequeued, milestoned, demilestoned, ready_for_review, review_requested,
+      review_request_removed, auto_merge_enabled, auto_merge_disabled]
+  pull_request_review:
+  pull_request_review_comment:
+  issues:
+  issue_comment:
+  discussion:
+  discussion_comment:
+  release:
+  fork:
+  watch:
+  public:
+  gollum:
+  label:
+  milestone:
+  branch_protection_rule:
+  deployment:
+  deployment_status:
+  registry_package:
+  page_build:
+  status:
+  check_run:
+  check_suite:
+  merge_group:
+  repository_dispatch:
+  workflow_dispatch:
+  workflow_run:
+    # Explicit names avoid recording this logger and creating recursive runs.
+    workflows: ['Repository checks', 'Windows build and gameplay tests']
+
+permissions:
+  contents: read
+
+# No concurrency cancellation: each delivered event keeps its own record.
+jobs:
+  record:
+    name: Record event metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Write event record and summary
+        shell: python
+        run: |
+          import html
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          record = {
+              'recorded_at': datetime.now(timezone.utc).isoformat(),
+              'event': os.environ['GITHUB_EVENT_NAME'],
+              'action': event.get('action'),
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'ref': event.get('ref', os.environ.get('GITHUB_REF')),
+              'ref_type': event.get('ref_type'),
+              'sha': os.environ.get('GITHUB_SHA'),
+          }
+          for key in ('before', 'after', 'created', 'deleted', 'forced'):
+              if key in event:
+                  record[key] = event[key]
+          pr = event.get('pull_request')
+          if pr:
+              record['pull_request'] = {
+                  'number': pr['number'],
+                  'head': pr['head']['ref'],
+                  'head_sha': pr['head']['sha'],
+                  'base': pr['base']['ref'],
+                  'merged': pr.get('merged', False),
+              }
+          for key in ('issue', 'discussion'):
+              if key in event:
+                  record[key] = {'number': event[key]['number']}
+          if 'release' in event:
+              record['release'] = {'tag': event['release']['tag_name']}
+          if 'workflow_run' in event:
+              run = event['workflow_run']
+              record['workflow_run'] = {
+                  key: run.get(key) for key in
+                  ('id', 'name', 'head_branch', 'head_sha', 'status', 'conclusion')
+              }
+          # Do not copy raw payloads, account details, commit authors or bodies.
+          output = json.dumps(record, ensure_ascii=True, indent=2) + '\n'
+          Path('activity.json').write_text(output, encoding='utf-8')
+          print(output)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('## Repository activity\n\n<pre>' + html.escape(output) + '</pre>\n')
+      - name: Save event record
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: repository-activity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: activity.json
+          if-no-files-found: error
+          retention-days: 90

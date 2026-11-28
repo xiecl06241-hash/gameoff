@@ -2,7 +2,7 @@
 
 ## 自动检查
 
-`Repository checks` 在推送到 `main`、向 `main` 提交 PR 或手动运行时执行：
+`Repository checks` 在推送到任意分支或标签、向任意分支提交或更新 PR、手动运行时执行：
 
 - Ubuntu / Windows 上用 Python 3.13 检查所有已跟踪 Python 脚本的语法。
 - 检查 JSON、重复键、商品标签、场景和模型目录中的资产引用，以及二进制资产的 Git LFS 规则。
@@ -11,6 +11,21 @@
 这些检查不下载 LFS 大文件，不需要 UE，也不编译 C++ 或运行游戏。编辑器脚本只检查语法，不在普通 Python 中导入 `unreal`。
 
 Dependabot 每周一 09:00（Asia/Tokyo）检查 Actions 依赖并提交更新 PR。Actions 固定到完整提交 SHA。
+
+## 仓库活动记录
+
+在 **Actions → Repository activity log** 查看每次事件的摘要、日志及 `activity.json` 下载文件。记录保留 90 天（受仓库保留策略限制），不取消较早的事件运行；它是活动记录，不是永久、不可篡改的审计存储。
+
+- 所有分支和标签的推送（包括强制推送）、创建和删除。
+- 所有目标分支的 PR 生命周期，包括关闭、合并、重开、审核请求、标签及自动合并状态；另记录审核、行内评论及普通评论。
+- Issue、Discussion 及评论、Release、Fork、Star、Wiki、标签、里程碑、分支保护规则、部署、包、Pages、提交状态、检查和合并队列的 Actions 支持事件。
+- 外部派发、手动运行，以及现有检查和 Windows 构建工作流的运行状态。新增其他工作流时，需把名称加入 `activity.yml` 的 `workflow_run.workflows`。
+
+记录只包含事件类型、动作、分支／标签、提交 SHA、PR／Issue 编号等元数据，不复制原始事件、账号信息、正文、评论、提交作者或邮箱。记录工作流不检出代码，不执行 PR 或分支代码；`pull_request_target` 仅用于读取 PR 事件元数据。Windows 本机构建仍单独手动运行。
+
+覆盖边界：GitHub Actions 不能记录 clone、fetch、pull 等读取操作，也不覆盖所有权限／设置变更、未推送的本地操作、Fork 内未提交 PR 的分支操作。历史事件不会补录。GitHub 未投递、被平台限制、等待批准、超出保留期或工作流被修改／禁用的事件也无法保证留存；例如一次创建／删除超过三个标签、一次推送超过 5,000 个分支、部分由 `GITHUB_TOKEN` 产生的事件不会触发。完整审计需要另外部署 Webhook 接收存储或使用适用的 GitHub 审计能力。
+
+分支必须包含更新后的工作流文件，才能在该分支的后续 push/create 事件中使用新规则；删除和多数仓库级事件依赖默认分支中的工作流。从旧提交创建的分支需要同步工作流。外部 PR 的代码检查仍可能需要维护者批准。
 
 ## Windows 打包与回归
 
