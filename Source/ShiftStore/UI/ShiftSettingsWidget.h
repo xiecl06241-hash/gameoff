@@ -21,6 +21,9 @@ public:
 
 	void FocusSlider();
 
+	/** Re-apply the current language to the static settings labels. */
+	void RefreshLabels();
+
 	/** Called after Back so the pause menu can restore its main panel. */
 	FSimpleDelegate OnClosed;
 
@@ -47,4 +50,6 @@ private:
 	void OnBack();
 
 	void UpdateValueText(float Value);
+
+	TArray<TPair<FString, TWeakObjectPtr<UTextBlock>>> LocalizedLabels;
 };

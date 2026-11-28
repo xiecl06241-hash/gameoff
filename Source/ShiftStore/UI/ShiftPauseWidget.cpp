@@ -1,9 +1,37 @@
 #include "ShiftPauseWidget.h"
 
+#include "../ShiftLocalization.h"
 #include "../ShiftPlayerController.h"
 #include "ShiftSettingsWidget.h"
 
+#include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
+#include "Components/TextBlock.h"
+
+namespace
+{
+	bool IsPauseLabelKey(const FString& Key)
+	{
+		static const TCHAR* Keys[] =
+		{
+			TEXT("PAUSED"),
+			TEXT("Resume Game"),
+			TEXT("Mouse Sensitivity"),
+			TEXT("Return to Main Menu"),
+			TEXT("Quit Game"),
+			TEXT("Only dawn checkpoints are saved. Returning to the menu discards this night's progress.")
+		};
+
+		for (const TCHAR* Candidate : Keys)
+		{
+			if (Key == Candidate)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+}
 
 void UShiftPauseWidget::NativeConstruct()
 {
@@ -35,6 +63,34 @@ void UShiftPauseWidget::NativeConstruct()
 	{
 		MainPanel->SetVisibility(ESlateVisibility::Visible);
 	}
+
+	LocalizedLabels.Reset();
+	if (WidgetTree)
+	{
+		WidgetTree->ForEachWidget([this](UWidget* Widget)
+		{
+			if (UTextBlock* Block = Cast<UTextBlock>(Widget))
+			{
+				const FString Key = Block->GetText().ToString();
+				if (IsPauseLabelKey(Key))
+				{
+					LocalizedLabels.Emplace(Key, Block);
+				}
+			}
+		});
+	}
+	RefreshLabels();
+}
+
+void UShiftPauseWidget::RefreshLabels()
+{
+	for (const TPair<FString, TWeakObjectPtr<UTextBlock>>& Pair : LocalizedLabels)
+	{
+		if (UTextBlock* Block = Pair.Value.Get())
+		{
+			Block->SetText(FText::FromString(ShiftLoc::Text(Pair.Key)));
+		}
+	}
 }
 
 void UShiftPauseWidget::FocusFirstButton()
@@ -61,6 +117,7 @@ void UShiftPauseWidget::OnSettings()
 	}
 	if (SettingsPanel)
 	{
+		SettingsPanel->RefreshLabels();
 		SettingsPanel->SetVisibility(ESlateVisibility::Visible);
 		SettingsPanel->FocusSlider();
 	}

@@ -92,6 +92,7 @@ void UShiftTitleWidget::OnSettings()
 	}
 	if (SettingsPanel)
 	{
+		SettingsPanel->RefreshLabels();
 		SettingsPanel->SetVisibility(ESlateVisibility::Visible);
 		SettingsPanel->FocusSlider();
 	}

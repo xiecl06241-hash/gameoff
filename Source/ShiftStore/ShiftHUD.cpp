@@ -323,7 +323,7 @@ void AShiftHUD::DrawHUD()
 		if (GM->Phase == EShiftPhase::LanguageSelection)
 		{
 			DrawCenteredText(TEXT("S H I F T  /  2 4"), H * 0.13f, HorrorPalette::Bone, 2.0f);
-			DrawCenteredText(TEXT("Language / 言語 / 語言 / 语言"), H * 0.255f, HorrorPalette::Ash, 1.25f);
+			DrawCenteredText(TEXT("SELECT LANGUAGE"), H * 0.255f, HorrorPalette::Ash, 1.25f);
 			for (int32 Index = 0; Index < ShiftLoc::LanguageCount; ++Index)
 			{
 				const FBox2D Box = LanguageButton(Index, W, H);

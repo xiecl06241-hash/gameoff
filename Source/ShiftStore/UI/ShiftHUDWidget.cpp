@@ -236,7 +236,9 @@ void UShiftHUDWidget::Refresh(AShiftStoreGameMode* GM, AShiftPlayerCharacter* Pl
 		// --- Crosshair / interaction prompt ---
 		const bool bHasPrompt = !Player->CrosshairPrompt.IsEmpty();
 		const bool bGrabbed = Player->IsGrabbed();
-		SetTextIfChanged(PromptText, bHasPrompt ? Player->CrosshairPrompt : FString());
+		SetTextIfChanged(PromptText, bHasPrompt
+			? ShiftLoc::Text(Player->CrosshairPrompt)
+			: FString());
 		if (PromptText)
 		{
 			PromptText->SetVisibility(bHasPrompt ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);

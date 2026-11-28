@@ -3,13 +3,54 @@
 #include "../ShiftLocalization.h"
 #include "../ShiftPlayerController.h"
 
+#include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 
+namespace
+{
+	bool IsSettingsLabelKey(const FString& Key)
+	{
+		static const TCHAR* Keys[] =
+		{
+			TEXT("Mouse Sensitivity"),
+			TEXT("Lower is slower. Changes are saved automatically."),
+			TEXT("Restore Default"),
+			TEXT("Back")
+		};
+
+		for (const TCHAR* Candidate : Keys)
+		{
+			if (Key == Candidate)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+}
+
 void UShiftSettingsWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	LocalizedLabels.Reset();
+	if (WidgetTree)
+	{
+		WidgetTree->ForEachWidget([this](UWidget* Widget)
+		{
+			if (UTextBlock* Block = Cast<UTextBlock>(Widget))
+			{
+				const FString Key = Block->GetText().ToString();
+				if (IsSettingsLabelKey(Key))
+				{
+					LocalizedLabels.Emplace(Key, Block);
+				}
+			}
+		});
+	}
+	RefreshLabels();
 
 	AShiftPlayerController* PC = Cast<AShiftPlayerController>(GetOwningPlayer());
 	if (!PC)
@@ -42,6 +83,17 @@ void UShiftSettingsWidget::FocusSlider()
 	if (SensitivitySlider)
 	{
 		SensitivitySlider->SetKeyboardFocus();
+	}
+}
+
+void UShiftSettingsWidget::RefreshLabels()
+{
+	for (const TPair<FString, TWeakObjectPtr<UTextBlock>>& Pair : LocalizedLabels)
+	{
+		if (UTextBlock* Block = Pair.Value.Get())
+		{
+			Block->SetText(FText::FromString(ShiftLoc::Text(Pair.Key)));
+		}
 	}
 }
 

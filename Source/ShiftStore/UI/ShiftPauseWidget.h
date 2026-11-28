@@ -6,6 +6,7 @@
 
 class UButton;
 class UWidget;
+class UTextBlock;
 class UShiftSettingsWidget;
 
 /**
@@ -22,6 +23,9 @@ public:
 
 	/** Focus the Resume button when the menu opens (keyboard/gamepad). */
 	void FocusFirstButton();
+
+	/** Re-apply the current language to the static pause labels. */
+	void RefreshLabels();
 
 private:
 	UPROPERTY(meta=(BindWidget))
@@ -55,4 +59,6 @@ private:
 	void OnQuit();
 
 	void HandleSettingsClosed();
+
+	TArray<TPair<FString, TWeakObjectPtr<UTextBlock>>> LocalizedLabels;
 };

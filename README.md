@@ -10,5 +10,4 @@
 - 修改 ShiftPlayerCotroller.h/.cpp 等一系列代码
 
 ## 后续优化方向
-- 优化Title和Logo的美术表现
 - 优化文本

@@ -10,43 +10,15 @@ ENTRIES = [
     ("SETTINGS", "设置", "設定", "設定"),
     ("LANGUAGE", "语言", "言語", "語言"),
     ("SELECT LANGUAGE", "选择语言", "言語を選択", "選擇語言"),
-
     ("STORE MANAGER", "店长", "店長", "店長"),
     ("YOU", "你", "あなた", "你"),
-
-    ("First night shift. The store is yours until 06:00.",
-    "第一晚。这家店在 06:00 前归你管。",
-    "初日の夜勤。06:00 まではこの店は君の担当だ。",
-    "第一晚。這家店在 06:00 前歸你管。"),
-
-    ("Keep the shelves full, serve every customer, and clean up before dawn.",
-    "把货架补满，接待每位顾客，天亮前清理干净。",
-    "棚を埋め、すべての客を接客し、夜明け前に片付けろ。",
-    "把貨架補滿，接待每位顧客，天亮前清理乾淨。"),
-
-    ("WASD to move, mouse to look, E to interact or hold for chores.",
-    "WASD 移动，鼠标观察，E 互动 / 长按干活。",
-    "WASD で移動、マウスで視点、E で調べる / 長押しで作業。",
-    "WASD 移動，滑鼠觀察，E 互動 / 長按幹活。"),
-
-    ("Tab shows your task, R opens the rules, Esc pauses.",
-    "Tab 查看任务，R 打开守则，Esc 暂停。",
-    "Tab でタスク、R でルール、Esc で一時停止。",
-    "Tab 查看任務，R 開啟守則，Esc 暫停。"),
-
-    ("...What if the lights go out?",
-    "……如果灯灭了怎么办？",
-    "……もし明かりが消えたら？",
-    "……如果燈滅了怎麼辦？"),
-
-    ("Then don't argue with what walks in. Find what it wants and bring it to the register.",
-    "别和走进来的东西讲道理。找到它要的，送到收银台。",
-    "入ってくるものと議論するな。欲しがる物を探してレジへ運べ。",
-    "別和走進來的東西講道理。找到它要的，送到收銀台。"),
-    ("HANDS: Empty  ([E] Pick up / Interact)",
-    "空手（[E] 拾取 / 交互）",
-    "手ぶら（[E] 拾う / 調べる）",
-    "空手（[E] 拾取 / 互動）"),
+    ("First night shift. The store is yours until 06:00.", "第一晚。这家店在 06:00 前归你管。", "初日の夜勤。06:00 まではこの店は君の担当だ。", "第一晚。這家店在 06:00 前歸你管。"),
+    ("Keep the shelves full, serve every customer, and clean up before dawn.", "把货架补满，接待每位顾客，天亮前清理干净。", "棚を埋め、すべての客を接客し、夜明け前に片付けろ。", "把貨架補滿，接待每位顧客，天亮前清理乾淨。"),
+    ("WASD to move, mouse to look, E to interact or hold for chores.", "WASD 移动，鼠标观察，E 互动 / 长按干活。", "WASD で移動、マウスで視点、E で調べる / 長押しで作業。", "WASD 移動，滑鼠觀察，E 互動 / 長按幹活。"),
+    ("Tab shows your task, R opens the rules, Esc pauses.", "Tab 查看任务，R 打开守则，Esc 暂停。", "Tab でタスク、R でルール、Esc で一時停止。", "Tab 查看任務，R 開啟守則，Esc 暫停。"),
+    ("...What if the lights go out?", "……如果灯灭了怎么办？", "……もし明かりが消えたら？", "……如果燈滅了怎麼辦？"),
+    ("Then don't argue with what walks in. Find what it wants and bring it to the register.", "别和走进来的东西讲道理。找到它要的，送到收银台。", "入ってくるものと議論するな。欲しがる物を探してレジへ運べ。", "別和走進來的東西講道理。找到它要的，送到收銀台。"),
+    ("HANDS: Empty  ([E] Pick up / Interact)", "空手（[E] 拾取 / 交互）", "手ぶら（[E] 拾う / 調べる）", "空手（[E] 拾取 / 互動）"),
     ("Mouse Sensitivity", "鼠标灵敏度", "マウス感度", "滑鼠靈敏度"),
     ("Lower is slower. Changes are saved automatically.", "数值越低，视角移动越慢。设置会自动保存。", "値が小さいほど視点移動が遅くなります。変更は自動保存されます。", "數值越低，視角移動越慢。設定會自動儲存。"),
     ("Mouse sensitivity: %sx", "鼠标灵敏度：{0} 倍", "マウス感度：{0} 倍", "滑鼠靈敏度：{0} 倍"),
@@ -103,7 +75,6 @@ ENTRIES = [
     ("SANITY: %d%%", "清醒度：{0}%", "正気度：{0}%", "清醒度：{0}%"),
     ("SALES: +$%.1f   LOSS: -$%.1f / -$%.0f", "收入：+${0}  货损：-${1} / -${2}", "売上：+${0}  損失：-${1} / -${2}", "收入：+${0}  貨損：-${1} / -${2}"),
     ("CARRYING: %s  ([F/RMB] Throw  [G] Drop)", "手持：{0}（[F/右键] 投掷 [G] 放下）", "所持：{0}（[F/右クリック] 投げる [G] 置く）", "手持：{0}（[F/右鍵] 投擲 [G] 放下）"),
-    ("HANDS: Empty  ([E] Pick up / Interact)", "空手（[E] 拾取／交互）", "何も持っていない（[E] 拾う・調べる）", "空手（[E] 拾取／交互）"),
     ("SHIFT CHECKLIST & ALERTS", "值班任务与提醒", "勤務チェックリスト・通知", "值班任務與提醒"),
     ("!! ABNORMAL ENTITY IN STORE !!", "！！店内出现异常顾客！！", "！！店内に怪異が出現！！", "！！店內出現異常顧客！！"),
     ("Demand: Find [%s] (Red Glow)", "要求：寻找［{0}］（红光）", "要求：［{0}］を探す（赤い光）", "要求：尋找［{0}］（紅光）"),
@@ -219,22 +190,14 @@ ENTRIES = [
     ("Follow the yellow aisle markers to the work location.", "跟随黄色通道标记，前往任务位置。", "黄色い通路マーカーに従い、作業場所へ向かう。", "跟隨黃色通道標記，前往任務位置。"),
     ("Look at the task marker and HOLD [E] to work.", "对准任务标记，长按 [E] 完成工作。", "作業マーカーに視点を合わせ、[E] を長押し。", "對準任務標記，長按 [E] 完成工作。"),
     ("[TAB] Next chore   |   Finish all chores to admit customers.", "[TAB] 切换任务  |  全部完成后，顾客才会进店。", "[Tab] 次の作業  |  全作業を終えると、お客様が来店します。", "[TAB] 切換任務  |  全部完成後，顧客才會進店。"),
-]
-
-ENTRIES += [
     ("Prepare hot oden", "煮关东煮", "おでんを仕込む", "煮關東煮"),
     ("Next chore: %s. Follow the yellow marker.", "下一项工作：{0}，请跟随黄色标记。", "次の作業：{0}。黄色いマーカーに従いましょう。", "下一項工作：{0}，請跟隨黃色標記。"),
     ("At the oden station, HOLD [E] to prepare the broth.", "在关东煮台前长按 [E]，准备热汤。", "おでん台で [E] を長押しして、だしを準備する。", "在關東煮臺前長按 [E]，準備熱湯。"),
-]
-
-ENTRIES += [
     ("Hands full. Put it back on a shelf, or press [G] to drop it.", "手里已有物品。放回货架，或按 [G] 放下。", "手がふさがっています。棚に戻すか、[G] で置きましょう。", "手上已有物品。放回貨架，或按 [G] 放下。"),
     ("[E] Put back %s", "[E] 放回 {0}", "[E] {0} を戻す", "[E] 放回 {0}"),
     ("Tidy up: %d items left on the floor", "整理：地上还有 {0} 件商品", "片付け：床に商品が {0} 個残っています", "整理：地上還有 {0} 件商品"),
     ("Pick up loose merchandise and press [E] at any shelf to put it back.", "捡起散落的商品，对准任意货架按 [E] 放回。", "散らばった商品を拾い、棚に向かって [E] で戻す。", "撿起散落的商品，對準任意貨架按 [E] 放回。"),
     ("Chores done! Put the loose merchandise back on the shelves (%d left).", "工作完成！请把散落的商品放回货架（还剩 {0} 件）。", "作業完了！散らばった商品を棚に戻しましょう（残り {0} 個）。", "工作完成！請把散落的商品放回貨架（還剩 {0} 件）。"),
-]
-ENTRIES += [
     ("Reset warped welcome sign", "复位被篡改的迎宾牌", "歪んだ歓迎看板を戻す", "復位被篡改的迎賓牌"),
     ("Push shifted Aisle 02 gondola back", "推回暗移的二号货架", "ずれた2番棚を押し戻す", "推回暗移的二號貨架"),
     ("Close rattling cooler & check stock", "复位异响冷柜并核对商品", "鳴動する冷蔵棚を戻し在庫確認", "復位異響冷櫃並核對商品"),
@@ -255,9 +218,6 @@ ENTRIES += [
     ("Suspect disguise? Hand their whispered true item to ward off!", "怀疑是伪装？递交其低语暗示的真正商品可直接驱离！", "偽装の疑い？呟いている本当の品を渡せば撃退できる！", "懷疑是偽裝？遞交其低語暗示的真正商品可直接驅離！"),
     ("! ANOMALY: %s (%ds)", "！局部异变：{0}（{1}秒）", "！局所異変：{0}（{1}秒）", "！局部異變：{0}（{1}秒）"),
     ("Follow the yellow marker; HOLD [E] to reset the store anomaly.", "跟随黄色标记，长按 [E] 复位店铺局部异变。", "黄色いマーカーに従い、[E] 長押しで異変を戻す。", "跟隨黃色標記，長按 [E] 復位店鋪局部異變。"),
-]
-
-ENTRIES += [
     ("Excuse me... could you grab me a bag of potato chips?", "不好意思……能帮我拿包薯片吗？", "すみません……ポテトチップスを取ってもらえますか？", "不好意思……能幫我拿包薯片嗎？"),
     ("SPRINT [Shift]", "冲刺 [Shift]", "ダッシュ [Shift]", "衝刺 [Shift]"),
     ("SHIFT RULES — Observe Customer Before Handing:", "夜班异常守则 —— 递交商品前先观察顾客体态：", "夜勤異変則 —— 商品を渡す前に客の様子を観察：", "夜班異常守則 —— 遞交商品前先觀察顧客體態："),
@@ -265,15 +225,21 @@ ENTRIES += [
     ("2. Red eye glare & light flicker -> Hand [DAILY Whole Milk]", "② 红眼微光+顶灯闪烁 → 别给原商品，递【每日全脂鲜奶】", "② 赤い眼光・照明点滅 → 要求品ではなく【毎日牛乳】", "② 紅眼微光+頂燈閃爍 → 別給原商品，遞【每日全脂鮮奶】"),
     ("3. Feet floating off floor -> Hand [MORNING Bread]", "③ 脚不沾地悬空漂浮 → 别给原商品，递【晨光切片面包】", "③ 足が床から浮遊 → 要求品ではなく【朝食パン】", "③ 腳不沾地懸空漂浮 → 別給原商品，遞【晨光切片麵包】"),
     ("Check SHIFT RULES (Bottom-Left): Observe posture before handing!", "核对左下角《夜班异常守则》：先观察顾客体态再递交！", "左下の『夜勤異変則』を確認：姿勢を観察してから渡せ！", "核對左下角《夜班異常守則》：先觀察顧客體態再遞交！"),
-]
-
-ENTRIES += [
-    ('TRUE ENDING — MASTER OF THE NIGHT SHIFT', '真结局 —— 完美守夜人', '真エンド —— 夜勤の達人', '真結局 —— 完美守夜人'),
-    ('SURVIVOR ENDING — 06:00 AM HANDOVER', '幸存结局 —— 早上六点交班', '生還エンド —— 午前6時の引き継ぎ', '倖存結局 —— 早上六點交班'),
-    ('You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n"You understand the rules now. The store is yours."', '你在店铺彻底异变前识破了每一个伪装。\n白班店员在收银台留了一张纸条：\n“你已经懂得守则了。这家店属于你。”', '店が完全に変わる前に、すべての偽装を見破った。\n日勤の店員がレジにメモを残した。\n「もう規則はわかったね。この店は君のものだ。」', '你在店鋪徹底異變前識破了每一個偽裝。\n白班店員在收銀台留了一張紙條：\n「你已經懂得守則了。這家店屬於你。」'),
-    ('Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.', '三晚的货架错位和停电终于结束。\n阳光照上前窗，你把围裙放在柜台上，\n赶在早晨的门铃响起之前离开。', '棚の移動と停電に悩まされた三晩が終わった。\n朝日が窓を照らす。エプロンをカウンターに置き、\n朝のチャイムが鳴る前に店を出た。', '三晚的貨架錯位和停電終於結束。\n陽光照上前窗，你把圍裙放在櫃台上，\n趕在早晨的門鈴響起之前離開。'),
-    ('Disguises Warded Off: %d   |   Store Shifts Survived: %d', '识破驱离：{0} 次   |   全店异变：{1} 次', '偽装を見破った回数：{0}   |   店の異変回数：{1}', '識破驅離：{0} 次   |   全店異變：{1} 次'),
-    ('[! SIGNAL CORRUPTED — FIX ANOMALY !]', '[！信号异常 —— 请复位异变！]', '[！信号異常 —— 異変を直せ！]', '[！訊號異常 —— 請復位異變！]'),
+    ("TRUE ENDING — MASTER OF THE NIGHT SHIFT", "真结局 —— 完美守夜人", "真エンド —— 夜勤の達人", "真結局 —— 完美守夜人"),
+    ("SURVIVOR ENDING — 06:00 AM HANDOVER", "幸存结局 —— 早上六点交班", "生還エンド —— 午前6時の引き継ぎ", "倖存結局 —— 早上六點交班"),
+    ("You saw through every disguise before the store could fully shift.\nThe day-shift clerk left a note on the register:\n\"You understand the rules now. The store is yours.\"", "你在店铺彻底异变前识破了每一个伪装。\n白班店员在收银台留了一张纸条：\n“你已经懂得守则了。这家店属于你。”", "店が完全に変わる前に、すべての偽装を見破った。\n日勤の店員がレジにメモを残した。\n「もう規則はわかったね。この店は君のものだ。」", "你在店鋪徹底異變前識破了每一個偽裝。\n白班店員在收銀台留了一張紙條：\n「你已經懂得守則了。這家店屬於你。」"),
+    ("Three nights of shifting aisles and blackouts are finally over.\nSunlight hits the front glass. You drop your apron on the counter\nand walk out before the morning door chime rings.", "三晚的货架错位和停电终于结束。\n阳光照上前窗，你把围裙放在柜台上，\n赶在早晨的门铃响起之前离开。", "棚の移動と停電に悩まされた三晩が終わった。\n朝日が窓を照らす。エプロンをカウンターに置き、\n朝のチャイムが鳴る前に店を出た。", "三晚的貨架錯位和停電終於結束。\n陽光照上前窗，你把圍裙放在櫃台上，\n趕在早晨的門鈴響起之前離開。"),
+    ("Disguises Warded Off: %d   |   Store Shifts Survived: %d", "识破驱离：{0} 次   |   全店异变：{1} 次", "偽装を見破った回数：{0}   |   店の異変回数：{1}", "識破驅離：{0} 次   |   全店異變：{1} 次"),
+    ("[! SIGNAL CORRUPTED — FIX ANOMALY !]", "[！信号异常 —— 请复位异变！]", "[！信号異常 —— 異変を直せ！]", "[！訊號異常 —— 請復位異變！]"),
+    ("SHOW RULES", "查看守则", "規則を見る", "查看守則"),
+    ("HIDE RULES", "收起守则", "規則を閉じる", "收起守則"),
+    ("▼ Click to continue", "▼ 点击继续", "▼ クリックで続行", "▼ 點擊繼續"),
+    ("UNLISTED BRAND", "未列出品牌", "未登録ブランド", "未列出品牌"),
+    ("S H I F T  /  2 4", "S H I F T  /  2 4", "S H I F T  /  2 4", "S H I F T  /  2 4"),
+    ("[ BREAKER ]", "[ 电闸 ]", "[ ブレーカー ]", "[ 電閘 ]"),
+    ("[ SHIFT! ]", "[ 异变！ ]", "[ 異変！ ]", "[ 異變！ ]"),
+    ("[ E ]", "[ E ]", "[ E ]", "[ E ]"),
+    ("[ ! ]", "[ ! ]", "[ ! ]", "[ ! ]"),
 ]
 
 PRINTF = re.compile(r"%%|%[-+0 #]*\d*(?:\.\d+)?[sdf]")

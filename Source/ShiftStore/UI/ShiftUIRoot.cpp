@@ -121,6 +121,7 @@ void UShiftRootWidget::Refresh()
 
 		if (bPaused && !bLastPaused)
 		{
+			PauseMenu->RefreshLabels();
 			PauseMenu->FocusFirstButton();
 		}
 	}

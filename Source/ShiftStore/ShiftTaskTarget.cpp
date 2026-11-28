@@ -1,4 +1,5 @@
 #include "ShiftTaskTarget.h"
+#include "ShiftLocalization.h"
 #include "ShiftStoreGameMode.h"
 #include "Components/SphereComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -56,17 +57,18 @@ void AShiftTaskTarget::Setup(EShiftTaskType InType, const FString& InLabel, floa
 	}
 	if (Type == EShiftTaskType::BreakerBox)
 	{
-		Marker->SetText(FText::FromString(TEXT("[ BREAKER ]")));
+		Marker->SetText(FText::FromString(ShiftLoc::Text(TEXT("[ BREAKER ]"))));
 		Marker->SetTextRenderColor(FColor(120, 225, 255));
 	}
 	else if (Type == EShiftTaskType::FixAnomaly)
 	{
-		Marker->SetText(FText::FromString(TEXT("[ SHIFT! ]")));
+		Marker->SetText(FText::FromString(ShiftLoc::Text(TEXT("[ SHIFT! ]"))));
 		Marker->SetTextRenderColor(FColor(255, 110, 80));
 	}
 	else
 	{
-		Marker->SetText(FText::FromString(Type == EShiftTaskType::CartonSource ? TEXT("[ E ]") : TEXT("[ ! ]")));
+		Marker->SetText(FText::FromString(ShiftLoc::Text(
+			Type == EShiftTaskType::CartonSource ? TEXT("[ E ]") : TEXT("[ ! ]"))));
 		Marker->SetTextRenderColor(Type == EShiftTaskType::CartonSource ? FColor(180, 200, 190) : FColor(255, 210, 90));
 	}
 }
